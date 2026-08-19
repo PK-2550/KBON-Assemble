@@ -22,6 +22,43 @@ export const INITIAL_DURIAN_FARMS: DurianFarm[] = [
     establishedYear: 1989,
     certifications: ['GAP กรมวิชาการเกษตร', 'GI ทุเรียนภูเขาไฟศรีสะเกษ', 'Organic Thailand (แปลงทดลอง)'],
     individualTrees: VOLCANO_LUNGDUM_TREES,
+    smartTechnologies: [
+      {
+        id: 'st-1',
+        name: 'ระบบน้ำหยดอัตโนมัติ',
+        subtext: 'ควบคุมผ่านแอปฯ',
+        iconEmoji: '💧',
+        active: true,
+      },
+      {
+        id: 'st-2',
+        name: 'เซ็นเซอร์วัดความชื้นดิน',
+        subtext: 'ทุก 15 นาที',
+        iconEmoji: '🌡️',
+        active: true,
+      },
+      {
+        id: 'st-3',
+        name: 'โดรนพ่นปุ๋ย / สำรวจ',
+        subtext: 'ลดการใช้สารเคมี 40%',
+        iconEmoji: '🚁',
+        active: true,
+      },
+      {
+        id: 'st-4',
+        name: 'Dashboard ติดตามสวน',
+        subtext: 'Real-time บน SmartFarm App',
+        iconEmoji: '📊',
+        active: true,
+      },
+      {
+        id: 'st-5',
+        name: 'พลังงานแสงอาทิตย์',
+        subtext: 'ลดต้นทุนพลังงาน 60%',
+        iconEmoji: '☀️',
+        active: true,
+      },
+    ],
     certificationDetails: [
       {
         name: 'GAP มาตรฐานการปฏิบัติทางการเกษตรที่ดี (Good Agricultural Practice)',
@@ -194,6 +231,36 @@ export const INITIAL_DURIAN_FARMS: DurianFarm[] = [
     establishedYear: 1995,
     certifications: ['GAP กรมวิชาการเกษตร', 'Carbon Neutral Farm', 'มาตรฐานท่องเที่ยวเชิงเกษตร'],
     individualTrees: generateTreesForFarm('KP-CT', 'สวนเคพี การ์เด้นท์', 'จันทบุรี'),
+    smartTechnologies: [
+      {
+        id: 'st-2-1',
+        name: 'ระบบสปริงเกอร์อัจฉริยะ',
+        subtext: 'ปรับแรงดันน้ำตามสภาพอากาศ',
+        iconEmoji: '💧',
+        active: true,
+      },
+      {
+        id: 'st-2-2',
+        name: 'เซ็นเซอร์วัดความชื้นดิน',
+        subtext: 'รายงานผลทุก 30 นาที',
+        iconEmoji: '🌡️',
+        active: true,
+      },
+      {
+        id: 'st-2-3',
+        name: 'ระบบ NFC & QR Traceability',
+        subtext: 'ตรวจย้อนกลับถึงต้นแบบ 100%',
+        iconEmoji: '🏷️',
+        active: true,
+      },
+      {
+        id: 'st-2-4',
+        name: 'Dashboard พยากรณ์ผลผลิต',
+        subtext: 'AI คำนวณวันตัดทุเรียนแม่นยำ',
+        iconEmoji: '📊',
+        active: true,
+      },
+    ],
     certificationDetails: [
       {
         name: 'GAP มาตรฐานการปฏิบัติทางการเกษตรที่ดี',
@@ -334,6 +401,29 @@ export const INITIAL_DURIAN_FARMS: DurianFarm[] = [
     establishedYear: 1982,
     certifications: ['GAP กรมวิชาการเกษตร', 'GI ทุเรียนระยอง', 'วิถีชีวภาพปลอดภัย'],
     individualTrees: generateTreesForFarm('SP-RY', 'สวนสุภัทราแลนด์', 'ระยอง'),
+    smartTechnologies: [
+      {
+        id: 'st-3-1',
+        name: 'ระบบน้ำหยดโซลาร์เซลล์',
+        subtext: 'พลังงานสะอาด 100%',
+        iconEmoji: '☀️',
+        active: true,
+      },
+      {
+        id: 'st-3-2',
+        name: 'โดรนสำรวจสุขภาพทรงพุ่ม',
+        subtext: 'ตรวจจับโรคใบไหม้ทางอากาศ',
+        iconEmoji: '🚁',
+        active: true,
+      },
+      {
+        id: 'st-3-3',
+        name: 'เซ็นเซอร์สภาพอากาศ IoT',
+        subtext: 'วัดอุณหภูมิและความชื้นสัมพัทธ์',
+        iconEmoji: '🌡️',
+        active: true,
+      },
+    ],
     certificationDetails: [
       {
         name: 'GAP มาตรฐานการปฏิบัติทางการเกษตรที่ดี',
@@ -449,6 +539,29 @@ export const INITIAL_DURIAN_FARMS: DurianFarm[] = [
     establishedYear: 1978,
     certifications: ['GAP กรมวิชาการเกษตร', 'GI ทุเรียนหลงลับแล - หลินลับแล'],
     individualTrees: generateTreesForFarm('SN-LL', 'สวนทุเรียนหลงลับแล ป้าสงวน', 'อุตรดิตถ์'),
+    smartTechnologies: [
+      {
+        id: 'st-4-1',
+        name: 'เซ็นเซอร์วัดความชื้นไหล่เขา',
+        subtext: 'ตรวจจับน้ำใต้ดินบนภูเขาสูง',
+        iconEmoji: '📡',
+        active: true,
+      },
+      {
+        id: 'st-4-2',
+        name: 'ปั๊มน้ำพลังงานแสงอาทิตย์',
+        subtext: 'สูบน้ำขึ้นแปลงเขาชันอัตโนมัติ',
+        iconEmoji: '☀️',
+        active: true,
+      },
+      {
+        id: 'st-4-3',
+        name: 'NFC Tag กันปลอม GI ลับแล',
+        subtext: 'ชิปเข้ารหัสตรวจสอบความแท้',
+        iconEmoji: '🏷️',
+        active: true,
+      },
+    ],
     certificationDetails: [
       {
         name: 'GAP มาตรฐานการปฏิบัติทางการเกษตรที่ดี',
@@ -549,6 +662,36 @@ export const INITIAL_DURIAN_FARMS: DurianFarm[] = [
     establishedYear: 1918,
     certifications: ['GAP กรมวิชาการเกษตร', 'GI ทุเรียนนนท์', 'มรดกภูมิปัญญาการเกษตร'],
     individualTrees: generateTreesForFarm('NT-SW', 'สวนทุเรียนนนท์ คุณสุวรรณ', 'นนทบุรี'),
+    smartTechnologies: [
+      {
+        id: 'st-5-1',
+        name: 'ระบบควบคุมน้ำร่องสวนอัตโนมัติ',
+        subtext: 'ปรับระดับน้ำตามน้ำขึ้น-น้ำลง',
+        iconEmoji: '💧',
+        active: true,
+      },
+      {
+        id: 'st-5-2',
+        name: 'เซ็นเซอร์วัดความเค็มและแร่ธาตุในดิน',
+        subtext: 'เตือนภัยน้ำกร่อยแม่น้ำเจ้าพระยา',
+        iconEmoji: '🌡️',
+        active: true,
+      },
+      {
+        id: 'st-5-3',
+        name: 'ระบบ NFC ประจำต้นอนุรักษ์',
+        subtext: 'บันทึกประวัติศาสตร์ต้น 100 ปี',
+        iconEmoji: '🏷️',
+        active: true,
+      },
+      {
+        id: 'st-5-4',
+        name: 'Smart Camera เฝ้าระวังทรงพุ่ม',
+        subtext: 'AI ตรวจจับหนอนเจาะผลทุเรียน',
+        iconEmoji: '📊',
+        active: true,
+      },
+    ],
     certificationDetails: [
       {
         name: 'GAP มาตรฐานการปฏิบัติทางการเกษตรที่ดี',
@@ -649,6 +792,43 @@ export const INITIAL_DURIAN_FARMS: DurianFarm[] = [
     establishedYear: 2012,
     certifications: ['GAP กรมวิชาการเกษตร', 'GI ทุเรียนเบตง'],
     individualTrees: generateTreesForFarm('BT-MV', 'ฟาร์มทุเรียนเบตง มูซานคิง วัลเล่ย์', 'ยะลา'),
+    smartTechnologies: [
+      {
+        id: 'st-6-1',
+        name: 'ระบบสปริงเกอร์ไมโครปรับความชื้น',
+        subtext: 'สร้างละอองหมอกเลียนแบบธรรมชาติ',
+        iconEmoji: '💧',
+        active: true,
+      },
+      {
+        id: 'st-6-2',
+        name: 'สถานีตรวจวัดสภาพอากาศยอดเขา',
+        subtext: 'รายงานทิศทางลมและความกดอากาศ',
+        iconEmoji: '📡',
+        active: true,
+      },
+      {
+        id: 'st-6-3',
+        name: 'โดรนพ่นชีวภัณฑ์อัจฉริยะ',
+        subtext: 'พ่นสารอินทรีย์ป้องกันแมลงศัตรูพืช',
+        iconEmoji: '🚁',
+        active: true,
+      },
+      {
+        id: 'st-6-4',
+        name: 'ชิป NFC ติดขั้ว Musang King พรีเมียม',
+        subtext: 'รับประกันความแก่จัด 100%',
+        iconEmoji: '🏷️',
+        active: true,
+      },
+      {
+        id: 'st-6-5',
+        name: 'ระบบพลังงานแสงอาทิตย์ไฮบริด',
+        subtext: 'จ่ายไฟให้ระบบเซ็นเซอร์ทั่วหุบเขา',
+        iconEmoji: '☀️',
+        active: true,
+      },
+    ],
     certificationDetails: [
       {
         name: 'GAP มาตรฐานการปฏิบัติทางการเกษตรที่ดี',

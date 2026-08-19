@@ -57,34 +57,34 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative"
+        className="bg-[#092215] text-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#18422b] relative"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+          className="absolute top-4 right-4 p-2 text-[#8DA796] hover:text-white hover:bg-[#0e311f] rounded-full transition-colors border border-[#18422b]"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="flex items-center gap-2.5 mb-5">
-          <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-2xl bg-[#0e311f] text-[#E5A93C] border border-[#1e5236] flex items-center justify-center font-bold">
             <Sprout className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-800">เพิ่มฟาร์มทุเรียนใหม่</h2>
-            <p className="text-xs text-slate-500">บันทึกข้อมูลฟาร์มเข้าสู่ระบบ DuriTrack</p>
+            <h2 className="text-lg font-bold text-white">เพิ่มฟาร์มทุเรียนใหม่</h2>
+            <p className="text-xs text-[#8DA796]">บันทึกข้อมูลฟาร์มเข้าสู่ระบบ DuriTrack</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5 text-sm">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              ชื่อฟาร์ม / สวนทุเรียน <span className="text-red-500">*</span>
+            <label className="block text-xs font-semibold text-[#8DA796] mb-1">
+              ชื่อฟาร์ม / สวนทุเรียน <span className="text-[#E5A93C]">*</span>
             </label>
             <input
               type="text"
@@ -92,36 +92,36 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
               placeholder="เช่น สวนทุเรียนหมอนทองเมืองจันท์"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white placeholder-[#5d7c67] focus:outline-hidden focus:border-[#E5A93C]"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[#8DA796] mb-1">
                 จังหวัด
               </label>
               <select
                 value={province}
                 onChange={(e) => setProvince(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-800"
+                className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl focus:outline-hidden focus:border-[#E5A93C] text-white"
               >
-                <option value="จันทบุรี">จันทบุรี</option>
-                <option value="ระยอง">ระยอง</option>
-                <option value="ตราด">ตราด</option>
-                <option value="ศรีสะเกษ">ศรีสะเกษ</option>
-                <option value="นนทบุรี">นนทบุรี</option>
-                <option value="ชุมพร">ชุมพร</option>
-                <option value="สุราษฎร์ธานี">สุราษฎร์ธานี</option>
-                <option value="ยะลา">ยะลา</option>
-                <option value="อุตรดิตถ์">อุตรดิตถ์</option>
-                <option value="ปราจีนบุรี">ปราจีนบุรี</option>
-                <option value="กาญจนบุรี">กาญจนบุรี</option>
+                <option value="จันทบุรี" className="bg-[#04140b]">จันทบุรี</option>
+                <option value="ระยอง" className="bg-[#04140b]">ระยอง</option>
+                <option value="ตราด" className="bg-[#04140b]">ตราด</option>
+                <option value="ศรีสะเกษ" className="bg-[#04140b]">ศรีสะเกษ</option>
+                <option value="นนทบุรี" className="bg-[#04140b]">นนทบุรี</option>
+                <option value="ชุมพร" className="bg-[#04140b]">ชุมพร</option>
+                <option value="สุราษฎร์ธานี" className="bg-[#04140b]">สุราษฎร์ธานี</option>
+                <option value="ยะลา" className="bg-[#04140b]">ยะลา</option>
+                <option value="อุตรดิตถ์" className="bg-[#04140b]">อุตรดิตถ์</option>
+                <option value="ปราจีนบุรี" className="bg-[#04140b]">ปราจีนบุรี</option>
+                <option value="กาญจนบุรี" className="bg-[#04140b]">กาญจนบุรี</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[#8DA796] mb-1">
                 คะแนนรีวิวเริ่มต้น (1-10)
               </label>
               <input
@@ -131,14 +131,14 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
                 max="10"
                 value={rating}
                 onChange={(e) => setRating(parseFloat(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white focus:outline-hidden focus:border-[#E5A93C]"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[#8DA796] mb-1">
                 จำนวนต้นทุเรียน (ต้น)
               </label>
               <input
@@ -146,12 +146,12 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
                 min="0"
                 value={totalTrees}
                 onChange={(e) => setTotalTrees(parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white focus:outline-hidden focus:border-[#E5A93C]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[#8DA796] mb-1">
                 ผลผลิตที่เก็บเกี่ยว (ลูก/ปี)
               </label>
               <input
@@ -159,13 +159,13 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
                 min="0"
                 value={harvestedFruits}
                 onChange={(e) => setHarvestedFruits(parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white focus:outline-hidden focus:border-[#E5A93C]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-[#8DA796] mb-1">
               สายพันธุ์เด่น (คั่นด้วยจุลภาค)
             </label>
             <input
@@ -173,12 +173,12 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
               placeholder="เช่น หมอนทอง, ชะนี, ก้านยาว"
               value={topVarietiesInput}
               onChange={(e) => setTopVarietiesInput(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
+              className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white placeholder-[#5d7c67] focus:outline-hidden focus:border-[#E5A93C]"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-[#8DA796] mb-1">
               จุดเด่น / คำอธิบายฟาร์ม
             </label>
             <textarea
@@ -186,21 +186,21 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
               placeholder="เช่น ทุเรียนดินภูเขาไฟ หวานมันกรอบนอกนุ่มใน"
               value={highlight}
               onChange={(e) => setHighlight(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 resize-none text-xs"
+              className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl focus:outline-hidden focus:border-[#E5A93C] resize-none text-xs text-white placeholder-[#5d7c67]"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[#18422b]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="px-4 py-2 text-xs font-bold text-[#8DA796] hover:text-white hover:bg-[#0e311f] rounded-xl"
             >
               ยกเลิก
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md shadow-emerald-200 flex items-center gap-1"
+              className="px-5 py-2 text-xs font-bold text-[#241603] bg-[#E5A93C] hover:bg-[#d4992e] rounded-xl shadow-md flex items-center gap-1 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               บันทึกฟาร์ม

@@ -14,48 +14,48 @@ export const StatsBar: React.FC<StatsBarProps> = ({ farms }) => {
     : '0.0';
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-      <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-        <div className="flex items-center gap-2 text-slate-500 text-xs font-medium mb-1">
-          <Award className="w-4 h-4 text-emerald-600" />
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
+      <div className="bg-[#0e2619] p-3 rounded-2xl border border-[#1c442c] shadow-md text-white">
+        <div className="flex items-center gap-1.5 text-[#83A893] text-xs font-medium mb-0.5">
+          <Award className="w-3.5 h-3.5 text-[#E5A93C]" />
           <span>ฟาร์มในระบบ</span>
         </div>
-        <div className="text-xl font-bold text-slate-800 tabular-nums">
+        <div className="text-lg sm:text-xl font-bold text-white tabular-nums">
           {farms.length}{' '}
-          <span className="text-xs font-normal text-slate-400">แห่ง</span>
+          <span className="text-xs font-normal text-[#83A893]">แห่ง</span>
         </div>
       </div>
 
-      <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-        <div className="flex items-center gap-2 text-slate-500 text-xs font-medium mb-1">
-          <Trees className="w-4 h-4 text-emerald-600" />
+      <div className="bg-[#0e2619] p-3 rounded-2xl border border-[#1c442c] shadow-md text-white">
+        <div className="flex items-center gap-1.5 text-[#83A893] text-xs font-medium mb-0.5">
+          <Trees className="w-3.5 h-3.5 text-[#E5A93C]" />
           <span>ต้นทุเรียนทั้งหมด</span>
         </div>
-        <div className="text-xl font-bold text-slate-800 tabular-nums">
+        <div className="text-lg sm:text-xl font-bold text-white tabular-nums">
           {totalTrees.toLocaleString()}{' '}
-          <span className="text-xs font-normal text-slate-400">ต้น</span>
+          <span className="text-xs font-normal text-[#83A893]">ต้น</span>
         </div>
       </div>
 
-      <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-        <div className="flex items-center gap-2 text-slate-500 text-xs font-medium mb-1">
-          <Sprout className="w-4 h-4 text-amber-600" />
+      <div className="bg-[#0e2619] p-3 rounded-2xl border border-[#1c442c] shadow-md text-white">
+        <div className="flex items-center gap-1.5 text-[#83A893] text-xs font-medium mb-0.5">
+          <Sprout className="w-3.5 h-3.5 text-[#E5A93C]" />
           <span>ผลผลิตที่เก็บเกี่ยว</span>
         </div>
-        <div className="text-xl font-bold text-slate-800 tabular-nums">
+        <div className="text-lg sm:text-xl font-bold text-white tabular-nums">
           {totalHarvested.toLocaleString()}{' '}
-          <span className="text-xs font-normal text-slate-400">ลูก</span>
+          <span className="text-xs font-normal text-[#83A893]">ลูก</span>
         </div>
       </div>
 
-      <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-        <div className="flex items-center gap-2 text-slate-500 text-xs font-medium mb-1">
-          <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+      <div className="bg-[#0e2619] p-3 rounded-2xl border border-[#1c442c] shadow-md text-white">
+        <div className="flex items-center gap-1.5 text-[#83A893] text-xs font-medium mb-0.5">
+          <Star className="w-3.5 h-3.5 text-[#E5A93C] fill-[#E5A93C]" />
           <span>คะแนนเฉลี่ย</span>
         </div>
-        <div className="text-xl font-bold text-slate-800 tabular-nums">
+        <div className="text-lg sm:text-xl font-bold text-white tabular-nums">
           {avgRating}{' '}
-          <span className="text-xs font-normal text-slate-400">/10 ดาว</span>
+          <span className="text-xs font-normal text-[#83A893]">/10 ดาว</span>
         </div>
       </div>
     </div>

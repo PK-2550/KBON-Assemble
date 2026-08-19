@@ -1,9 +1,40 @@
 @import "tailwindcss";
 
 @layer base {
-  body {
+  html, body {
     font-family: 'Prompt', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #fcfdfd;
-    color: #1f2937;
+    background-color: #07190f;
+    color: #f3f6f4;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 }
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07190f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1c442c;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2a5a3c;
+}
+
+/* Custom utility to hide scrollbars while allowing scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Trees, Sparkles } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { DurianFarm } from '../types';
 import { FarmLogo } from './FarmLogo';
 
@@ -16,73 +16,65 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
     <div
       onClick={() => onSelectFarm(farm)}
       id={`farm-item-${farm.id}`}
-      className="group flex items-center justify-between py-3.5 px-3 rounded-xl hover:bg-emerald-50/50 cursor-pointer transition-all duration-150 border-b border-slate-100/90 last:border-b-0"
+      className="group flex items-center justify-between py-3.5 px-3.5 sm:px-5 hover:bg-[#143523] cursor-pointer transition-colors border-b border-[#1c442c] last:border-b-0"
     >
-      {/* Left side: Rank + Logo + Name & Subtitle */}
+      {/* Left side: Rank Number + Logo + Name & Subtitle */}
       <div className="flex items-center gap-3 min-w-0 pr-2">
-        {/* Rank Number */}
-        <span className="w-6 text-center text-sm font-semibold text-slate-400 group-hover:text-emerald-700 shrink-0 tabular-nums">
-          {currentRank}
+        {/* Rank Number (1, 2, 3...) */}
+        <span className={`w-5 sm:w-6 text-center text-xs sm:text-sm font-bold shrink-0 tabular-nums ${
+          currentRank <= 3 ? 'text-[#E5A93C]' : 'text-[#83A893]'
+        }`}>
+          {currentRank <= 3 ? `👑 ${currentRank}` : currentRank}
         </span>
 
-        {/* Farm Logo */}
-        <FarmLogo
-          name={farm.name}
-          rank={farm.rank}
-          bgColor={farm.logoBgColor}
-          textColor={farm.logoTextColor}
-        />
+        {/* Square Farm Logo */}
+        <div className="shrink-0">
+          <FarmLogo
+            name={farm.name}
+            rank={farm.rank}
+            bgColor={farm.logoBgColor}
+            textColor={farm.logoTextColor}
+          />
+        </div>
 
-        {/* Farm Name & Info */}
+        {/* Farm Name & Subtitle (สายพันธุ์ / จังหวัด) */}
         <div className="min-w-0 flex flex-col">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <h3 className="font-semibold text-[15px] text-slate-800 group-hover:text-emerald-800 tracking-tight truncate">
+            <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#E5A93C] tracking-tight truncate max-w-[140px] sm:max-w-[240px] transition-colors">
               {farm.name}
             </h3>
             {farm.certifications?.includes('GI') && (
-              <span className="inline-flex items-center px-1.5 py-0.2 text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-sm">
-                GI แท้
+              <span className="inline-flex items-center px-1.5 py-0.2 text-[9px] font-bold bg-[#E5A93C]/20 text-[#F5D280] border border-[#E5A93C]/40 rounded-sm">
+                GI
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-            <span className="flex items-center gap-1 text-slate-600">
-              <span className="inline-block w-3.5 text-center">🇹🇭</span>
-              <span className="font-medium text-slate-700">{farm.province}</span>
+          <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-[#83A893] mt-0.5">
+            <span className="inline-block">🇹🇭</span>
+            <span className="font-medium text-[#c8dcd0]">
+              {farm.varietiesCount || farm.topVarieties?.length || 4} สายพันธุ์
             </span>
-            <span className="text-slate-300">•</span>
-            <span className="truncate text-slate-500">
-              {farm.varietiesCount} สายพันธุ์ ({farm.topVarieties.slice(0, 2).join(', ')})
-            </span>
+            <span className="text-[#1c442c]">•</span>
+            <span className="text-[#83A893] truncate">{farm.province}</span>
           </div>
         </div>
       </div>
 
-      {/* Right side: Trees count + Harvest count + Star rating */}
-      <div className="flex items-center gap-4 sm:gap-6 shrink-0 text-right pl-2">
-        {/* จำนวนต้นทุเรียน (Trees / Diaries) */}
-        <div className="flex flex-col items-end">
-          <div className="flex items-center gap-1 text-slate-700 font-semibold text-sm">
-            <Trees className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="tabular-nums">{farm.totalTrees.toLocaleString()}</span>
-          </div>
-          <span className="text-[11px] text-slate-400 font-normal">ต้นทุเรียน</span>
+      {/* Right side: Star Rating (8.8 /10) + Harvests Count (2,873 ผลผลิต) */}
+      <div className="flex flex-col items-end shrink-0 text-right pl-2 min-w-[80px] sm:min-w-[100px]">
+        {/* Rating ★ 9.8 /10 */}
+        <div className="flex items-center gap-1">
+          <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#E5A93C] fill-[#E5A93C]" />
+          <span className="font-extrabold text-white text-xs sm:text-sm tabular-nums">
+            {farm.rating.toFixed(1)}{' '}
+            <span className="text-[#83A893] font-normal text-[10px] sm:text-xs">/10</span>
+          </span>
         </div>
 
-        {/* รีวิวดาว + จำนวนลูกที่เก็บเกี่ยว (Rating & Harvests) */}
-        <div className="flex flex-col items-end min-w-[76px]">
-          <div className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-            <span className="font-bold text-slate-800 text-sm tabular-nums">
-              {farm.rating.toFixed(1)}
-              <span className="text-slate-400 font-normal text-xs">/10</span>
-            </span>
-          </div>
-          <div className="text-[11px] text-slate-500 font-medium tabular-nums mt-0.5">
-            {farm.harvestedFruits.toLocaleString()}{' '}
-            <span className="text-slate-400 font-normal">ลูก</span>
-          </div>
+        {/* Harvest count */}
+        <div className="text-[10px] sm:text-[11px] text-[#83A893] font-normal tabular-nums mt-0.5">
+          {farm.harvestedFruits.toLocaleString()} ผลผลิต
         </div>
       </div>
     </div>

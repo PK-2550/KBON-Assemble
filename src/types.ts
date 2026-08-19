@@ -99,6 +99,29 @@ export interface DurianFarm {
   photos?: string[];
   treeVarieties?: FruitTreeVariety[];
   individualTrees?: IndividualTree[]; // รายชื่อแต่ละต้นอย่างละเอียดพร้อมรหัส
+  smartTechnologies?: SmartTechItem[];
+}
+
+export interface SmartTechItem {
+  id: string;
+  name: string;
+  subtext: string;
+  iconEmoji: string;
+  active: boolean;
 }
 
 export type SortField = 'harvested' | 'trees' | 'rating' | 'rank' | 'name';
+
+export type UserRole = 'user' | 'admin'; // 'user' = โหมดผู้บริโภค (Consumer Flow), 'admin' = โหมดเจ้าของสวน/แอดมิน (Admin Flow)
+
+export interface NfcScannedFruit {
+  tagId: string; // e.g. "NFC Tag: #VK-MT01-F042"
+  treeCode: string; // e.g. "VK-MT-001"
+  treeName: string; // e.g. "หมอนทองภูเขาไฟ ต้นแม่พันธุ์ A1"
+  farmName: string; // e.g. "สวนทุเรียนภูเขาไฟ ลุงดำ"
+  variety: string;
+  weightKg: number;
+  harvestDate: string;
+  sweetnessBrix?: number;
+  verified: boolean;
+}

@@ -1,0 +1,129 @@
+{
+  "entities": {
+    "Farm": {
+      "title": "Farm",
+      "description": "Durian farm entity including location, certificates, social contacts, and production stats.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "nameEn": { "type": "string", "maxLength": 200 },
+        "province": { "type": "string", "maxLength": 100 },
+        "totalTrees": { "type": "number" },
+        "harvestedFruits": { "type": "number" },
+        "rank": { "type": "number" },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" },
+        "topVarieties": { "type": "array" },
+        "logoUrl": { "type": "string", "maxLength": 1000 },
+        "photos": { "type": "array" },
+        "phone": { "type": "string", "maxLength": 50 },
+        "facebook": { "type": "string", "maxLength": 200 },
+        "instagram": { "type": "string", "maxLength": 200 },
+        "lineId": { "type": "string", "maxLength": 100 },
+        "gapCertificateNo": { "type": "string", "maxLength": 100 },
+        "giCertified": { "type": "boolean" },
+        "gpaCertified": { "type": "boolean" },
+        "organicCertified": { "type": "boolean" },
+        "story": { "type": "string", "maxLength": 5000 },
+        "createdAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["name", "province"]
+    },
+    "Tree": {
+      "title": "Tree",
+      "description": "Individual durian tree entity with passport metrics and logs.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 50 },
+        "name": { "type": "string", "maxLength": 200 },
+        "farmId": { "type": "string", "maxLength": 128 },
+        "variety": { "type": "string", "maxLength": 100 },
+        "zone": { "type": "string", "maxLength": 100 },
+        "ageYears": { "type": "number" },
+        "plantedDate": { "type": "string", "maxLength": 100 },
+        "heightMeters": { "type": "number" },
+        "healthStatus": { "type": "string", "maxLength": 100 },
+        "brixSweetness": { "type": "number" },
+        "yieldFruitCount": { "type": "number" },
+        "yieldWeightKg": { "type": "number" },
+        "diariesCount": { "type": "number" },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" },
+        "propagationCode": { "type": "string", "maxLength": 20 },
+        "companionPlants": { "type": "array" },
+        "notes": { "type": "string", "maxLength": 2000 }
+      },
+      "required": ["code", "name", "farmId"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Durian tree review submitted with verified NFC tag or admin entry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "treeCode": { "type": "string", "maxLength": 50 },
+        "farmId": { "type": "string", "maxLength": 128 },
+        "authorName": { "type": "string", "maxLength": 100 },
+        "rating": { "type": "number" },
+        "comment": { "type": "string", "maxLength": 2000 },
+        "nfcTag": { "type": "string", "maxLength": 100 },
+        "isNfcVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["treeCode", "authorName", "comment"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with display name, email, role, and preferences.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 200 },
+        "email": { "type": "string", "maxLength": 200 },
+        "photoURL": { "type": "string", "maxLength": 1000 },
+        "role": { "type": "string", "maxLength": 20 },
+        "provider": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["uid", "email"]
+    },
+    "Account": {
+      "title": "Account",
+      "description": "Username credentials and account record.",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string", "maxLength": 100 },
+        "usernameLower": { "type": "string", "maxLength": 100 },
+        "passwordHash": { "type": "string", "maxLength": 256 },
+        "uid": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["usernameLower", "passwordHash"]
+    }
+  },
+  "firestore": {
+    "/accounts/{usernameId}": {
+      "schema": "Account",
+      "description": "Username and hashed credentials index."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User account profiles and role configuration."
+    },
+    "/farms/{farmId}": {
+      "schema": "Farm",
+      "description": "Public directory of durian farms."
+    },
+    "/trees/{treeId}": {
+      "schema": "Tree",
+      "description": "Individual tree passports and traceability data."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Customer reviews and NFC verified tasting notes."
+    }
+  }
+}
