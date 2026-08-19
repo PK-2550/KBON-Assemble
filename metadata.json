@@ -1,0 +1,6 @@
+{
+  "name": "ทำเนียบฟาร์มทุเรียน (Durian Farm Directory)",
+  "description": "รายชื่อและอันดับฟาร์มทุเรียน พร้อมรีวิวดาว จำนวนต้นทุเรียน และจำนวนลูกทุเรียนที่เก็บเกี่ยว",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
