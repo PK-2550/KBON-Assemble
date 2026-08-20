@@ -221,16 +221,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
 
         {/* Error & Success Alerts */}
         {errorMsg && (
-          <div className="mb-2 p-1.5 bg-red-950/70 border border-red-800/80 rounded-lg text-red-300 text-[10px] flex items-start gap-1 animate-in fade-in">
-            <AlertCircle className="w-3 h-3 shrink-0 mt-0.5 text-red-400" />
-            <span>{errorMsg}</span>
+          <div className="mb-2.5 p-2 bg-red-950/90 border border-red-500/80 rounded-xl text-red-200 text-xs flex items-center gap-2 shadow-lg shadow-red-950/50 animate-bounce-short">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+            <span className="font-medium leading-tight">{errorMsg}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-2 p-1.5 bg-[#0e311f] border border-[#1e5236] rounded-lg text-[#E5A93C] text-[10px] flex items-start gap-1 animate-in fade-in">
-            <CheckCircle2 className="w-3 h-3 shrink-0 mt-0.5 text-[#E5A93C]" />
-            <span>{successMsg}</span>
+          <div className="mb-2.5 p-2 bg-[#0e311f] border border-[#22c55e] rounded-xl text-emerald-300 text-xs flex items-center gap-2 shadow-lg animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-[#22c55e]" />
+            <span className="font-medium leading-tight">{successMsg}</span>
           </div>
         )}
 

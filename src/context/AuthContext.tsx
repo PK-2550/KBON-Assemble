@@ -66,36 +66,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithGoogle = async (role: UserRole = 'user') => {
-    setLoading(true);
-    try {
-      const profile = await authLoginWithGoogle(role);
-      setCurrentUser(profile);
-      return profile;
-    } finally {
-      setLoading(false);
-    }
+    const profile = await authLoginWithGoogle(role);
+    setCurrentUser(profile);
+    return profile;
   };
 
   const signInWithUsername = async (username: string, pass: string) => {
-    setLoading(true);
-    try {
-      const profile = await authLoginWithUsername(username, pass);
-      setCurrentUser(profile);
-      return profile;
-    } finally {
-      setLoading(false);
-    }
+    const profile = await authLoginWithUsername(username, pass);
+    setCurrentUser(profile);
+    return profile;
   };
 
   const registerWithUsername = async (username: string, pass: string, role: UserRole = 'user') => {
-    setLoading(true);
-    try {
-      const profile = await authRegisterWithUsername(username, pass, role);
-      // Do not set currentUser so user goes to login screen
-      return profile;
-    } finally {
-      setLoading(false);
-    }
+    const profile = await authRegisterWithUsername(username, pass, role);
+    // Do not set currentUser so user stays on login screen
+    return profile;
   };
 
   const signOutUser = async () => {
