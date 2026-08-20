@@ -81,8 +81,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
     }
 
     if (isRegisterMode) {
-      if (!passwordSecurity.isValid) {
-        setErrorMsg('รหัสผ่านยังไม่ผ่านเกณฑ์ความปลอดภัยมาตรฐาน (ต้องมี 8 ตัวอักษร, พิมพ์ใหญ่, พิมพ์เล็ก และตัวเลข)');
+      if (password.length < 6) {
+        setErrorMsg('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษรขึ้นไป');
         return;
       }
       if (password !== confirmPassword) {

@@ -2,6 +2,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut as firebaseSignOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -27,6 +30,19 @@ const LOCAL_STORAGE_SESSION_KEY = 'duritrack_user_session';
 const LOCAL_STORAGE_ACCOUNTS_KEY = 'duritrack_local_accounts';
 
 /**
+ * Format username into a standard Firebase Auth email format
+ */
+export function usernameToEmail(username: string): string {
+  const clean = username.trim().toLowerCase();
+  if (clean.includes('@')) {
+    return clean;
+  }
+  // Convert alphanumeric or Thai username into valid auth email
+  const safeUser = clean.replace(/[^a-z0-9._-]/g, (c) => `_${c.charCodeAt(0)}_`);
+  return `${safeUser || 'user_' + Date.now()}@duritrack.auth`;
+}
+
+/**
  * SHA-256 Hash helper using native Web Crypto API
  */
 export async function hashPassword(password: string): Promise<string> {
@@ -41,7 +57,6 @@ export async function hashPassword(password: string): Promise<string> {
  */
 export function normalizeUsernameKey(username: string): string {
   const trimmed = username.trim().toLowerCase();
-  // Safe document ID
   const hex = Array.from(trimmed)
     .map((c) => c.charCodeAt(0).toString(16).padStart(4, '0'))
     .join('');
@@ -84,7 +99,7 @@ export function clearUserSession(): void {
 }
 
 /**
- * Register with Username and Password (persisted in Firestore /accounts & /users)
+ * Register with Username and Password (Firebase Auth + Firestore /accounts & /users)
  */
 export async function registerWithUsername(
   username: string,
@@ -98,12 +113,36 @@ export async function registerWithUsername(
   if (cleanUsername.length < 3) {
     throw new Error('ชื่อผู้ใช้งานต้องมีความยาวอย่างน้อย 3 ตัวอักษร');
   }
+  if (pass.length < 6) {
+    throw new Error('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษรขึ้นไป');
+  }
 
   const accountDocKey = normalizeUsernameKey(cleanUsername);
+  const authEmail = usernameToEmail(cleanUsername);
   const passwordHash = await hashPassword(pass);
-  const uid = 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+  let uid = 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
 
-  // 1. Check if username already exists in Firestore
+  // 1. Try Firebase Authentication createUserWithEmailAndPassword first
+  let fbUser: FirebaseUser | null = null;
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, authEmail, pass);
+    fbUser = userCredential.user;
+    uid = fbUser.uid;
+    // Set display name in Firebase Auth
+    try {
+      await updateProfile(fbUser, { displayName: cleanUsername });
+    } catch {
+      // Non-blocking
+    }
+  } catch (err: any) {
+    const code = err?.code;
+    if (code === 'auth/email-already-in-use') {
+      throw new Error('ชื่อผู้ใช้งานหรืออีเมลนี้ถูกลงทะเบียนไว้แล้ว กรุณาเข้าสู่ระบบ');
+    }
+    console.warn('Firebase Auth direct registration fallback to Firestore:', err);
+  }
+
+  // 2. Check if username already exists in Firestore /accounts
   try {
     const accountRef = doc(db, 'accounts', accountDocKey);
     const snap = await getDoc(accountRef);
@@ -114,17 +153,12 @@ export async function registerWithUsername(
     if (err.message && err.message.includes('ถูกลงทะเบียนไว้แล้ว')) {
       throw err;
     }
-    // Check localStorage fallback
-    const localAccounts = JSON.parse(localStorage.getItem(LOCAL_STORAGE_ACCOUNTS_KEY) || '{}');
-    if (localAccounts[accountDocKey]) {
-      throw new Error('ชื่อผู้ใช้งาน (Username) นี้ถูกลงทะเบียนไว้แล้ว กรุณาเลือกชื่ออื่น หรือเข้าสู่ระบบ');
-    }
   }
 
   const profile: AppUserProfile = {
     uid,
     username: cleanUsername,
-    email: null,
+    email: cleanUsername.includes('@') ? cleanUsername : null,
     displayName: cleanUsername,
     photoURL: null,
     role,
@@ -136,6 +170,7 @@ export async function registerWithUsername(
   const accountData = {
     username: cleanUsername,
     usernameLower: cleanUsername.toLowerCase(),
+    authEmail,
     passwordHash,
     uid,
     role,
@@ -143,7 +178,7 @@ export async function registerWithUsername(
     lastLoginAt: new Date().toISOString(),
   };
 
-  // 2. Save in Firestore /accounts/{accountDocKey} and /users/{uid}
+  // 3. Save in Firestore /accounts/{accountDocKey} and /users/{uid}
   try {
     await setDoc(doc(db, 'accounts', accountDocKey), accountData);
     await setDoc(doc(db, 'users', uid), profile);
@@ -151,7 +186,7 @@ export async function registerWithUsername(
     console.warn('Firestore write failed, saving to local accounts store fallback:', err);
   }
 
-  // 3. Save in localStorage accounts registry for offline fallback
+  // 4. Save in localStorage accounts registry for offline fallback
   try {
     const localAccounts = JSON.parse(localStorage.getItem(LOCAL_STORAGE_ACCOUNTS_KEY) || '{}');
     localAccounts[accountDocKey] = accountData;
@@ -160,13 +195,13 @@ export async function registerWithUsername(
     console.error('LocalStorage write failed:', err);
   }
 
-  // 4. Save active session
+  // 5. Save active session
   saveUserSession(profile);
   return profile;
 }
 
 /**
- * Sign in with Username and Password
+ * Sign in with Username and Password (Firebase Auth + Firestore /accounts fallback)
  */
 export async function loginWithUsername(username: string, pass: string): Promise<AppUserProfile> {
   const cleanUsername = username.trim();
@@ -177,12 +212,33 @@ export async function loginWithUsername(username: string, pass: string): Promise
     throw new Error('กรุณากรอกรหัสผ่าน (Password)');
   }
 
+  const authEmail = usernameToEmail(cleanUsername);
   const accountDocKey = normalizeUsernameKey(cleanUsername);
   const inputHash = await hashPassword(pass);
 
-  let accountData: any = null;
+  // 1. Try Firebase Auth signInWithEmailAndPassword
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, authEmail, pass);
+    const fbUser = userCredential.user;
+    const profile: AppUserProfile = {
+      uid: fbUser.uid,
+      username: fbUser.displayName || cleanUsername,
+      email: cleanUsername.includes('@') ? cleanUsername : null,
+      displayName: fbUser.displayName || cleanUsername,
+      photoURL: fbUser.photoURL || null,
+      role: 'user',
+      provider: 'username',
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+    };
+    saveUserSession(profile);
+    return profile;
+  } catch (authErr: any) {
+    console.warn('Firebase Auth login attempt failed, trying Firestore account lookup:', authErr);
+  }
 
-  // 1. Try to read from Firestore /accounts/{accountDocKey}
+  // 2. Fallback: Try to read from Firestore /accounts/{accountDocKey}
+  let accountData: any = null;
   try {
     const accountRef = doc(db, 'accounts', accountDocKey);
     const snap = await getDoc(accountRef);
@@ -193,7 +249,7 @@ export async function loginWithUsername(username: string, pass: string): Promise
     console.warn('Could not read from Firestore, trying local cache:', err);
   }
 
-  // 2. If not found in Firestore or offline, check localStorage fallback
+  // 3. If not found in Firestore, check localStorage fallback
   if (!accountData) {
     try {
       const localAccounts = JSON.parse(localStorage.getItem(LOCAL_STORAGE_ACCOUNTS_KEY) || '{}');
@@ -205,21 +261,21 @@ export async function loginWithUsername(username: string, pass: string): Promise
     }
   }
 
-  // 3. If account still not found
+  // 4. If account still not found
   if (!accountData) {
-    throw new Error('ไม่พบชื่อผู้ใช้งานนี้ในระบบ กรุณาตรวจสอบหรือสมัครสมาชิกใหม่');
+    throw new Error('ไม่พบชื่อผู้ใช้งานนี้ในระบบ หากยังไม่มีบัญชีกรุณาคลิกแท็บ "สมัครสมาชิก (Register)" เพื่อสร้างบัญชีก่อน');
   }
 
-  // 4. Validate password hash
+  // 5. Validate password hash
   if (accountData.passwordHash !== inputHash) {
     throw new Error('รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
   }
 
-  // 5. Build user profile
+  // 6. Build user profile
   const profile: AppUserProfile = {
     uid: accountData.uid || 'usr_' + Date.now(),
     username: accountData.username || cleanUsername,
-    email: null,
+    email: cleanUsername.includes('@') ? cleanUsername : null,
     displayName: accountData.username || cleanUsername,
     photoURL: null,
     role: accountData.role || 'user',
@@ -236,7 +292,7 @@ export async function loginWithUsername(username: string, pass: string): Promise
     // Ignore async touch error
   }
 
-  // 6. Save active session
+  // 7. Save active session
   saveUserSession(profile);
   return profile;
 }
@@ -284,7 +340,7 @@ export async function logout(): Promise<void> {
 }
 
 /**
- * Password Security Validator (Industry Standard: 8+ chars, upper, lower, number, special char)
+ * Password Security Validator (Accessible 6+ chars, with strength level indicator)
  */
 export function validatePasswordSecurity(password: string): {
   isValid: boolean;
@@ -294,32 +350,26 @@ export function validatePasswordSecurity(password: string): {
   const feedback: string[] = [];
   let score = 0;
 
+  if (password.length >= 6) {
+    score += 1;
+  } else {
+    feedback.push('ความยาวอย่างน้อย 6 ตัวอักษร');
+  }
+
   if (password.length >= 8) {
     score += 1;
-  } else {
-    feedback.push('ความยาวอย่างน้อย 8 ตัวอักษร');
   }
 
-  if (/[A-Z]/.test(password)) {
+  if (/[A-Z]/.test(password) || /[a-z]/.test(password)) {
     score += 1;
-  } else {
-    feedback.push('ต้องมีตัวพิมพ์ใหญ่ (A-Z) อย่างน้อย 1 ตัว');
-  }
-
-  if (/[a-z]/.test(password)) {
-    score += 1;
-  } else {
-    feedback.push('ต้องมีตัวพิมพ์เล็ก (a-z) อย่างน้อย 1 ตัว');
   }
 
   if (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password)) {
     score += 1;
-  } else {
-    feedback.push('ต้องมีตัวเลข (0-9) หรือสัญลักษณ์พิเศษ');
   }
 
   return {
-    isValid: score === 4,
+    isValid: password.length >= 6,
     score,
     feedback,
   };
@@ -341,9 +391,11 @@ export function formatAuthErrorMessage(error: any): string {
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      return 'ชื่อผู้ใช้งาน (Username) หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+      return 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
     case 'auth/email-already-in-use':
-      return 'ชื่อผู้ใช้งาน (Username) นี้ถูกลงทะเบียนไว้แล้ว กรุณาเลือกชื่ออื่น หรือเข้าสู่ระบบ';
+      return 'ชื่อผู้ใช้งานหรืออีเมลนี้ถูกลงทะเบียนไว้แล้ว กรุณาเข้าสู่ระบบ';
+    case 'auth/operation-not-allowed':
+      return 'ระบบ Email/Password ยังไม่ได้เปิดใช้งานใน Firebase Console (กำลังใช้ระบบ Username ภายใน)';
     case 'auth/weak-password':
       return 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษรขึ้นไป';
     case 'auth/popup-closed-by-user':
