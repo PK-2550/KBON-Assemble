@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const profile = await authRegisterWithUsername(username, pass, role);
-      setCurrentUser(profile);
+      // Do not set currentUser so user goes to login screen
       return profile;
     } finally {
       setLoading(false);

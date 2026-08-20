@@ -195,8 +195,13 @@ export async function registerWithUsername(
     console.error('LocalStorage write failed:', err);
   }
 
-  // 5. Save active session
-  saveUserSession(profile);
+  // 5. Explicitly sign out of Firebase Auth so registering doesn't automatically log the user in
+  try {
+    await firebaseSignOut(auth);
+  } catch {
+    // Non-blocking
+  }
+
   return profile;
 }
 
@@ -263,12 +268,12 @@ export async function loginWithUsername(username: string, pass: string): Promise
 
   // 4. If account still not found
   if (!accountData) {
-    throw new Error('ไม่พบชื่อผู้ใช้งานนี้ในระบบ หากยังไม่มีบัญชีกรุณาคลิกแท็บ "สมัครสมาชิก (Register)" เพื่อสร้างบัญชีก่อน');
+    throw new Error('ชื่อผู้ใช้งาน (User) หรือรหัสผ่าน (Password) ไม่ถูกต้อง อาจมีการกรอกผิด กรุณาตรวจสอบอีกครั้ง');
   }
 
   // 5. Validate password hash
   if (accountData.passwordHash !== inputHash) {
-    throw new Error('รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
+    throw new Error('ชื่อผู้ใช้งาน (User) หรือรหัสผ่าน (Password) ไม่ถูกต้อง อาจมีการกรอกผิด กรุณาตรวจสอบอีกครั้ง');
   }
 
   // 6. Build user profile
@@ -391,7 +396,7 @@ export function formatAuthErrorMessage(error: any): string {
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      return 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
+      return 'ชื่อผู้ใช้งาน (User) หรือรหัสผ่าน (Password) ไม่ถูกต้อง อาจมีการกรอกผิด กรุณาตรวจสอบอีกครั้ง';
     case 'auth/email-already-in-use':
       return 'ชื่อผู้ใช้งานหรืออีเมลนี้ถูกลงทะเบียนไว้แล้ว กรุณาเข้าสู่ระบบ';
     case 'auth/operation-not-allowed':

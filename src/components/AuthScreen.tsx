@@ -97,7 +97,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
       setIsSubmitting(true);
       try {
         await registerWithUsername(cleanUser, password, 'user');
-        setSuccessMsg('สร้างบัญชีผู้ใช้งานสำเร็จ กำลังนำเข้าสู่ระบบ...');
+        setSuccessMsg(`สร้างบัญชี "${cleanUser}" สำเร็จเรียบร้อย! กรุณาเข้าสู่ระบบ`);
+        setPassword('');
+        setConfirmPassword('');
+        // Switch to login mode
+        setIsRegisterMode(false);
       } catch (err: any) {
         setErrorMsg(formatAuthErrorMessage(err));
       } finally {
