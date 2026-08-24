@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: duritrack-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: duritrack
+      POSTGRES_PASSWORD: duritrack_dev_password
+      POSTGRES_DB: duritrack
+      # ให้ collation รองรับการเรียงภาษาไทยได้ถูกต้อง
+      LANG: th_TH.utf8
+    ports:
+      # ใช้ 5433 ฝั่ง host กัน port ชนกับ Postgres ตัวอื่นที่อาจติดตั้งไว้ในเครื่อง
+      - '5433:5432'
+    volumes:
+      - duritrack_pgdata:/var/lib/postgresql/data
+      # ไฟล์ใน initdb.d จะถูกรันอัตโนมัติ "เฉพาะตอนสร้าง volume ครั้งแรก" เท่านั้น
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U duritrack -d duritrack']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  duritrack_pgdata:

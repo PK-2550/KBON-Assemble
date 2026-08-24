@@ -1,105 +1,113 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
 import {
   AppUserProfile,
-  loginWithGoogle as authLoginWithGoogle,
-  loginWithUsername as authLoginWithUsername,
-  registerWithUsername as authRegisterWithUsername,
-  logout as authLogout,
-  getStoredUserSession,
-  saveUserSession,
-} from '../services/authService';
+  fetchCurrentUser,
+  loginWithUsername as apiLogin,
+  registerWithUsername as apiRegister,
+  logout as apiLogout,
+  getPreferredRole,
+  setPreferredRole,
+} from '../services/userService';
 import { UserRole } from '../types';
 
 interface AuthContextType {
   currentUser: AppUserProfile | null;
   userProfile: AppUserProfile | null;
   loading: boolean;
-  signInWithGoogle: (role?: UserRole) => Promise<AppUserProfile>;
+  /** โหมดที่กำลังดูอยู่ -- ไม่ใช่สิทธิ์จริง สิทธิ์จริงอยู่ที่ currentUser.role */
+  roleMode: UserRole;
+  /** เป็นแอดมินจริงหรือไม่ ตัดสินจาก role ที่ server ส่งมาเท่านั้น */
+  isAdmin: boolean;
+  /** ติดต่อ server ไม่ได้ -- คนละเรื่องกับการยังไม่ได้ล็อกอิน */
+  connectionError: string | null;
+  retryConnection: () => void;
   signInWithUsername: (username: string, pass: string) => Promise<AppUserProfile>;
-  registerWithUsername: (username: string, pass: string, role?: UserRole) => Promise<AppUserProfile>;
+  registerWithUsername: (username: string, pass: string) => Promise<AppUserProfile>;
   signOutUser: () => Promise<void>;
-  updateUserRole: (role: UserRole) => Promise<void>;
+  setRoleMode: (role: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<AppUserProfile | null>(() => getStoredUserSession());
+  const [currentUser, setCurrentUser] = useState<AppUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roleMode, setRoleModeState] = useState<UserRole>('user');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
+  const isAdmin = currentUser?.role === 'admin';
+
+  /**
+   * ตอนเปิดแอปต้องถาม server ว่ามี session อยู่ไหม
+   *
+   * ของเดิมอ่านโปรไฟล์จาก localStorage ได้ทันทีโดยไม่ต้องถามใคร ซึ่งเร็วกว่า
+   * แต่แปลว่าใครก็แก้ localStorage ให้ตัวเองเป็น admin ได้
+   * ตอนนี้ token อยู่ใน httpOnly cookie ที่ JavaScript อ่านไม่ได้
+   * จึงต้องให้ server เป็นคนบอกว่าเราเป็นใคร
+   */
   useEffect(() => {
-    // 1. Initial check from stored local session
-    const saved = getStoredUserSession();
-    if (saved) {
-      setCurrentUser(saved);
-    }
+    let cancelled = false;
+    setLoading(true);
 
-    // 2. Also listen to Firebase Auth for Google Sign-in state
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        const googleProfile: AppUserProfile = {
-          uid: fbUser.uid,
-          username: fbUser.displayName || fbUser.email?.split('@')[0] || 'ผู้ใช้งาน Google',
-          email: fbUser.email,
-          displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'ผู้ใช้งาน Google',
-          photoURL: fbUser.photoURL || null,
-          role: 'user',
-          provider: 'google',
-        };
-        setCurrentUser(googleProfile);
-        saveUserSession(googleProfile);
-      } else {
-        // If Firebase Auth logged out and provider was Google, clear user
-        const current = getStoredUserSession();
-        if (current && current.provider === 'google') {
-          setCurrentUser(null);
-        }
-      }
-      setLoading(false);
-    });
+    fetchCurrentUser()
+      .then((profile) => {
+        if (cancelled) return;
+        setCurrentUser(profile);
+        setConnectionError(null);
+        // คืนค่าโหมดที่เคยเลือกไว้ แต่เฉพาะคนที่เป็นแอดมินจริงเท่านั้น
+        setRoleModeState(profile?.role === 'admin' ? getPreferredRole('user') : 'user');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setCurrentUser(null);
+        setConnectionError(
+          err instanceof Error ? err.message : 'ติดต่อเซิร์ฟเวอร์ไม่สำเร็จ'
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-    setLoading(false);
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [retryCount]);
 
-  const signInWithGoogle = async (role: UserRole = 'user') => {
-    const profile = await authLoginWithGoogle(role);
-    setCurrentUser(profile);
-    return profile;
-  };
+  const retryConnection = () => setRetryCount((n) => n + 1);
 
   const signInWithUsername = async (username: string, pass: string) => {
-    const profile = await authLoginWithUsername(username, pass);
+    const profile = await apiLogin(username, pass);
     setCurrentUser(profile);
+    setRoleModeState(profile.role === 'admin' ? getPreferredRole('user') : 'user');
     return profile;
   };
 
-  const registerWithUsername = async (username: string, pass: string, role: UserRole = 'user') => {
-    const profile = await authRegisterWithUsername(username, pass, role);
-    // Do not set currentUser so user stays on login screen
-    return profile;
+  const registerWithUsername = async (username: string, pass: string) => {
+    // ไม่ตั้ง currentUser เพื่อให้ผู้ใช้ยังอยู่ที่หน้าเข้าสู่ระบบ (พฤติกรรมเดิมของแอป)
+    return apiRegister(username, pass);
   };
 
   const signOutUser = async () => {
-    await authLogout();
-    setCurrentUser(null);
+    try {
+      await apiLogout();
+    } finally {
+      setCurrentUser(null);
+      setRoleModeState('user');
+    }
   };
 
-  const updateUserRole = async (newRole: UserRole) => {
-    if (!currentUser) return;
-    const updated: AppUserProfile = { ...currentUser, role: newRole };
-    setCurrentUser(updated);
-    saveUserSession(updated);
-
-    try {
-      const userRef = doc(db, 'users', currentUser.uid);
-      await setDoc(userRef, { role: newRole }, { merge: true });
-    } catch (err) {
-      console.warn('Failed to update role in Firestore:', err);
-    }
+  /**
+   * สลับโหมดการแสดงผล -- ไม่ได้เปลี่ยนสิทธิ์
+   *
+   * ของเดิมฟังก์ชันนี้เขียน role ลง Firestore ตรง ๆ จากเบราว์เซอร์
+   * ผู้ใช้ทั่วไปจึงตั้งตัวเองเป็นแอดมินได้ ตอนนี้เปลี่ยนได้แค่มุมมอง
+   * ส่วนสิทธิ์จริงต้องให้คนดูแลระบบรันคำสั่ง npm run make:admin
+   */
+  const setRoleMode = (role: UserRole) => {
+    if (!isAdmin && role === 'admin') return;
+    setRoleModeState(role);
+    setPreferredRole(role);
   };
 
   return (
@@ -108,11 +116,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser,
         userProfile: currentUser,
         loading,
-        signInWithGoogle,
+        roleMode,
+        isAdmin,
+        connectionError,
+        retryConnection,
         signInWithUsername,
         registerWithUsername,
         signOutUser,
-        updateUserRole,
+        setRoleMode,
       }}
     >
       {children}

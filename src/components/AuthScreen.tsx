@@ -12,14 +12,14 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { validatePasswordSecurity, formatAuthErrorMessage } from '../services/authService';
+import { validatePasswordSecurity, formatAuthErrorMessage } from '../services/userService';
 
 interface AuthScreenProps {
   onGuestAccess?: () => void;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
-  const { signInWithGoogle, signInWithUsername, registerWithUsername } = useAuth();
+  const { signInWithUsername, registerWithUsername } = useAuth();
 
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [username, setUsername] = useState('');
@@ -48,18 +48,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
     return 'รหัสผ่านปลอดภัยสูงมาก (Strong)';
   };
 
-  const handleGoogleLogin = async () => {
-    setErrorMsg('');
-    setIsSubmitting(true);
-    try {
-      await signInWithGoogle('user');
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(formatAuthErrorMessage(err));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +84,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
 
       setIsSubmitting(true);
       try {
-        await registerWithUsername(cleanUser, password, 'user');
+        await registerWithUsername(cleanUser, password);
         setSuccessMsg(`สร้างบัญชี "${cleanUser}" สำเร็จเรียบร้อย! กรุณาเข้าสู่ระบบ`);
         setPassword('');
         setConfirmPassword('');
@@ -146,12 +134,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
 
       {/* Main Glass / Luxury Dark Card */}
       <div className="w-full max-w-xs sm:max-w-sm relative z-10 bg-[#092215]/95 border border-[#18422b] backdrop-blur-md rounded-2xl p-3.5 shadow-2xl text-white">
-        {/* Google One-Click Login */}
+        {/* Google Sign-In -- ปิดไว้ก่อน ยังไม่ได้ทำ OAuth ในระบบใหม่
+            เก็บปุ่มไว้เพราะจะกลับมาต่อทีหลัง (users.provider และ password_hash
+            ที่เป็น NULL ได้ รองรับไว้ในตารางแล้ว) */}
         <button
           type="button"
-          onClick={handleGoogleLogin}
-          disabled={isSubmitting}
-          className="w-full py-2 px-3 bg-[#04140b] hover:bg-[#0e311f] border border-[#18422b] hover:border-[#1e5236] text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+          disabled
+          title="ยังไม่เปิดใช้งานในระบบใหม่"
+          className="w-full py-2 px-3 bg-[#04140b] border border-[#18422b] text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 opacity-40 cursor-not-allowed"
         >
           {/* Google Vector Icon */}
           <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
@@ -172,7 +162,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          <span className="text-xs">เข้าสู่ระบบด้วย Google</span>
+          <span className="text-xs">เข้าสู่ระบบด้วย Google (ยังไม่เปิดใช้งาน)</span>
         </button>
 
         {/* Divider */}
@@ -368,7 +358,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
 
         <div className="flex items-center justify-center gap-1 text-[#5d7c67] text-[9px]">
           <ShieldCheck className="w-3 h-3 text-[#E5A93C]" />
-          <span>มาตรฐานความปลอดภัย Firebase Firestore</span>
+          <span>เข้ารหัสรหัสผ่านด้วย bcrypt · PostgreSQL</span>
         </div>
       </div>
     </div>

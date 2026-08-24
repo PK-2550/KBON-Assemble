@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { INITIAL_DURIAN_FARMS } from './data/farms';
-import { DurianFarm, SortField, FruitTreeVariety, UserRole, NfcScannedFruit, IndividualTree } from './types';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { DurianFarm, SortField, FruitTreeVariety, NfcScannedFruit, IndividualTree } from './types';
 import { Navbar } from './components/Navbar';
 import { HeaderBar } from './components/HeaderBar';
 import { StatsBar } from './components/StatsBar';
@@ -18,14 +17,15 @@ import { TreeDetailModal } from './components/TreeDetailModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { AuthScreen } from './components/AuthScreen';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { subscribeFarms, saveFarmToFirestore, seedFarmsIfEmpty } from './services/firestoreService';
-import { Trees, Loader2, ArrowLeft } from 'lucide-react';
+import { fetchFarms, createFarm } from './services/farmService';
+import { Trees, Loader2, ArrowLeft, AlertCircle } from 'lucide-react';
 
 function MainAppContent() {
-  const { currentUser, userProfile, loading, updateUserRole } = useAuth();
+  const { currentUser, loading, roleMode, isAdmin, setRoleMode, connectionError, retryConnection } =
+    useAuth();
 
-  const [farms, setFarms] = useState<DurianFarm[]>(INITIAL_DURIAN_FARMS);
-  const [currentRole, setCurrentRole] = useState<UserRole>('user');
+  const [farms, setFarms] = useState<DurianFarm[]>([]);
+  const [farmsError, setFarmsError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'farms' | 'dashboard'>('farms');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,39 +37,26 @@ function MainAppContent() {
   const [activeScannedTree, setActiveScannedTree] = useState<{ tree: IndividualTree; farm: DurianFarm } | null>(null);
   const [isGuestPreview, setIsGuestPreview] = useState(false);
 
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.username?.toLowerCase() === 'admin';
-
-  // Sync role when user profile is loaded
-  useEffect(() => {
-    if (userProfile?.role) {
-      setCurrentRole(userProfile.role);
+  /**
+   * โหลดข้อมูลฟาร์มจาก API
+   *
+   * ของเดิมใช้ onSnapshot ของ Firestore ซึ่งอัปเดตให้เองแบบ realtime
+   * Postgres + REST ไม่มีของแบบนั้น จึงใช้วิธีโหลดตอนเปิดหน้า
+   * แล้วเรียกซ้ำหลังบันทึกข้อมูลแทน
+   */
+  const loadFarms = useCallback(async () => {
+    try {
+      const data = await fetchFarms();
+      setFarms(data);
+      setFarmsError(null);
+    } catch (err) {
+      setFarmsError(err instanceof Error ? err.message : 'โหลดข้อมูลฟาร์มไม่สำเร็จ');
     }
-  }, [userProfile]);
-
-  // Synchronize farms in real-time with Firebase Firestore kbon-pop-db
-  useEffect(() => {
-    seedFarmsIfEmpty().then((loadedFarms) => {
-      if (loadedFarms && loadedFarms.length > 0) {
-        setFarms(loadedFarms);
-      }
-    });
-
-    const unsubscribe = subscribeFarms((firestoreFarms) => {
-      if (firestoreFarms && firestoreFarms.length > 0) {
-        setFarms(firestoreFarms);
-      }
-    });
-
-    return () => unsubscribe();
   }, []);
 
-  // Handle role change
-  const handleRoleChange = (newRole: UserRole) => {
-    setCurrentRole(newRole);
-    if (currentUser) {
-      updateUserRole(newRole);
-    }
-  };
+  useEffect(() => {
+    loadFarms();
+  }, [loadFarms]);
 
   // Extract unique provinces list
   const provinces = useMemo(() => {
@@ -119,11 +106,14 @@ function MainAppContent() {
   }, [farms, searchQuery, selectedProvince, sortBy]);
 
   const handleAddFarm = async (newFarm: DurianFarm) => {
-    setFarms((prev) => [newFarm, ...prev]);
     try {
-      await saveFarmToFirestore(newFarm);
+      await createFarm(newFarm);
+      // ดึงข้อมูลใหม่ทั้งชุดแทนการ push เข้า state เอง
+      // จะได้เห็นค่าที่ server บันทึกจริง ไม่ใช่ค่าที่เราเดาไว้ฝั่งนี้
+      await loadFarms();
+      setFarmsError(null);
     } catch (err) {
-      console.error('Failed to save new farm to Firestore:', err);
+      setFarmsError(err instanceof Error ? err.message : 'บันทึกฟาร์มใหม่ไม่สำเร็จ');
     }
   };
 
@@ -146,7 +136,7 @@ function MainAppContent() {
     setActiveTab('farms');
   };
 
-  // If Firebase Auth is still initializing
+  // ระหว่างถาม server ว่ามี session อยู่ไหม
   if (loading) {
     return (
       <div className="min-h-screen bg-[#07190f] flex flex-col items-center justify-center text-[#83A893]">
@@ -157,6 +147,38 @@ function MainAppContent() {
         <span className="text-xs font-semibold tracking-wider text-[#83A893]">
           กำลังเตรียมระบบความปลอดภัยและการยืนยันตัวตน...
         </span>
+      </div>
+    );
+  }
+
+  /**
+   * ติดต่อเซิร์ฟเวอร์ไม่ได้ -- ต้องบอกให้ชัด ไม่ใช่โยนหน้า login ใส่
+   *
+   * ถ้าเด้งไปหน้าเข้าสู่ระบบ ผู้ใช้จะนึกว่าตัวเองหลุดจากระบบแล้วพยายามล็อกอินซ้ำ ๆ
+   * ทั้งที่ปัญหาจริงคือเซิร์ฟเวอร์ไม่ทำงาน
+   */
+  if (connectionError && !currentUser) {
+    return (
+      <div className="min-h-screen bg-[#07190f] flex flex-col items-center justify-center text-[#83A893] px-6 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-rose-950/60 border border-rose-800 flex items-center justify-center text-rose-400 mb-4 shadow-xl">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <h1 className="text-sm font-bold text-white mb-1.5">ติดต่อเซิร์ฟเวอร์ไม่ได้</h1>
+        <p className="text-xs text-[#83A893] max-w-xs leading-relaxed mb-1">{connectionError}</p>
+        <p className="text-[11px] text-[#5d7c67] max-w-xs leading-relaxed mb-4">
+          ตรวจว่าฐานข้อมูลทำงานอยู่ (docker compose up -d) แล้วสั่ง npm run dev อีกครั้ง
+        </p>
+        <button
+          onClick={() => {
+            // ลองใหม่ทั้งสองอย่างพร้อมกัน ไม่งั้นผู้ใช้ต้องกดสองรอบ
+            // (รอบแรกได้ session กลับมา แต่รายชื่อฟาร์มยังว่างอยู่)
+            retryConnection();
+            loadFarms();
+          }}
+          className="px-4 py-2 bg-[#E5A93C] hover:bg-[#d4992e] text-[#241603] text-xs font-bold rounded-xl cursor-pointer shadow-md"
+        >
+          ลองเชื่อมต่อใหม่
+        </button>
       </div>
     );
   }
@@ -172,8 +194,8 @@ function MainAppContent() {
       <Navbar
         activeTab={activeTab}
         onTabChange={handleTabChange}
-        currentRole={currentRole}
-        onRoleChange={handleRoleChange}
+        currentRole={roleMode}
+        onRoleChange={setRoleMode}
         onOpenNfcScanner={() => setIsGlobalNfcScannerOpen(true)}
       />
 
@@ -190,13 +212,29 @@ function MainAppContent() {
         </div>
       )}
 
+      {/* แจ้งเตือนเมื่อติดต่อเซิร์ฟเวอร์ไม่ได้ หรือบันทึกข้อมูลไม่สำเร็จ
+          เดิม Firestore ทำงานแบบ offline cache ได้ แอปเลยไม่เคยต้องบอกผู้ใช้ว่าต่อไม่ติด
+          พอเป็น API จริงแล้ว ถ้าเงียบไว้ผู้ใช้จะเห็นแค่หน้าว่างโดยไม่รู้สาเหตุ */}
+      {farmsError && (
+        <div className="bg-rose-950/60 border-b border-rose-800 px-3 py-2 flex items-center justify-center gap-2 text-xs font-semibold text-rose-200">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+          <span>{farmsError}</span>
+          <button
+            onClick={loadFarms}
+            className="underline text-rose-100 font-bold hover:text-white cursor-pointer ml-1"
+          >
+            ลองใหม่
+          </button>
+        </div>
+      )}
+
       {/* Main Content Area - Mobile-First centered container */}
       <main className="flex-1 px-3.5 py-3 max-w-md md:max-w-xl w-full mx-auto flex flex-col gap-3 pb-24">
         {/* If a Farm is selected, show the comprehensive FarmProfileView */}
         {selectedFarm ? (
           <FarmProfileView
             farm={selectedFarm}
-            currentRole={currentRole}
+            currentRole={roleMode}
             onBack={() => setSelectedFarm(null)}
             onSelectVariety={(variety: FruitTreeVariety) => {
               console.log('Selected variety:', variety.name);
@@ -219,12 +257,12 @@ function MainAppContent() {
                   viewMode={viewMode}
                   onViewModeChange={setViewMode}
                   onOpenAddModal={() => setIsAddModalOpen(true)}
-                  currentRole={currentRole}
+                  currentRole={roleMode}
                   onOpenNfcScanner={() => setIsGlobalNfcScannerOpen(true)}
                 />
 
                 {/* Quick Stats Summary Ribbon (Visible only for Admin Account) */}
-                {isAdmin && currentRole === 'admin' && (
+                {isAdmin && roleMode === 'admin' && (
                   <StatsBar farms={filteredAndSortedFarms} />
                 )}
 
@@ -234,7 +272,7 @@ function MainAppContent() {
                   viewMode={viewMode}
                   onSelectFarm={(farm) => setSelectedFarm(farm)}
                   onOpenAddModal={() => setIsAddModalOpen(true)}
-                  currentRole={currentRole}
+                  currentRole={roleMode}
                 />
               </>
             )}
@@ -272,15 +310,15 @@ function MainAppContent() {
       {/* Interface Footer with Database Status */}
       <footer className="hidden md:flex bg-white border-t border-slate-200 h-12 px-4 sm:px-8 items-center justify-between shrink-0">
         <span className="text-[11px] uppercase tracking-widest text-slate-400 font-bold">
-          DuriTrack Smart Agri-System v2.5 • {currentRole === 'user' ? 'โหมดผู้บริโภค (User Flow)' : 'โหมดผู้ดูแลระบบ (Admin Flow)'}
+          DuriTrack Smart Agri-System v2.5 • {roleMode === 'user' ? 'โหมดผู้บริโภค (User Flow)' : 'โหมดผู้ดูแลระบบ (Admin Flow)'}
         </span>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-xs text-slate-600 font-semibold flex items-center gap-1">
-              <span>Firebase Auth & Firestore:</span>
+              <span>PostgreSQL:</span>
               <span className="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-sm border border-emerald-200 text-[10px]">
-                kbon-pop-db
+                duritrack
               </span>
             </span>
           </div>
@@ -320,7 +358,7 @@ function MainAppContent() {
         <TreeDetailModal
           tree={activeScannedTree.tree}
           farm={activeScannedTree.farm}
-          currentRole={currentRole}
+          currentRole={roleMode}
           onClose={() => setActiveScannedTree(null)}
         />
       )}

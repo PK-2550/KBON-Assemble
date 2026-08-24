@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# ข้อมูลที่ dump ออกมาจาก Firestore มี password hash และอีเมลผู้ใช้จริง ห้ามขึ้น git
+backup/

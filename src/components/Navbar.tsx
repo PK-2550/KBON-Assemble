@@ -18,11 +18,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onRoleChange,
   onOpenNfcScanner,
 }) => {
-  const { currentUser, signOutUser } = useAuth();
+  // isAdmin มาจาก context ซึ่งดูจาก role ที่ server ส่งมาเท่านั้น
+  // ของเดิมเช็คเพิ่มว่า username เป็น 'admin' ด้วย แปลว่าใครก็ตามที่สมัคร
+  // ด้วยชื่อ "admin" จะได้เห็นเมนูแอดมินทันที จึงเอาเงื่อนไขนั้นออก
+  const { currentUser, signOutUser, isAdmin } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
-
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.username?.toLowerCase() === 'admin';
 
   // Close profile menu when clicking outside
   useEffect(() => {

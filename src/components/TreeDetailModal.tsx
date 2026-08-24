@@ -14,7 +14,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { IndividualTree, DurianFarm, TreeReview, UserRole } from '../types';
-import { subscribeTreeReviews } from '../services/firestoreService';
+import { fetchTreeReviews } from '../services/farmService';
 
 interface TreeDetailModalProps {
   tree: IndividualTree | null;
@@ -34,32 +34,29 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
   // Segmented Tabs: 'passport' | 'diaries' | 'reviews'
   const [activeTab, setActiveTab] = useState<'passport' | 'diaries' | 'reviews'>('passport');
 
-  // Real-time Firestore reviews listener
+  // เริ่มจากรีวิวที่ติดมากับต้นไม้ก่อน แล้วค่อยแทนที่ด้วยข้อมูลล่าสุดจาก API
+  // จะได้ไม่เห็นช่องว่างระหว่างรอโหลด
   const [reviewsList, setReviewsList] = useState<TreeReview[]>(tree.reviews || []);
 
   useEffect(() => {
     if (!tree) return;
-    const unsubscribe = subscribeTreeReviews(tree.code, (firestoreReviews) => {
-      if (firestoreReviews.length > 0) {
-        const formatted: TreeReview[] = firestoreReviews.map((r) => ({
-          id: r.id || `rev-${Math.random()}`,
-          authorName: r.authorName,
-          nfcFruitTag: r.verifiedNfcTag || `#${tree.code}`,
-          nfcFruitWeightKg: 3.5,
-          rating: r.rating,
-          reviewDate: r.date || 'เมื่อสักครู่',
-          comment: r.comment,
-          verifiedNfc: r.isVerifiedBuyer,
-          tastingNotes: r.flavorNotes || ['หวานมันกลมกล่อม', 'ยืนยันชิป NFC แท้'],
-        }));
-        // Merge with existing static reviews without duplicates
-        const existingIds = new Set(formatted.map((f) => f.id));
-        const combined = [...formatted, ...(tree.reviews || []).filter((r) => !existingIds.has(r.id))];
-        setReviewsList(combined);
-      }
-    });
+    let cancelled = false;
 
-    return () => unsubscribe();
+    // ของเดิมใช้ onSnapshot ของ Firestore ที่อัปเดตเองแบบ realtime
+    // ตอนนี้ดึงครั้งเดียวตอนเปิดหน้าต่าง ซึ่งพอสำหรับการอ่านรีวิว
+    fetchTreeReviews(tree.code)
+      .then((reviews) => {
+        if (!cancelled) setReviewsList(reviews);
+      })
+      .catch((err) => {
+        // โหลดรีวิวไม่สำเร็จไม่ควรทำให้ทั้งหน้าต่างพัง
+        // ยังแสดงรีวิวที่ติดมากับข้อมูลต้นไม้ต่อไปได้
+        console.warn('โหลดรีวิวของต้น', tree.code, 'ไม่สำเร็จ:', err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [tree]);
 
   return (
