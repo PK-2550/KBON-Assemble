@@ -27,7 +27,7 @@ import {
 import { DurianFarm, IndividualTree, FruitTreeVariety, UserRole, SmartTechItem, CertificationDetail } from '../types';
 import { TreeDetailModal } from './TreeDetailModal';
 import { FarmRegistrationModal } from './FarmRegistrationModal';
-import { saveFarmToFirestore } from '../services/firestoreService';
+import { saveFarm } from '../services/farmService';
 import { useAuth } from '../context/AuthContext';
 import { openPdfDocument } from '../utils/pdfUtils';
 
@@ -188,7 +188,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
     setCurrentFarm(updated);
     setIsPhotoManagerOpen(false);
     try {
-      await saveFarmToFirestore(updated);
+      await saveFarm(updated);
     } catch (err) {
       console.error('Failed to save photos to Firestore:', err);
     }
@@ -204,7 +204,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
     setCurrentFarm(updated);
     setIsSmartTechModalOpen(false);
     try {
-      await saveFarmToFirestore(updated);
+      await saveFarm(updated);
     } catch (err) {
       console.error('Failed to save smart tech to Firestore:', err);
     }
@@ -1105,7 +1105,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                       photos: photoList,
                     };
                     setCurrentFarm(updatedFarm);
-                    await saveFarmToFirestore(updatedFarm);
+                    await saveFarm(updatedFarm);
                     setIsPhotoManagerOpen(false);
                     setUpdateSuccessToast('บันทึกรูปภาพบรรยากาศสวนเรียบร้อยแล้ว');
                     setTimeout(() => setUpdateSuccessToast(''), 3500);

@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler.js';
 import { pool } from '../db.js';
-import { loadFarms } from '../farmsRepo.js';
-import { requireAdmin } from '../middleware/auth.js';
+import { loadFarms, upsertFarmStandalone } from '../farmsRepo.js';
+import { requireAdmin, requireAuth } from '../middleware/auth.js';
 
 export const farmsRouter = Router();
 
@@ -124,4 +124,45 @@ farmsRouter.patch('/:id', requireAdmin, asyncHandler(async (req, res) => {
 
   const farms = await loadFarms({ farmId: req.params.id });
   res.json({ farm: farms[0] });
+}));
+
+/**
+ * เขียนทับฟาร์มทั้งก้อน (แทน saveFarmToFirestore ของเดิม)
+ *
+ * แอดมินแก้ได้ทุกฟาร์ม ส่วนผู้จัดการสวนแก้ได้เฉพาะฟาร์มที่ตัวเองดูแล
+ * ของเดิมฝั่ง Firestore ใครก็เขียนทับฟาร์มไหนก็ได้ ขอแค่มีชื่อฟาร์มเป็น string
+ */
+farmsRouter.put('/:id', requireAuth, asyncHandler(async (req, res) => {
+  const farmId = req.params.id;
+
+  const owner = await pool.query('SELECT manager_id FROM farms WHERE id = $1', [farmId]);
+  if (owner.rowCount === 0) {
+    return res.status(404).json({ error: 'ไม่พบฟาร์มที่ระบุ' });
+  }
+
+  const isAdmin = req.user!.role === 'admin';
+  const isOwner = owner.rows[0].manager_id === req.user!.uid;
+  if (!isAdmin && !isOwner) {
+    return res.status(403).json({ error: 'แก้ไขได้เฉพาะฟาร์มที่คุณเป็นผู้ดูแล' });
+  }
+
+  const body = req.body ?? {};
+  if (typeof body.name !== 'string' || !body.name.trim()) {
+    return res.status(400).json({ error: 'กรุณากรอกชื่อฟาร์ม' });
+  }
+
+  // ไม่ให้ client ย้ายเจ้าของฟาร์มเอง -- คงค่าเดิมไว้เสมอ
+  await upsertFarmStandalone({ ...body, id: farmId, managerId: owner.rows[0].manager_id });
+
+  const farms = await loadFarms({ farmId });
+  res.json({ farm: farms[0] });
+}));
+
+/** ลบฟาร์ม -- เฉพาะแอดมิน ต้นไม้และรีวิวจะถูกลบตามด้วย cascade */
+farmsRouter.delete('/:id', requireAdmin, asyncHandler(async (req, res) => {
+  const result = await pool.query('DELETE FROM farms WHERE id = $1 RETURNING id', [req.params.id]);
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: 'ไม่พบฟาร์มที่ระบุ' });
+  }
+  res.json({ ok: true, id: req.params.id });
 }));

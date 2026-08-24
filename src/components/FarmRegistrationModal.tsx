@@ -47,9 +47,6 @@ import {
 } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { submitFarmRegistrationRequest } from '../services/farmRequestService';
-import { saveFarmToFirestore } from '../services/firestoreService';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 import { openPdfDocument } from '../utils/pdfUtils';
 import { compressImageFile } from '../utils/imageCompressor';
 import {

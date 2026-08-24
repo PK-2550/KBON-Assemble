@@ -74,3 +74,22 @@ export async function createTreeReview(
   );
   return created;
 }
+
+/**
+ * เขียนทับฟาร์มทั้งก้อน -- มาแทน saveFarmToFirestore ของเดิม
+ *
+ * แอดมินแก้ได้ทุกฟาร์ม ผู้จัดการสวนแก้ได้เฉพาะฟาร์มที่ตัวเองดูแล
+ * ถ้าไม่มีสิทธิ์ API จะตอบ 403
+ */
+export async function saveFarm(farm: DurianFarm): Promise<DurianFarm> {
+  const { farm: saved } = await api.put<{ farm: DurianFarm }>(
+    `/farms/${encodeURIComponent(farm.id)}`,
+    farm
+  );
+  return saved;
+}
+
+/** ลบฟาร์ม -- เฉพาะแอดมิน ต้นไม้และรีวิวถูกลบตามด้วย */
+export async function deleteFarm(farmId: string): Promise<void> {
+  await api.del(`/farms/${encodeURIComponent(farmId)}`);
+}

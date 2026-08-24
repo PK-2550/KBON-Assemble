@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { DurianFarm } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { isUserAdmin } from '../services/authService';
 import { subscribeAllFarmRequests } from '../services/farmRequestService';
 
 interface DashboardViewProps {
@@ -36,8 +35,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenAdminApproval,
   onOpenAddFarm,
 }) => {
-  const { currentUser } = useAuth();
-  const isAdmin = propIsAdmin ?? isUserAdmin(currentUser);
+  // isAdmin จาก context อ่าน role จาก JWT ที่ server เซ็น
+  // ของเดิมเรียก isUserAdmin() ซึ่งให้สิทธิ์แอดมินจากชื่อผู้ใช้หรืออีเมลฝั่ง client
+  const { isAdmin: contextIsAdmin } = useAuth();
+  const isAdmin = propIsAdmin ?? contextIsAdmin;
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   // Subscribe to pending requests count for Admin

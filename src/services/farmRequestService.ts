@@ -1,21 +1,18 @@
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  setDoc,
-  updateDoc,
-  onSnapshot,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { FarmRegistrationRequest, DurianFarm, IndividualTree, CertificationDetail } from '../types';
-import { saveFarmToFirestore } from './firestoreService';
+/**
+ * คำขอขึ้นทะเบียนสวนและระบบอนุมัติของแอดมิน
+ *
+ * เดิมไฟล์นี้คุยกับ Firestore ตรง ๆ จากเบราว์เซอร์ ตอนนี้เรียกผ่าน API แทน
+ *
+ * งานหนักย้ายไปอยู่ฝั่ง server หมดแล้ว โดยเฉพาะการอนุมัติคำขอ ซึ่งเดิม
+ * ประกอบข้อมูลฟาร์มและเขียน 4 ที่ติดกันในเบราว์เซอร์ (สร้างฟาร์ม อัปเดตคำขอ
+ * เลื่อน role และผูกบัญชี) โดยแต่ละก้อนครอบ try/catch ที่กลืน error ทิ้ง
+ * ถ้าพังกลางทางจะได้สถานะครึ่ง ๆ กลาง ๆ ตอนนี้ทำใน transaction เดียวที่ server
+ *
+ * ส่วนที่เป็น localStorage และข้อมูลตัวอย่างยังอยู่เหมือนเดิม เพราะไม่เกี่ยวกับฐานข้อมูล
+ */
 
-const REQUESTS_COLLECTION = 'farm_requests';
+import { api } from './apiClient';
+import { FarmRegistrationRequest, DurianFarm, IndividualTree, CertificationDetail } from '../types';
 const LOCAL_STORAGE_REQUESTS_KEY = 'duritrack_local_farm_requests';
 
 export const DEFAULT_STATIC_SAMPLE_REQUESTS: FarmRegistrationRequest[] = [
@@ -317,19 +314,16 @@ export async function submitFarmRegistrationRequest(
 
   const cleaned = sanitize(newRequest);
 
-  // 1. Save/merge to Firestore
+  // 1. ส่งคำขอไปเก็บที่ server
+  //    userId ที่ server บันทึกจริงมาจาก token ไม่ใช่ค่าที่ส่งไปในนี้
+  //    จึงยื่นคำขอในนามคนอื่นไม่ได้
   try {
-    await setDoc(
-      doc(db, REQUESTS_COLLECTION, targetId),
-      {
-        ...cleaned,
-        updatedAtServer: serverTimestamp(),
-      },
-      { merge: true }
-    );
+    await api.post('/farm-requests', cleaned);
   } catch (err) {
-    console.warn('Firestore write farm request error, saving to local store:', err);
-    handleFirestoreError(err, OperationType.WRITE, REQUESTS_COLLECTION);
+    // เก็บลง localStorage ต่อไปเพื่อให้หน้าจอยังเห็นคำขอที่เพิ่งกรอก
+    // แต่ต้องโยน error ต่อ ไม่งั้นผู้ใช้จะนึกว่าส่งสำเร็จทั้งที่ไม่ถึง server
+    console.warn('ส่งคำขอไปยังเซิร์ฟเวอร์ไม่สำเร็จ:', err);
+    throw err;
   }
 
   // 2. Local Storage sync for fast instant UI response
@@ -402,39 +396,35 @@ export function subscribeUserFarmRequest(
     }
   } catch {}
 
-  const q = query(
-    collection(db, REQUESTS_COLLECTION),
-    where('userId', '==', userId)
-  );
+  // เดิมใช้ onSnapshot ของ Firestore ที่อัปเดตเองแบบ realtime
+  // Postgres + REST ไม่มีของแบบนั้น จึงดึงครั้งเดียวตอนเรียก
+  // แต่คง signature เดิม (คืนฟังก์ชันยกเลิก) ไว้ให้คอมโพเนนต์ไม่ต้องแก้
+  let cancelled = false;
 
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const list: FarmRegistrationRequest[] = [];
-      snapshot.forEach((d) => {
-        list.push(d.data() as FarmRegistrationRequest);
-      });
-      list.sort(
-        (a, b) =>
-          new Date(b.updatedAt || b.createdAt).getTime() -
-          new Date(a.updatedAt || a.createdAt).getTime()
-      );
-      
-      // Update local storage cache safely
-      if (list.length > 0) {
+  api
+    .get<{ requests: FarmRegistrationRequest[] }>('/farm-requests/mine')
+    .then(({ requests }) => {
+      if (cancelled) return;
+
+      // เก็บสำเนาไว้ใน localStorage ให้หน้าจอขึ้นทันทีในครั้งถัดไป
+      if (requests.length > 0) {
         try {
           const local = JSON.parse(localStorage.getItem(LOCAL_STORAGE_REQUESTS_KEY) || '[]');
           const otherReqs = local.filter((r: FarmRegistrationRequest) => r.userId !== userId);
-          safeSetLocalRequests([...list, ...otherReqs]);
+          safeSetLocalRequests([...requests, ...otherReqs]);
         } catch {}
       }
-      
-      onUpdated(list);
-    },
-    (err) => {
-      handleFirestoreError(err, OperationType.LIST, REQUESTS_COLLECTION);
-    }
-  );
+
+      onUpdated(requests);
+    })
+    .catch((err) => {
+      // ยังไม่ได้ล็อกอินหรือต่อ server ไม่ได้ -- ใช้สำเนาใน localStorage ต่อไป
+      console.warn('โหลดคำขอของผู้ใช้ไม่สำเร็จ:', err);
+    });
+
+  return () => {
+    cancelled = true;
+  };
 }
 
 /**
@@ -443,34 +433,31 @@ export function subscribeUserFarmRequest(
 export function subscribeAllFarmRequests(
   onUpdated: (requests: FarmRegistrationRequest[]) => void
 ): () => void {
-  const q = collection(db, REQUESTS_COLLECTION);
+  // API คืนคำขอทั้งหมดให้เฉพาะแอดมิน ถ้าไม่ใช่แอดมินจะได้แค่ของตัวเอง
+  // (ของเดิมฝั่ง Firestore ใครก็อ่านคำขอของคนอื่นได้ รวมถึงเลขบัตรประชาชน
+  //  และรูปบัตรที่แนบมาด้วย)
+  let cancelled = false;
 
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const list: FarmRegistrationRequest[] = [];
-      snapshot.forEach((d) => {
-        list.push(d.data() as FarmRegistrationRequest);
-      });
-      list.sort(
-        (a, b) =>
-          new Date(b.updatedAt || b.createdAt).getTime() -
-          new Date(a.updatedAt || a.createdAt).getTime()
-      );
-
-      if (list.length > 0) {
-        safeSetLocalRequests(list);
-        onUpdated(list);
+  api
+    .get<{ requests: FarmRegistrationRequest[] }>('/farm-requests')
+    .then(({ requests }) => {
+      if (cancelled) return;
+      if (requests.length > 0) {
+        safeSetLocalRequests(requests);
+        onUpdated(requests);
       } else {
-        const fallback = getInitialFarmRequests();
-        onUpdated(fallback);
+        onUpdated(getInitialFarmRequests());
       }
-    },
-    (err) => {
-      handleFirestoreError(err, OperationType.LIST, REQUESTS_COLLECTION);
+    })
+    .catch((err) => {
+      if (cancelled) return;
+      console.warn('โหลดรายการคำขอไม่สำเร็จ:', err);
       onUpdated(getInitialFarmRequests());
-    }
-  );
+    });
+
+  return () => {
+    cancelled = true;
+  };
 }
 
 /**
@@ -520,169 +507,18 @@ export async function approveFarmRequest(
   request: FarmRegistrationRequest,
   adminName: string
 ): Promise<DurianFarm | null> {
-  const now = new Date().toISOString();
-  const isFarmVerification =
-    request.requestCategory === 'farm_verification' ||
-    request.requestType === 'update_farm' ||
-    Boolean(request.targetFarmId) ||
-    Boolean(request.farmName);
-  const isUpdate = request.requestType === 'update_farm' && Boolean(request.targetFarmId);
-  const targetId = request.targetFarmId;
+  // งานทั้งหมดอยู่ฝั่ง server แล้ว -- สร้างหรือเขียนทับฟาร์ม เลื่อน role ผู้ยื่น
+  // เป็นผู้จัดการสวน ผูกฟาร์มกับบัญชี และอัปเดตสถานะคำขอ ทำใน transaction เดียว
+  //
+  // เดิมโค้ดชุดนี้ประกอบข้อมูลฟาร์มเองในเบราว์เซอร์แล้วยิงเขียน 4 ที่ติดกัน
+  // โดยแต่ละก้อนครอบ try/catch ที่กลืน error ทิ้ง ถ้าพังกลางทางจะได้สถานะ
+  // ครึ่ง ๆ กลาง ๆ เช่นฟาร์มถูกสร้างแล้วแต่ผู้ใช้ยังเป็น user อยู่
+  const { farm } = await api.post<{ farm: DurianFarm | null }>(
+    `/farm-requests/${encodeURIComponent(request.id)}/approve`,
+    { adminNotes: request.adminNotes ?? null }
+  );
 
-  let updatedFarm: DurianFarm | null = null;
-
-  // Case A: Farm Standard Verification (New Farm or Update Farm)
-  if (isFarmVerification) {
-    const farmId = targetId || `farm-${request.userId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10)}-${Date.now().toString(36)}`;
-    const farmCode = (request.farmName.trim().slice(0, 2) || 'FM').toUpperCase();
-
-    let existingFarmData: Partial<DurianFarm> | null = null;
-    if (targetId) {
-      try {
-        const snap = await getDoc(doc(db, 'farms', targetId));
-        if (snap.exists()) {
-          existingFarmData = snap.data() as DurianFarm;
-        }
-      } catch (err) {
-        console.warn('Could not load existing farm before verification:', err);
-      }
-    }
-
-    const certDetails: CertificationDetail[] =
-      request.certificationList && request.certificationList.length > 0
-        ? request.certificationList.map((c) => ({
-            name: c.name || 'GAP (Good Agricultural Practice)',
-            nameTh: c.nameTh || c.name,
-            shortCode: c.shortCode || 'GAP',
-            certNumber: c.certNumber || request.gapCertNumber || 'GAP-TH-2026',
-            issuedBy: c.issuedBy || request.certIssuedBy || 'กรมวิชาการเกษตร',
-            validUntil: c.validUntil || request.certValidUntil || '2028',
-            verified: true,
-            documentPhoto: c.documentPhoto || request.certDocumentPhoto || '',
-            fileType: c.fileType || 'image',
-            fileName: c.fileName,
-          }))
-        : existingFarmData?.certificationDetails || [
-            {
-              name: 'GAP (Good Agricultural Practice)',
-              shortCode: 'GAP',
-              certNumber: request.gapCertNumber || 'GAP-TH-2026',
-              issuedBy: request.certIssuedBy || 'กรมวิชาการเกษตร',
-              validUntil: request.certValidUntil || '2028',
-              verified: true,
-              documentPhoto: request.certDocumentPhoto || '',
-              fileType: 'image',
-            },
-          ];
-
-    const atmospherePhotos =
-      request.atmospherePhotos && request.atmospherePhotos.length > 0
-        ? request.atmospherePhotos
-        : existingFarmData?.atmospherePhotos || [
-            'https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=800&auto=format&fit=crop&q=80',
-          ];
-
-    const generatedTrees =
-      existingFarmData?.individualTrees && existingFarmData.individualTrees.length > 0
-        ? existingFarmData.individualTrees
-        : generateInitialTreesForFarm(farmCode, request.topVarieties || ['หมอนทอง'], 6);
-
-    updatedFarm = {
-      id: farmId,
-      rank: existingFarmData?.rank || 99,
-      name: request.farmName || existingFarmData?.name || '',
-      nameEn: request.farmNameEn || existingFarmData?.nameEn || '',
-      province: request.province || existingFarmData?.province || '',
-      district: request.district || existingFarmData?.district || '',
-      areaRai: request.areaRai || existingFarmData?.areaRai || 20,
-      varietiesCount: Math.max(request.topVarieties?.length || 0, existingFarmData?.varietiesCount || 1),
-      topVarieties: request.topVarieties && request.topVarieties.length > 0 ? request.topVarieties : (existingFarmData?.topVarieties || ['หมอนทอง']),
-      totalTrees: request.totalTreesEstimate || existingFarmData?.totalTrees || 300,
-      harvestedFruits: existingFarmData?.harvestedFruits || Math.round((request.totalTreesEstimate || 300) * 15),
-      harvestRounds: existingFarmData?.harvestRounds || 3,
-      rating: existingFarmData?.rating || 9.5,
-      reviewCount: existingFarmData?.reviewCount || 1,
-      highlight: `สวนทุเรียนมาตรฐาน ${certDetails.map((c) => c.shortCode).join('/')} ${request.province} ผลผลิตคุณภาพพรีเมียม`,
-      aboutStory: request.aboutStory || existingFarmData?.aboutStory || '',
-      logoBgColor: existingFarmData?.logoBgColor || '#0e311f',
-      logoTextColor: existingFarmData?.logoTextColor || '#E5A93C',
-      establishedYear: existingFarmData?.establishedYear || (new Date().getFullYear() - 5),
-      certifications: Array.from(new Set(certDetails.map((c) => c.shortCode || 'GAP'))),
-      certDocumentPhoto: request.certDocumentPhoto || existingFarmData?.certDocumentPhoto || '',
-      certificationDetails: certDetails,
-      contact: {
-        facebook: request.contact?.facebook ?? existingFarmData?.contact?.facebook,
-        instagram: request.contact?.instagram ?? existingFarmData?.contact?.instagram,
-        lineId: request.contact?.lineId ?? existingFarmData?.contact?.lineId,
-        phoneNumber: request.contact?.phoneNumber ?? existingFarmData?.contact?.phoneNumber,
-        locationAddress: request.locationAddress || existingFarmData?.contact?.locationAddress || `${request.district} ${request.province}`,
-      },
-      photos: atmospherePhotos,
-      atmospherePhotos: atmospherePhotos,
-      hasSmartFarm: request.hasSmartFarm ?? existingFarmData?.hasSmartFarm ?? false,
-      smartTechnologies: request.smartTechnologies || existingFarmData?.smartTechnologies || [],
-      coordinates: request.coordinates || existingFarmData?.coordinates,
-      individualTrees: generatedTrees,
-      managerId: request.userId,
-      managerName: request.userDisplayName,
-      verifiedAt: now,
-    };
-
-    try {
-      await saveFarmToFirestore(updatedFarm);
-    } catch (err) {
-      console.warn('Failed to save verified farm to Firestore:', err);
-    }
-
-    try {
-      await updateDoc(doc(db, 'users', request.userId), {
-        managedFarmId: farmId,
-        updatedAt: now,
-      });
-    } catch {}
-  }
-
-  // 1. Update Request Status in Firestore
-  const approvalNote = isFarmVerification
-    ? 'ผ่านการตรวจสอบมาตรฐานฟาร์ม (GAP/GI) เรียบร้อยแล้ว ฟาร์มเปิดแสดงในระบบสาธารณะทันที'
-    : 'อนุมัติสิทธิ์ Manager เรียบร้อยแล้ว ท่านสามารถไปที่เมนูลงทะเบียนฟาร์มเพื่อสร้างและจัดการฟาร์มของคุณ';
-
-  try {
-    await updateDoc(doc(db, REQUESTS_COLLECTION, request.id), {
-      status: 'approved',
-      reviewedBy: adminName,
-      reviewedAt: now,
-      adminNotes: approvalNote,
-      createdFarmId: updatedFarm ? updatedFarm.id : undefined,
-      updatedAt: now,
-    });
-  } catch (err) {
-    console.warn('Failed to update request doc in Firestore:', err);
-  }
-
-  // 2. Upgrade User role to 'manager' in Firestore /users and /accounts
-  try {
-    await updateDoc(doc(db, 'users', request.userId), {
-      role: 'manager',
-      updatedAt: now,
-    });
-  } catch (err) {
-    console.warn('Failed to update user role in Firestore /users:', err);
-  }
-
-  // Also update in /accounts if present
-  try {
-    const cleanUsername = request.userEmailOrUsername?.replace(/@.*$/, '') || request.userDisplayName;
-    if (cleanUsername) {
-      const accountDocKey = cleanUsername.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-      await updateDoc(doc(db, 'accounts', accountDocKey), {
-        role: 'manager',
-        updatedAt: now,
-      });
-    }
-  } catch {}
-
-  // 3. Update Local Storage Cache
+  // อัปเดตสำเนาใน localStorage ให้หน้าจอตรงกับของจริงทันที
   try {
     const local = JSON.parse(localStorage.getItem(LOCAL_STORAGE_REQUESTS_KEY) || '[]');
     const updated = local.map((r: FarmRegistrationRequest) =>
@@ -691,15 +527,15 @@ export async function approveFarmRequest(
             ...r,
             status: 'approved',
             reviewedBy: adminName,
-            reviewedAt: now,
-            createdFarmId: updatedFarm ? updatedFarm.id : undefined,
+            reviewedAt: new Date().toISOString(),
+            createdFarmId: farm ? farm.id : undefined,
           }
         : r
     );
     safeSetLocalRequests(updated);
   } catch {}
 
-  return updatedFarm;
+  return farm;
 }
 
 /**
@@ -817,22 +653,17 @@ export async function rejectFarmRequest(
   action: 'rejected' | 'needs_revision' = 'needs_revision'
 ): Promise<void> {
   const now = new Date().toISOString();
-  const notesToSave = adminNotes.trim() || (action === 'rejected' ? 'เอกสารหรือข้อมูลไม่ผ่านเกณฑ์การตรวจสอบ' : 'กรุณาตรวจสอบและแนบเอกสารเพิ่มเติม');
+  const notesToSave =
+    adminNotes.trim() ||
+    (action === 'rejected'
+      ? 'เอกสารหรือข้อมูลไม่ผ่านเกณฑ์การตรวจสอบ'
+      : 'กรุณาตรวจสอบและแนบเอกสารเพิ่มเติม');
 
-  // Update Firestore
-  try {
-    await updateDoc(doc(db, REQUESTS_COLLECTION, requestId), {
-      status: action,
-      adminNotes: notesToSave,
-      reviewedBy: adminName,
-      reviewedAt: now,
-      updatedAt: now,
-    });
-  } catch (err) {
-    console.warn('Failed to update request in Firestore:', err);
-  }
+  await api.post(`/farm-requests/${encodeURIComponent(requestId)}/reject`, {
+    adminNotes: notesToSave,
+    needsRevision: action === 'needs_revision',
+  });
 
-  // Update Local Storage safely
   try {
     const local = JSON.parse(localStorage.getItem(LOCAL_STORAGE_REQUESTS_KEY) || '[]');
     const updated = local.map((r: FarmRegistrationRequest) =>
@@ -853,17 +684,7 @@ export async function resetFarmRequestToPending(
 ): Promise<void> {
   const now = new Date().toISOString();
 
-  try {
-    await updateDoc(doc(db, REQUESTS_COLLECTION, requestId), {
-      status: 'pending',
-      adminNotes: '',
-      reviewedBy: adminName,
-      reviewedAt: now,
-      updatedAt: now,
-    });
-  } catch (err) {
-    console.warn('Failed to reset request in Firestore:', err);
-  }
+  await api.post(`/farm-requests/${encodeURIComponent(requestId)}/reset`, {});
 
   try {
     const local = JSON.parse(localStorage.getItem(LOCAL_STORAGE_REQUESTS_KEY) || '[]');

@@ -7,6 +7,7 @@ import { readUser } from './middleware/auth.js';
 import { authRouter } from './routes/auth.js';
 import { farmsRouter } from './routes/farms.js';
 import { treesRouter } from './routes/trees.js';
+import { farmRequestsRouter } from './routes/farmRequests.js';
 
 const PORT = Number(process.env.API_PORT ?? 3001);
 
@@ -22,6 +23,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRouter);
 app.use('/api/farms', farmsRouter);
 app.use('/api/trees', treesRouter);
+app.use('/api/farm-requests', farmRequestsRouter);
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'ไม่พบ endpoint ที่เรียก' }));
 
