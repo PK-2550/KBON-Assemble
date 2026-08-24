@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Sprout, Plus } from 'lucide-react';
 import { DurianFarm } from '../types';
+import { THAILAND_REGIONS, getDistrictsByProvince } from '../constants/provinces';
 
 interface AddFarmModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [province, setProvince] = useState('จันทบุรี');
+  const [district, setDistrict] = useState('เมืองจันทบุรี');
   const [totalTrees, setTotalTrees] = useState<number>(500);
   const [harvestedFruits, setHarvestedFruits] = useState<number>(12000);
   const [rating, setRating] = useState<number>(9.0);
@@ -39,6 +41,7 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
       rank: existingCount + 1,
       name: name.trim(),
       province: province.trim(),
+      district: district.trim(),
       varietiesCount: Math.max(varieties.length, 1),
       topVarieties: varieties.length > 0 ? varieties : ['หมอนทอง'],
       totalTrees: Number(totalTrees) || 0,
@@ -103,26 +106,50 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
               </label>
               <select
                 value={province}
-                onChange={(e) => setProvince(e.target.value)}
-                className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl focus:outline-hidden focus:border-[#E5A93C] text-white"
+                onChange={(e) => {
+                  const newProv = e.target.value;
+                  setProvince(newProv);
+                  const available = getDistrictsByProvince(newProv);
+                  if (available.length > 0 && !available.includes(district)) {
+                    setDistrict(available[0]);
+                  }
+                }}
+                className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl focus:outline-hidden focus:border-[#E5A93C] text-white text-xs"
               >
-                <option value="จันทบุรี" className="bg-[#04140b]">จันทบุรี</option>
-                <option value="ระยอง" className="bg-[#04140b]">ระยอง</option>
-                <option value="ตราด" className="bg-[#04140b]">ตราด</option>
-                <option value="ศรีสะเกษ" className="bg-[#04140b]">ศรีสะเกษ</option>
-                <option value="นนทบุรี" className="bg-[#04140b]">นนทบุรี</option>
-                <option value="ชุมพร" className="bg-[#04140b]">ชุมพร</option>
-                <option value="สุราษฎร์ธานี" className="bg-[#04140b]">สุราษฎร์ธานี</option>
-                <option value="ยะลา" className="bg-[#04140b]">ยะลา</option>
-                <option value="อุตรดิตถ์" className="bg-[#04140b]">อุตรดิตถ์</option>
-                <option value="ปราจีนบุรี" className="bg-[#04140b]">ปราจีนบุรี</option>
-                <option value="กาญจนบุรี" className="bg-[#04140b]">กาญจนบุรี</option>
+                {THAILAND_REGIONS.map((group) => (
+                  <optgroup key={group.region} label={`── ${group.region} ──`} className="bg-[#0e2619] text-[#F5D280] font-bold">
+                    {group.provinces.map((prov) => (
+                      <option key={prov} value={prov} className="bg-[#04140b] text-white font-normal">
+                        {prov}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#8DA796] mb-1">
-                คะแนนรีวิวเริ่มต้น (1-10)
+                อำเภอ / เขต
+              </label>
+              <select
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl focus:outline-hidden focus:border-[#E5A93C] text-white text-xs"
+              >
+                {getDistrictsByProvince(province).map((dist) => (
+                  <option key={dist} value={dist} className="bg-[#04140b] text-white">
+                    {dist}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            <div>
+              <label className="block text-[11px] font-semibold text-[#8DA796] mb-1">
+                คะแนนรีวิว (1-10)
               </label>
               <input
                 type="number"
@@ -131,35 +158,33 @@ export const AddFarmModal: React.FC<AddFarmModalProps> = ({
                 max="10"
                 value={rating}
                 onChange={(e) => setRating(parseFloat(e.target.value))}
-                className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white focus:outline-hidden focus:border-[#E5A93C]"
+                className="w-full px-2.5 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white focus:outline-hidden focus:border-[#E5A93C] text-xs"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#8DA796] mb-1">
-                จำนวนต้นทุเรียน (ต้น)
+              <label className="block text-[11px] font-semibold text-[#8DA796] mb-1">
+                ต้นทุเรียน (ต้น)
               </label>
               <input
                 type="number"
                 min="0"
                 value={totalTrees}
                 onChange={(e) => setTotalTrees(parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white focus:outline-hidden focus:border-[#E5A93C]"
+                className="w-full px-2.5 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white focus:outline-hidden focus:border-[#E5A93C] text-xs"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#8DA796] mb-1">
-                ผลผลิตที่เก็บเกี่ยว (ลูก/ปี)
+              <label className="block text-[11px] font-semibold text-[#8DA796] mb-1">
+                ผลผลิต (ลูก/ปี)
               </label>
               <input
                 type="number"
                 min="0"
                 value={harvestedFruits}
                 onChange={(e) => setHarvestedFruits(parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white focus:outline-hidden focus:border-[#E5A93C]"
+                className="w-full px-2.5 py-2 bg-[#04140b] border border-[#18422b] rounded-xl text-white focus:outline-hidden focus:border-[#E5A93C] text-xs"
               />
             </div>
           </div>

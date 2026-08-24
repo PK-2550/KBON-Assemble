@@ -25,6 +25,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Farm registration & upgrade requests
+    match /farm_requests/{requestId} {
+      allow read, write: if isValidId(requestId);
+    }
+
     // Trees collection: readable by everyone, writable
     match /trees/{treeId} {
       allow read: if true;

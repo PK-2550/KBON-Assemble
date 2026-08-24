@@ -5,7 +5,15 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { INITIAL_DURIAN_FARMS } from './data/farms';
-import { DurianFarm, SortField, FruitTreeVariety, UserRole, NfcScannedFruit, IndividualTree } from './types';
+import {
+  DurianFarm,
+  SortField,
+  FruitTreeVariety,
+  UserRole,
+  NfcScannedFruit,
+  IndividualTree,
+  FarmRegistrationRequest,
+} from './types';
 import { Navbar } from './components/Navbar';
 import { HeaderBar } from './components/HeaderBar';
 import { StatsBar } from './components/StatsBar';
@@ -15,10 +23,13 @@ import { DashboardView } from './components/DashboardView';
 import { AddFarmModal } from './components/AddFarmModal';
 import { NfcScannerModal } from './components/NfcScannerModal';
 import { TreeDetailModal } from './components/TreeDetailModal';
+import { FarmRegistrationModal } from './components/FarmRegistrationModal';
+import { AdminApprovalHubModal } from './components/AdminApprovalHubModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { AuthScreen } from './components/AuthScreen';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { subscribeFarms, saveFarmToFirestore, seedFarmsIfEmpty } from './services/firestoreService';
+import { isUserAdmin } from './services/authService';
 import { Trees, Loader2, ArrowLeft } from 'lucide-react';
 
 function MainAppContent() {
@@ -33,18 +44,24 @@ function MainAppContent() {
   const [selectedProvince, setSelectedProvince] = useState('');
   const [selectedFarm, setSelectedFarm] = useState<DurianFarm | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isRegisterFarmModalOpen, setIsRegisterFarmModalOpen] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<FarmRegistrationRequest | null>(null);
+  const [isAdminApprovalModalOpen, setIsAdminApprovalModalOpen] = useState(false);
+  const [adminApprovalInitialTab, setAdminApprovalInitialTab] = useState<'manager_application' | 'farm_verification'>('manager_application');
   const [isGlobalNfcScannerOpen, setIsGlobalNfcScannerOpen] = useState(false);
   const [activeScannedTree, setActiveScannedTree] = useState<{ tree: IndividualTree; farm: DurianFarm } | null>(null);
   const [isGuestPreview, setIsGuestPreview] = useState(false);
 
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.username?.toLowerCase() === 'admin';
+  const isAdmin = isUserAdmin(currentUser);
 
   // Sync role when user profile is loaded
   useEffect(() => {
-    if (userProfile?.role) {
+    if (isAdmin) {
+      setCurrentRole('admin');
+    } else if (userProfile?.role) {
       setCurrentRole(userProfile.role);
     }
-  }, [userProfile]);
+  }, [userProfile, isAdmin]);
 
   // Synchronize farms in real-time with Firebase Firestore kbon-pop-db
   useEffect(() => {
@@ -127,9 +144,27 @@ function MainAppContent() {
     }
   };
 
+  const handleFarmApprovedByAdmin = (approvedFarm: DurianFarm) => {
+    setFarms((prev) => {
+      const exists = prev.some((f) => f.id === approvedFarm.id);
+      if (exists) {
+        return prev.map((f) => (f.id === approvedFarm.id ? approvedFarm : f));
+      }
+      return [approvedFarm, ...prev];
+    });
+  };
+
   const handleTabChange = (tab: 'farms' | 'dashboard') => {
     setActiveTab(tab);
     setSelectedFarm(null);
+  };
+
+  const handleSelectManagedFarm = (farmId: string) => {
+    const target = farms.find((f) => f.id === farmId);
+    if (target) {
+      setSelectedFarm(target);
+      setActiveTab('farms');
+    }
   };
 
   const handleGlobalFruitScanned = (scannedFruit: NfcScannedFruit) => {
@@ -175,6 +210,23 @@ function MainAppContent() {
         currentRole={currentRole}
         onRoleChange={handleRoleChange}
         onOpenNfcScanner={() => setIsGlobalNfcScannerOpen(true)}
+        onOpenRegisterFarm={(req) => {
+          setEditingRequest(req || null);
+          setIsRegisterFarmModalOpen(true);
+        }}
+        onOpenAdminApproval={(tab) => {
+          if (tab === 'manager_application' || tab === 'farm_verification') {
+            setAdminApprovalInitialTab(tab);
+          } else {
+            setAdminApprovalInitialTab('manager_application');
+          }
+          setIsAdminApprovalModalOpen(true);
+        }}
+        farms={farms}
+        onSelectFarm={(farm) => {
+          setSelectedFarm(farm);
+          setActiveTab('farms');
+        }}
       />
 
       {/* Guest Mode Banner (if exploring without login) */}
@@ -262,6 +314,9 @@ function MainAppContent() {
                 <DashboardView
                   farms={farms}
                   onSelectFarm={(farm) => setSelectedFarm(farm)}
+                  isAdmin={isAdmin}
+                  onOpenAdminApproval={() => setIsAdminApprovalModalOpen(true)}
+                  onOpenAddFarm={() => setIsAddModalOpen(true)}
                 />
               </div>
             )}
@@ -272,7 +327,7 @@ function MainAppContent() {
       {/* Interface Footer with Database Status */}
       <footer className="hidden md:flex bg-white border-t border-slate-200 h-12 px-4 sm:px-8 items-center justify-between shrink-0">
         <span className="text-[11px] uppercase tracking-widest text-slate-400 font-bold">
-          DuriTrack Smart Agri-System v2.5 • {currentRole === 'user' ? 'โหมดผู้บริโภค (User Flow)' : 'โหมดผู้ดูแลระบบ (Admin Flow)'}
+          DuriTrack Smart Agri-System v2.5 • {currentRole === 'user' ? 'โหมดผู้บริโภค (User Flow)' : currentRole === 'manager' ? 'โหมดผู้จัดการสวน (Manager Flow)' : 'โหมดผู้ดูแลระบบ (Admin Flow)'}
         </span>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -291,7 +346,28 @@ function MainAppContent() {
         </div>
       </footer>
 
-      {/* Add New Farm Modal (Admin Flow) */}
+      {/* Farm Registration & Upgrade Modal (Shopee/Lazada style Manager Flow) */}
+      <FarmRegistrationModal
+        isOpen={isRegisterFarmModalOpen}
+        initialData={editingRequest || undefined}
+        onClose={() => {
+          setIsRegisterFarmModalOpen(false);
+          setEditingRequest(null);
+        }}
+        onRequestSubmitted={() => {
+          setEditingRequest(null);
+        }}
+      />
+
+      {/* Admin Approval & Verification Hub Modal */}
+      <AdminApprovalHubModal
+        isOpen={isAdminApprovalModalOpen}
+        onClose={() => setIsAdminApprovalModalOpen(false)}
+        onFarmApproved={handleFarmApprovedByAdmin}
+        initialMasterTab={adminApprovalInitialTab}
+      />
+
+      {/* Add New Farm Modal (Admin Quick Entry) */}
       <AddFarmModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -301,8 +377,6 @@ function MainAppContent() {
 
       {/* Mobile Bottom Navigation Bar */}
       <MobileBottomNav
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
         onOpenNfcScanner={() => setIsGlobalNfcScannerOpen(true)}
       />
 

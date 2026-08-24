@@ -149,7 +149,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
         {/* Google One-Click Login */}
         <button
           type="button"
-          onClick={handleGoogleLogin}
+          onClick={() => handleGoogleLogin()}
           disabled={isSubmitting}
           className="w-full py-2 px-3 bg-[#04140b] hover:bg-[#0e311f] border border-[#18422b] hover:border-[#1e5236] text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
         >
@@ -359,7 +359,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
         {onGuestAccess && (
           <button
             type="button"
-            onClick={onGuestAccess}
+            onClick={() => onGuestAccess()}
             className="text-[#8DA796] hover:text-[#E5A93C] text-[10px] font-semibold underline underline-offset-2 transition-colors cursor-pointer"
           >
             เข้าชมตัวอย่างระบบชั่วคราว (Guest Preview)

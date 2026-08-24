@@ -1,7 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sprout, User, Radio, Settings, LogOut, MoreVertical } from 'lucide-react';
-import { UserRole } from '../types';
+import {
+  Sprout,
+  User,
+  Radio,
+  Settings,
+  LogOut,
+  MoreVertical,
+  ShieldCheck,
+  Award,
+  Sparkles,
+  Building2,
+  TreePine,
+  ArrowRight,
+  Clock,
+  HelpCircle,
+  CheckCircle2,
+} from 'lucide-react';
+import { UserRole, DurianFarm, FarmRegistrationRequest } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { isUserAdmin } from '../services/authService';
+import {
+  subscribeAllFarmRequests,
+  subscribeUserFarmRequest,
+  getReadRequestIds,
+  subscribeReadRequestIds,
+} from '../services/farmRequestService';
 
 interface NavbarProps {
   activeTab: 'farms' | 'dashboard';
@@ -9,6 +32,10 @@ interface NavbarProps {
   currentRole: UserRole;
   onRoleChange: (role: UserRole) => void;
   onOpenNfcScanner: () => void;
+  onOpenRegisterFarm?: (existingRequest?: FarmRegistrationRequest) => void;
+  onOpenAdminApproval?: (tab?: 'manager_application' | 'farm_verification') => void;
+  farms?: DurianFarm[];
+  onSelectFarm?: (farm: DurianFarm) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -17,12 +44,66 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentRole,
   onRoleChange,
   onOpenNfcScanner,
+  onOpenRegisterFarm,
+  onOpenAdminApproval,
+  farms = [],
+  onSelectFarm,
 }) => {
   const { currentUser, signOutUser } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [allRequests, setAllRequests] = useState<FarmRegistrationRequest[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(() => getReadRequestIds());
+  const [userRequests, setUserRequests] = useState<FarmRegistrationRequest[]>([]);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.username?.toLowerCase() === 'admin';
+  const isAdmin = isUserAdmin(currentUser);
+  const isManager = currentUser?.role === 'manager';
+
+  // Find manager's farm if exists
+  const managedFarm = isManager
+    ? farms.find((f) => f.managerId === currentUser?.uid || f.id === currentUser?.managedFarmId)
+    : null;
+
+  // Listen to pending requests count and read IDs for Admin badge
+  useEffect(() => {
+    if (!isAdmin) return;
+    const unsubReqs = subscribeAllFarmRequests((reqs) => {
+      setAllRequests(reqs);
+    });
+    const unsubRead = subscribeReadRequestIds((ids) => {
+      setReadIds(new Set(ids));
+    });
+    return () => {
+      unsubReqs();
+      unsubRead();
+    };
+  }, [isAdmin]);
+
+  const isMgr = (r: FarmRegistrationRequest) =>
+    r.requestCategory === 'manager_application' ||
+    (!r.requestCategory && !r.targetFarmId && r.requestType !== 'update_farm' && Boolean(r.farmerIdCardNumber));
+
+  // Count unread pending requests
+  const pendingManagerCount = allRequests.filter(
+    (r) => isMgr(r) && r.status === 'pending' && !readIds.has(r.id)
+  ).length;
+
+  const pendingFarmCount = allRequests.filter(
+    (r) => !isMgr(r) && r.status === 'pending' && !readIds.has(r.id)
+  ).length;
+
+  const totalPendingCount = pendingManagerCount + pendingFarmCount;
+
+  // Listen to user's own farm verification requests
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const unsubscribe = subscribeUserFarmRequest(currentUser.uid, (reqs) => {
+      setUserRequests(reqs);
+    });
+    return () => unsubscribe();
+  }, [currentUser?.uid]);
+
+  const latestRequest = userRequests[0];
 
   // Close profile menu when clicking outside
   useEffect(() => {
@@ -65,7 +146,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Center Column: Centered Website Name & Brand Logo */}
-      <div className="flex items-center justify-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('farms')}>
+      <div
+        className="flex items-center justify-center gap-2 cursor-pointer select-none"
+        onClick={() => onTabChange('farms')}
+      >
         {/* Gold & Emerald Logo Badge */}
         <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-[#E5A93C] to-[#d89727] rounded-xl flex items-center justify-center text-[#1c1202] font-black text-sm sm:text-base tracking-tighter shadow-md">
           dt
@@ -80,8 +164,25 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Right Column: Profile Avatar / 3 Dots menu */}
+      {/* Right Column: Admin Hub Button + Profile Avatar */}
       <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-1/4 sm:w-1/3" ref={profileMenuRef}>
+        {/* Admin Quick Approval Hub Button (Placed right beside Profile avatar as requested) */}
+        {isAdmin && onOpenAdminApproval && (
+          <button
+            onClick={() => onOpenAdminApproval()}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 bg-gradient-to-r from-[#E5A93C] to-[#c78b23] hover:from-[#f0b548] hover:to-[#d4992e] text-[#1c1202] rounded-xl text-xs font-black transition-transform active:scale-95 cursor-pointer shadow-md"
+            title="ศูนย์อนุมัติและตรวจสอบมาตรฐานฟาร์ม (Admin Approval Hub)"
+          >
+            <ShieldCheck className="w-4 h-4 text-[#1c1202]" />
+            <span className="text-[11px] sm:text-xs">ศูนย์อนุมัติ & ตรวจมาตรฐาน</span>
+            {totalPendingCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-black animate-pulse">
+                {totalPendingCount}
+              </span>
+            )}
+          </button>
+        )}
+
         {/* Profile Avatar Trigger */}
         <button
           onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
@@ -103,9 +204,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           <MoreVertical className="w-4 h-4 text-[#83A893]" />
         </button>
 
-        {/* Profile Dropdown Menu with Sign Out inside */}
+        {/* Profile Dropdown Menu */}
         {isProfileMenuOpen && (
-          <div className="absolute right-3 sm:right-6 top-13 sm:top-15 w-64 bg-[#07190f] text-[#f3f6f4] rounded-2xl shadow-2xl border border-[#1c442c] py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute right-3 sm:right-6 top-13 sm:top-15 w-72 bg-[#07190f] text-[#f3f6f4] rounded-2xl shadow-2xl border border-[#1c442c] py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
             {/* User Info Header */}
             <div className="px-4 py-3 border-b border-[#1c442c]">
               <div className="flex items-center gap-2.5">
@@ -126,22 +227,157 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="mt-2.5 flex items-center justify-between">
                 <span className="text-[10px] text-[#83A893] font-medium">สิทธิ์การใช้งาน:</span>
                 {isAdmin ? (
-                  <span className="text-[10px] font-bold bg-[#E5A93C]/20 text-[#F5D280] border border-[#E5A93C]/40 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold bg-[#E5A93C]/20 text-[#F5D280] border border-[#E5A93C]/40 px-2 py-0.5 rounded-full flex items-center gap-1">
                     👑 ผู้ดูแลระบบ (Admin)
                   </span>
+                ) : isManager ? (
+                  <span className="text-[10px] font-bold bg-[#143523] text-[#4ADE80] border border-[#235b3a] px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Award className="w-3 h-3 text-[#4ADE80]" />
+                    ผู้จัดการสวน (Manager)
+                  </span>
                 ) : (
-                  <span className="text-[10px] font-bold bg-[#143523] text-[#4ADE80] border border-[#225538] px-2 py-0.5 rounded-full">
-                    🌱 ผู้บริโภคทั่วไป
+                  <span className="text-[10px] font-bold bg-[#143523] text-[#83A893] border border-[#1c442c] px-2 py-0.5 rounded-full">
+                    🌱 ผู้บริโภคทั่วไป (User)
                   </span>
                 )}
               </div>
             </div>
 
+            {/* Manager Action: View My Farm (Only if the farm exists and has been approved/registered) */}
+            {isManager && managedFarm && onSelectFarm && (
+              <div className="p-2 border-b border-[#1c442c] space-y-1.5">
+                <button
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    onSelectFarm(managedFarm);
+                  }}
+                  className="w-full p-2.5 bg-gradient-to-r from-[#0d2e1b] to-[#123e25] hover:from-[#133e24] hover:to-[#174e2e] border border-[#4ADE80]/40 rounded-xl text-left transition-all cursor-pointer group flex items-center justify-between"
+                >
+                  <div className="min-w-0 pr-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#4ADE80]">
+                      <TreePine className="w-3.5 h-3.5" />
+                      <span className="truncate">ดูสวนของฉัน: {managedFarm.name}</span>
+                    </div>
+                    <p className="text-[10px] text-[#83A893] mt-0.5 truncate">
+                      จัดการภาพถ่ายบรรยากาศและบันทึกต้นทุเรียน
+                    </p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-[#4ADE80] shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </div>
+            )}
+
+            {/* Farm Owner Application / Verification for Managers without an active registered farm or standard Users */}
+            {!isAdmin && (!managedFarm || latestRequest?.status === 'pending' || latestRequest?.status === 'needs_revision') && onOpenRegisterFarm && (
+              <div className="p-2 border-b border-[#1c442c]">
+                {latestRequest?.status === 'pending' ? (
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      onOpenRegisterFarm(latestRequest);
+                    }}
+                    className="w-full p-2.5 bg-gradient-to-r from-[#1c1808] via-[#141206] to-[#1c1808] hover:from-[#24200b] hover:to-[#1a1708] border border-amber-500/40 rounded-xl text-left transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                        <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                        <span>สถานะคำขอ: รอผลพิจารณาจาก admin</span>
+                      </div>
+                      <span className="text-[9px] bg-amber-500/30 text-amber-300 px-1.5 py-0.2 rounded-md font-bold">
+                        Pending
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-amber-300/70 mt-1 truncate">
+                      ส่งข้อมูลสวน "{latestRequest.farmName || 'ข้อมูลสวน'}" แล้ว รอ Admin อนุมัติเพื่อเปิดสู่สาธารณะ
+                    </p>
+                  </button>
+                ) : latestRequest?.status === 'needs_revision' ? (
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      onOpenRegisterFarm(latestRequest);
+                    }}
+                    className="w-full p-2.5 bg-gradient-to-r from-[#1c0c0c] via-[#140808] to-[#1c0c0c] hover:from-[#241010] hover:to-[#1c0c0c] border border-rose-500/40 rounded-xl text-left transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-rose-300">
+                        <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+                        <span>คำขอต้องการการแก้ไข (Revision)</span>
+                      </div>
+                      <span className="text-[9px] bg-rose-500/30 text-rose-300 px-1.5 py-0.2 rounded-md font-bold">
+                        แก้ไข
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-rose-300/80 mt-1 truncate">
+                      {latestRequest.adminNotes || 'โปรดแก้ไขข้อมูลเอกสาร'}
+                    </p>
+                  </button>
+                ) : isManager ? (
+                  /* Manager who hasn't registered a farm yet */
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      onOpenRegisterFarm();
+                    }}
+                    className="w-full p-2.5 bg-gradient-to-r from-[#0e2a1b] to-[#123824] hover:from-[#133924] hover:to-[#17462d] border border-[#E5A93C]/40 rounded-xl text-left transition-all cursor-pointer group shadow-sm"
+                  >
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#F5D280]">
+                      <Sprout className="w-3.5 h-3.5 text-[#E5A93C] group-hover:scale-110 transition-transform" />
+                      <span>ลงทะเบียนสวนทุเรียนของคุณ</span>
+                    </div>
+                    <p className="text-[10px] text-[#83A893] mt-0.5 leading-relaxed">
+                      บันทึกข้อมูลแปลงสวน & ส่งให้ Admin ตรวจสอบเพื่อเปิดหน้าฟาร์ม
+                    </p>
+                  </button>
+                ) : (
+                  /* Standard User (ผู้บริโภคทั่วไป) */
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      onOpenRegisterFarm();
+                    }}
+                    className="w-full p-2.5 bg-gradient-to-r from-[#0e2a1b] to-[#123824] hover:from-[#133924] hover:to-[#17462d] border border-[#E5A93C]/40 rounded-xl text-left transition-all cursor-pointer group shadow-sm"
+                  >
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#F5D280]">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#E5A93C] group-hover:scale-110 transition-transform" />
+                      <span>ยื่นเรื่องขอสิทธิ์ผู้จัดการสวน (Manager)</span>
+                    </div>
+                    <p className="text-[10px] text-[#83A893] mt-0.5 leading-relaxed">
+                      ยื่นเอกสารเจ้าของสวนเพื่อรับสิทธิ์ Manager & เปิดหน้าฟาร์ม
+                    </p>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Admin Hub Shortcut Menu Item (Unified Hub) */}
+            {isAdmin && onOpenAdminApproval && (
+              <div className="py-1 border-b border-[#1c442c] space-y-0.5">
+                <button
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    onOpenAdminApproval();
+                  }}
+                  className="w-full px-4 py-2 text-left text-xs font-bold text-[#E5A93C] hover:bg-[#0e2619] flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-[#E5A93C]" />
+                    <span>ศูนย์อนุมัติ & ตรวจสอบมาตรฐานฟาร์ม</span>
+                  </div>
+                  {totalPendingCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-black">
+                      {totalPendingCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+
             {/* Role Switcher (Visible to Admin) */}
             {isAdmin && (
               <div className="px-3 py-2 border-b border-[#1c442c]">
                 <span className="text-[10px] font-bold text-[#83A893] uppercase tracking-wider block mb-1.5 px-1">
-                  สลับโหมดการทำงาน
+                  สลับโหมดการทำงาน (Admin Switcher)
                 </span>
                 <div className="grid grid-cols-2 gap-1 bg-[#0e2619] p-1 rounded-xl border border-[#1c442c]">
                   <button

@@ -30,6 +30,30 @@ const LOCAL_STORAGE_SESSION_KEY = 'duritrack_user_session';
 const LOCAL_STORAGE_ACCOUNTS_KEY = 'duritrack_local_accounts';
 
 /**
+ * Pre-authorized Admin UIDs, Emails and Admin Accounts
+ */
+export const ADMIN_EMAILS: string[] = [
+  'kangphanichpannawich@gmail.com',
+  'admin@duritrack.auth',
+];
+
+export const ADMIN_UIDS: string[] = [
+  'usr_1787149746548_mvw23',
+  'admin',
+  'superadmin',
+];
+
+export function isUserAdmin(user: { uid?: string; role?: string; username?: string; email?: string | null } | null | undefined): boolean {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  if (user.username && (user.username.toLowerCase() === 'admin' || user.username.toLowerCase() === 'superadmin')) return true;
+  if (user.email && ADMIN_EMAILS.some((e) => e.toLowerCase() === user.email?.toLowerCase())) return true;
+  if (user.email && user.email.toLowerCase().startsWith('admin@')) return true;
+  if (user.uid && ADMIN_UIDS.includes(user.uid)) return true;
+  return false;
+}
+
+/**
  * Format username into a standard Firebase Auth email format
  */
 export function usernameToEmail(username: string): string {
@@ -70,7 +94,11 @@ export function getStoredUserSession(): AppUserProfile | null {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as AppUserProfile;
+    const profile = JSON.parse(raw) as AppUserProfile;
+    if (isUserAdmin(profile)) {
+      profile.role = 'admin';
+    }
+    return profile;
   } catch {
     return null;
   }
@@ -277,13 +305,21 @@ export async function loginWithUsername(username: string, pass: string): Promise
   }
 
   // 6. Build user profile
+  const calculatedRole: UserRole =
+    accountData.uid === 'usr_1787149746548_mvw23' ||
+    ADMIN_UIDS.includes(accountData.uid) ||
+    accountData.username?.toLowerCase() === 'admin' ||
+    accountData.role === 'admin'
+      ? 'admin'
+      : accountData.role || 'user';
+
   const profile: AppUserProfile = {
     uid: accountData.uid || 'usr_' + Date.now(),
     username: accountData.username || cleanUsername,
     email: cleanUsername.includes('@') ? cleanUsername : null,
     displayName: accountData.username || cleanUsername,
     photoURL: null,
-    role: accountData.role || 'user',
+    role: calculatedRole,
     provider: 'username',
     createdAt: accountData.createdAt || new Date().toISOString(),
     lastLoginAt: new Date().toISOString(),

@@ -9,6 +9,7 @@
         "name": { "type": "string", "maxLength": 200 },
         "nameEn": { "type": "string", "maxLength": 200 },
         "province": { "type": "string", "maxLength": 100 },
+        "district": { "type": "string", "maxLength": 100 },
         "totalTrees": { "type": "number" },
         "harvestedFruits": { "type": "number" },
         "rank": { "type": "number" },
@@ -26,9 +27,39 @@
         "gpaCertified": { "type": "boolean" },
         "organicCertified": { "type": "boolean" },
         "story": { "type": "string", "maxLength": 5000 },
+        "managerId": { "type": "string", "maxLength": 128 },
         "createdAt": { "type": "string", "maxLength": 100 }
       },
       "required": ["name", "province"]
+    },
+    "FarmRequest": {
+      "title": "FarmRequest",
+      "description": "Farm registration and account upgrade requests awaiting admin verification.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userDisplayName": { "type": "string", "maxLength": 200 },
+        "userEmailOrUsername": { "type": "string", "maxLength": 200 },
+        "farmName": { "type": "string", "maxLength": 200 },
+        "farmNameEn": { "type": "string", "maxLength": 200 },
+        "province": { "type": "string", "maxLength": 100 },
+        "district": { "type": "string", "maxLength": 100 },
+        "locationAddress": { "type": "string", "maxLength": 300 },
+        "areaRai": { "type": "number" },
+        "totalTreesEstimate": { "type": "number" },
+        "topVarieties": { "type": "array" },
+        "aboutStory": { "type": "string", "maxLength": 5000 },
+        "gapCertNumber": { "type": "string", "maxLength": 100 },
+        "certIssuedBy": { "type": "string", "maxLength": 200 },
+        "certValidUntil": { "type": "string", "maxLength": 50 },
+        "certDocumentUrl": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "maxLength": 50 },
+        "adminNotes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["userId", "farmName", "province", "gapCertNumber", "status"]
     },
     "Tree": {
       "title": "Tree",
@@ -116,6 +147,10 @@
     "/farms/{farmId}": {
       "schema": "Farm",
       "description": "Public directory of durian farms."
+    },
+    "/farm_requests/{requestId}": {
+      "schema": "FarmRequest",
+      "description": "Farm registration and account upgrade applications submitted by users."
     },
     "/trees/{treeId}": {
       "schema": "Tree",

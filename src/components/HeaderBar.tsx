@@ -66,7 +66,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         {/* Admin Quick Action */}
         {currentRole === 'admin' && (
           <button
-            onClick={onOpenAddModal}
+            onClick={() => onOpenAddModal()}
             className="bg-[#E5A93C] text-[#241603] px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow-md hover:bg-[#d4992e] transition-all flex items-center gap-1 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
