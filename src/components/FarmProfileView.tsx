@@ -2,30 +2,34 @@ import React, { useState, useMemo } from 'react';
 import {
   ArrowLeft,
   Star,
-  Trees,
-  Sprout,
   MapPin,
-  Globe,
-  Phone,
-  MessageCircle,
   Award,
   CheckCircle2,
   Share2,
-  Heart,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
   ShieldCheck,
   Search,
   Cpu,
-  Droplets,
-  Radio,
   Sparkles,
-  Layers,
-  Calendar,
+  Camera,
+  Plus,
+  Trash2,
+  X,
+  ExternalLink,
+  Settings2,
+  FileText,
+  Sliders,
+  Check,
+  Eye,
+  FileEdit,
+  Send,
+  Upload,
 } from 'lucide-react';
-import { DurianFarm, IndividualTree, FruitTreeVariety, UserRole } from '../types';
+import { DurianFarm, IndividualTree, FruitTreeVariety, UserRole, SmartTechItem, CertificationDetail } from '../types';
 import { TreeDetailModal } from './TreeDetailModal';
+import { FarmRegistrationModal } from './FarmRegistrationModal';
+import { saveFarmToFirestore } from '../services/firestoreService';
+import { useAuth } from '../context/AuthContext';
+import { openPdfDocument } from '../utils/pdfUtils';
 
 interface FarmProfileViewProps {
   farm: DurianFarm;
@@ -34,11 +38,30 @@ interface FarmProfileViewProps {
   onSelectVariety?: (variety: FruitTreeVariety) => void;
 }
 
+const SAMPLE_GARDEN_PHOTOS = [
+  'https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=800&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=800&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=800&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1527842891421-42eec6e703ea?w=800&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=800&auto=format&fit=crop&q=80',
+];
+
+const DEFAULT_SMART_TECH_OPTIONS = [
+  { id: 'st-d1', name: 'ระบบน้ำหยดอัตโนมัติ (Smart Irrigation)', subtext: 'ควบคุมผ่านแอปฯ', iconEmoji: '💧' },
+  { id: 'st-d2', name: 'เซ็นเซอร์วัดความชื้นดินและสภาพอากาศ', subtext: 'อัปเดตทุก 15 นาที', iconEmoji: '🌡️' },
+  { id: 'st-d3', name: 'โดรนพ่นปุ๋ย / สำรวจสุขภาพแปลง', subtext: 'ลดการใช้สารเคมี 40%', iconEmoji: '🚁' },
+  { id: 'st-d4', name: 'Dashboard ติดตามสวนแบบ Real-time', subtext: 'มอนิเตอร์บนมือถือตลอด 24 ชม.', iconEmoji: '📊' },
+  { id: 'st-d5', name: 'พลังงานแสงอาทิตย์ (Solar Farm)', subtext: 'ขับเคลื่อนระบบน้ำด้วยแสงแดด', iconEmoji: '☀️' },
+  { id: 'st-d6', name: 'ระบบแท็กดิจิทัล QR-NFC ตรวจสอบย้อนกลับ', subtext: 'ระบุต้นกำเนิดผลทุเรียนรายต้น', iconEmoji: '🏷️' },
+];
+
 export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
-  farm,
+  farm: initialFarm,
   currentRole = 'user',
   onBack,
 }) => {
+  const { currentUser } = useAuth();
+  const [currentFarm, setCurrentFarm] = useState<DurianFarm>(initialFarm);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'auto' | 'photo' | 'companion'>('all');
   const [treeSearch, setTreeSearch] = useState('');
@@ -46,22 +69,62 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
   const [activeTab, setActiveTab] = useState<'trees' | 'smartfarm' | 'certs' | 'about'>('trees');
   const [selectedTree, setSelectedTree] = useState<IndividualTree | null>(null);
 
-  const photos = farm.photos && farm.photos.length > 0 ? farm.photos : [
-    'https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1527842891421-42eec6e703ea?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1592417817098-8f3d6910985b?w=800&auto=format&fit=crop&q=80',
-  ];
+  // Modals
+  const [isPhotoManagerOpen, setIsPhotoManagerOpen] = useState(false);
+  const [isSmartTechModalOpen, setIsSmartTechModalOpen] = useState(false);
+  const [isUpdateRequestModalOpen, setIsUpdateRequestModalOpen] = useState(false);
+  const [updateSuccessToast, setUpdateSuccessToast] = useState('');
+  const [selectedCertDoc, setSelectedCertDoc] = useState<{
+    name: string;
+    certNumber: string;
+    issuedBy: string;
+    validUntil: string;
+    photoUrl: string;
+    fileType?: 'image' | 'pdf';
+    fileName?: string;
+  } | null>(null);
 
-  const allTrees: IndividualTree[] = farm.individualTrees || [];
+  // Photo manager form state
+  const [photoList, setPhotoList] = useState<string[]>(
+    currentFarm.atmospherePhotos && currentFarm.atmospherePhotos.length > 0
+      ? currentFarm.atmospherePhotos
+      : currentFarm.photos && currentFarm.photos.length > 0
+      ? currentFarm.photos
+      : SAMPLE_GARDEN_PHOTOS.slice(0, 3)
+  );
+
+  // Smart farm form state
+  const [tempHasSmartFarm, setTempHasSmartFarm] = useState<boolean>(
+    currentFarm.hasSmartFarm ?? (currentFarm.smartTechnologies && currentFarm.smartTechnologies.length > 0 ? true : false)
+  );
+  const [tempSmartTechList, setTempSmartTechList] = useState<SmartTechItem[]>(
+    currentFarm.smartTechnologies && currentFarm.smartTechnologies.length > 0
+      ? currentFarm.smartTechnologies
+      : DEFAULT_SMART_TECH_OPTIONS.map((t) => ({ ...t, active: true }))
+  );
+
+  // Check if current user is owner or admin
+  const isOwnerOrAdmin =
+    currentRole === 'admin' ||
+    (currentUser && currentFarm.managerId === currentUser.uid);
+
+  // Garden Atmosphere photos ONLY (no certificate photos in the gallery)
+  const displayPhotos = useMemo(() => {
+    if (currentFarm.atmospherePhotos && currentFarm.atmospherePhotos.length > 0) {
+      return currentFarm.atmospherePhotos;
+    }
+    if (currentFarm.photos && currentFarm.photos.length > 0) {
+      return currentFarm.photos;
+    }
+    return SAMPLE_GARDEN_PHOTOS.slice(0, 3);
+  }, [currentFarm]);
+
+  const allTrees: IndividualTree[] = currentFarm.individualTrees || [];
 
   // Filter & Sort individual trees
   const filteredAndSortedTrees = useMemo(() => {
     let list = [...allTrees];
 
-    // Filter by tab / classification
     if (selectedFilter === 'auto') {
       list = list.filter((t) => t.propagationCode === 'AUTO' || t.category === 'durian_main');
     } else if (selectedFilter === 'photo') {
@@ -70,7 +133,6 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
       list = list.filter((t) => t.category === 'companion_fruit');
     }
 
-    // Filter by search query (Code or Name)
     if (treeSearch.trim()) {
       const q = treeSearch.toLowerCase().trim();
       list = list.filter(
@@ -82,7 +144,6 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
       );
     }
 
-    // Sort
     list.sort((a, b) => {
       if (sortBy === 'rating') {
         if (b.rating !== a.rating) return b.rating - a.rating;
@@ -106,63 +167,99 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
     return list;
   }, [allTrees, selectedFilter, treeSearch, sortBy]);
 
-  // Counts for pills
   const autoCount = allTrees.filter((t) => t.propagationCode === 'AUTO' || t.category === 'durian_main').length;
   const photoCount = allTrees.filter((t) => t.propagationCode === 'PHOTO' || t.category === 'durian_rare').length;
   const companionCount = allTrees.filter((t) => t.category === 'companion_fruit').length;
 
-  // Farm initials for logo (e.g. TC or ภข)
-  const farmInitials = (farm?.name || 'TC')
+  const farmInitials = (currentFarm?.name || 'TC')
     .split(' ')
     .slice(0, 2)
     .map((w) => w.charAt(0))
     .join('')
     .toUpperCase() || 'TC';
 
-  // SmartFarm technology list per farm with realistic fallback
-  const smartTechList = farm.smartTechnologies && farm.smartTechnologies.length > 0
-    ? farm.smartTechnologies
-    : [
-        { id: 'st-d1', name: 'ระบบน้ำหยดอัตโนมัติ', subtext: 'ควบคุมผ่านแอปฯ', iconEmoji: '💧', active: true },
-        { id: 'st-d2', name: 'เซ็นเซอร์วัดความชื้นดิน', subtext: 'ทุก 15 นาที', iconEmoji: '🌡️', active: true },
-        { id: 'st-d3', name: 'โดรนพ่นปุ๋ย / สำรวจ', subtext: 'ลดการใช้สารเคมี 40%', iconEmoji: '🚁', active: true },
-        { id: 'st-d4', name: 'Dashboard ติดตามสวน', subtext: 'Real-time บน SmartFarm App', iconEmoji: '📊', active: true },
-        { id: 'st-d5', name: 'พลังงานแสงอาทิตย์', subtext: 'ลดต้นทุนพลังงาน 60%', iconEmoji: '☀️', active: true },
-      ];
+  // Save Photos to Firestore
+  const handleSavePhotos = async () => {
+    const updated: DurianFarm = {
+      ...currentFarm,
+      atmospherePhotos: photoList,
+      photos: photoList,
+    };
+    setCurrentFarm(updated);
+    setIsPhotoManagerOpen(false);
+    try {
+      await saveFarmToFirestore(updated);
+    } catch (err) {
+      console.error('Failed to save photos to Firestore:', err);
+    }
+  };
+
+  // Save Smart Tech to Firestore
+  const handleSaveSmartTech = async () => {
+    const updated: DurianFarm = {
+      ...currentFarm,
+      hasSmartFarm: tempHasSmartFarm,
+      smartTechnologies: tempHasSmartFarm ? tempSmartTechList : [],
+    };
+    setCurrentFarm(updated);
+    setIsSmartTechModalOpen(false);
+    try {
+      await saveFarmToFirestore(updated);
+    } catch (err) {
+      console.error('Failed to save smart tech to Firestore:', err);
+    }
+  };
+
+  // Active Smart Technologies (if enabled)
+  const activeSmartTech = currentFarm.smartTechnologies?.filter((t) => t.active) || [];
+  const showSmartFarmCard = currentFarm.hasSmartFarm !== false && activeSmartTech.length > 0;
 
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
-      {/* Mobile-First Hero & Details Container matching user's uploaded layout */}
+      {/* Main Container */}
       <div className="bg-[#0e2619] text-[#f3f6f4] rounded-3xl overflow-hidden shadow-xl border border-[#1c442c]">
-        {/* Top Hero Photo Gallery */}
+        {/* Top Hero Photo Gallery (Pure Garden Atmosphere Photos) */}
         <div className="relative aspect-4/3 sm:aspect-16/9 bg-[#07190f] overflow-hidden">
-          {/* Main Hero Image */}
           <img
-            src={photos[activePhotoIndex]}
-            alt={farm.name}
+            src={displayPhotos[activePhotoIndex] || displayPhotos[0]}
+            alt={currentFarm.name}
             className="w-full h-full object-cover transition-all duration-300"
           />
-          {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e2619] via-transparent to-black/50 pointer-events-none" />
 
-          {/* Top Bar: Back Button & Photo Counter Pill */}
+          {/* Top Bar: Back Button & Photo Controls */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
             <button
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-xs font-bold text-[#F5D280] hover:text-white border border-[#E5A93C]/40 transition-all cursor-pointer shadow-sm active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-full text-xs font-bold text-[#F5D280] hover:text-white border border-[#E5A93C]/40 transition-all cursor-pointer shadow-sm active:scale-95"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-[#E5A93C]" />
               <span>กลับ</span>
             </button>
 
-            <div className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-full text-[11px] font-bold text-white border border-white/10 font-mono tracking-wider">
-              {activePhotoIndex + 1}/{photos.length}
+            <div className="flex items-center gap-2">
+              {isOwnerOrAdmin && (
+                <button
+                  onClick={() => {
+                    setPhotoList(displayPhotos);
+                    setIsPhotoManagerOpen(true);
+                  }}
+                  className="px-3 py-1.5 bg-[#E5A93C] hover:bg-[#f0b548] text-[#1c1202] text-xs font-black rounded-full flex items-center gap-1.5 shadow-md cursor-pointer transition-transform active:scale-95"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>จัดการรูปบรรยากาศ</span>
+                </button>
+              )}
+
+              <div className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-full text-[11px] font-bold text-white border border-white/10 font-mono tracking-wider">
+                {activePhotoIndex + 1}/{displayPhotos.length}
+              </div>
             </div>
           </div>
 
           {/* Carousel Dot Indicators */}
           <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5 z-10">
-            {photos.map((_, idx) => (
+            {displayPhotos.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setActivePhotoIndex(idx)}
@@ -171,7 +268,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                     ? 'w-6 bg-[#E5A93C]'
                     : 'w-1.5 bg-white/40 hover:bg-white/70'
                 }`}
-                aria-label={`รูปที่ ${idx + 1}`}
+                aria-label={`รูปบรรยากาศสวนที่ ${idx + 1}`}
               />
             ))}
           </div>
@@ -179,7 +276,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
         {/* Thumbnail Preview Strip */}
         <div className="px-4 pt-3 pb-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {photos.map((img, idx) => (
+          {displayPhotos.map((img, idx) => (
             <button
               key={idx}
               onClick={() => setActivePhotoIndex(idx)}
@@ -192,6 +289,18 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               <img src={img} alt={`thumb-${idx}`} className="w-full h-full object-cover" />
             </button>
           ))}
+          {isOwnerOrAdmin && (
+            <button
+              onClick={() => {
+                setPhotoList(displayPhotos);
+                setIsPhotoManagerOpen(true);
+              }}
+              className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-dashed border-[#1c442c] hover:border-[#E5A93C] flex flex-col items-center justify-center text-[#83A893] hover:text-[#E5A93C] text-[10px] font-bold cursor-pointer transition-colors"
+            >
+              <Plus className="w-4 h-4 mb-0.5" />
+              <span>เพิ่มรูป</span>
+            </button>
+          )}
         </div>
 
         {/* Farm Identity Header & Rating Card */}
@@ -199,19 +308,18 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
           <div className="flex items-start justify-between gap-3">
             {/* Left: Square Logo & Farm Name */}
             <div className="flex items-center gap-3 min-w-0">
-              {/* Square Logo Box in Gold/Emerald */}
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#143523] border border-[#225538] flex items-center justify-center text-[#E5A93C] font-black text-lg sm:text-xl shrink-0 shadow-inner font-serif">
                 {farmInitials}
               </div>
 
               <div className="min-w-0">
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">
-                  {farm.name}
+                  {currentFarm.name}
                 </h1>
                 <div className="flex items-center gap-1 text-xs text-[#83A893] mt-0.5">
                   <MapPin className="w-3.5 h-3.5 shrink-0 text-[#E5A93C]" />
                   <span className="truncate">
-                    {farm.district || 'อ.เมือง'} • {farm.province}
+                    {currentFarm.district || 'อ.เมือง'} • {currentFarm.province}
                   </span>
                 </div>
               </div>
@@ -220,46 +328,46 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
             {/* Right: Rating Box */}
             <div className="shrink-0 bg-[#143523] border border-[#225538] rounded-2xl px-3.5 py-2 text-center shadow-xs">
               <div className="text-lg font-black text-[#E5A93C] tabular-nums leading-none">
-                {farm.rating.toFixed(1)}
+                {currentFarm.rating.toFixed(1)}
               </div>
               <div className="flex items-center justify-center gap-0.5 text-[#E5A93C] text-[10px] my-1">
                 {'★'.repeat(5)}
               </div>
               <div className="text-[10px] text-[#83A893] font-medium">
-                {farm.reviewCount || 7} รีวิว
+                {currentFarm.reviewCount || 7} รีวิว
               </div>
             </div>
           </div>
 
-          {/* Social / Contact Action Buttons (Facebook, Instagram, LINE OA) */}
+          {/* Social / Contact Action Buttons */}
           <div className="grid grid-cols-3 gap-2 text-xs font-bold">
-            {/* Facebook */}
             <a
-              href={farm.contact?.facebook || 'https://facebook.com'}
+              href={currentFarm.contact?.facebook || 'https://facebook.com'}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
               className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-[#0c2238] border border-blue-800/60 hover:bg-[#122e4d] text-blue-300 rounded-xl transition-all text-center"
             >
               <span className="font-extrabold">f</span>
               <span className="truncate">Facebook</span>
             </a>
 
-            {/* Instagram */}
             <a
-              href={farm.contact?.instagram ? `https://instagram.com/${farm.contact.instagram}` : 'https://instagram.com'}
+              href={currentFarm.contact?.instagram ? `https://instagram.com/${currentFarm.contact.instagram}` : 'https://instagram.com'}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
               className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-[#261322] border border-pink-900/60 hover:bg-[#341a2e] text-pink-300 rounded-xl transition-all text-center"
             >
               <span>📷</span>
               <span className="truncate">Instagram</span>
             </a>
 
-            {/* LINE OA */}
             <a
-              href={farm.contact?.lineId ? `https://line.me/R/ti/p/${encodeURIComponent(farm.contact.lineId)}` : 'https://line.me'}
+              href={currentFarm.contact?.lineId ? `https://line.me/R/ti/p/${encodeURIComponent(currentFarm.contact.lineId)}` : 'https://line.me'}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
               className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-[#122b1c] border border-[#234d34] hover:bg-[#183a26] text-[#4ADE80] rounded-xl transition-all text-center"
             >
               <span>💬</span>
@@ -267,114 +375,196 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
             </a>
           </div>
 
-          {/* Key Stats Grid (2 Rows × 3 Columns matching uploaded screenshot) */}
+          {/* Success Toast for Update Request */}
+          {updateSuccessToast && (
+            <div className="p-3 bg-purple-950/80 border border-purple-500/60 rounded-2xl text-xs font-bold text-purple-200 flex items-center gap-2 animate-in slide-in-from-top shadow-lg">
+              <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
+              <span>{updateSuccessToast}</span>
+            </div>
+          )}
+
+          {/* Manager Action Banner: Request Farm Edit/Update to Admin */}
+          {isOwnerOrAdmin && (
+            <div className="p-3.5 bg-gradient-to-r from-purple-950/40 via-[#0e2619] to-indigo-950/40 border border-purple-700/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-md">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-900/60 border border-purple-600/50 flex items-center justify-center text-purple-300 shrink-0">
+                  <FileEdit className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>แผงควบคุมผู้จัดการสวน (Manager Hub)</span>
+                    <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1.5 py-0.2 rounded-md">
+                      Manager
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#83A893]">
+                    ต้องการแก้ไขข้อมูลที่กรอกผิด หรือเพิ่มเติมใบรับรอง / บรรยากาศสวน?
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsUpdateRequestModalOpen(true)}
+                className="w-full sm:w-auto px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>ส่งคำขอแก้ไขข้อมูลสวน (หา Admin)</span>
+              </button>
+            </div>
+          )}
+
+          {/* Key Stats Grid */}
           <div className="grid grid-cols-3 gap-2.5 pt-1">
-            {/* Row 1, Col 1: ต้นทุเรียน */}
             <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">🌳</span>
               <div className="text-base sm:text-lg font-black text-white tabular-nums">
-                {farm.totalTrees.toLocaleString()}
+                {currentFarm.totalTrees.toLocaleString()}
               </div>
               <div className="text-[11px] text-[#83A893] font-medium">ต้นทุเรียน</div>
             </div>
 
-            {/* Row 1, Col 2: ไร่ */}
             <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">📐</span>
               <div className="text-base sm:text-lg font-black text-white tabular-nums">
-                {farm.areaRai || 48}
+                {currentFarm.areaRai || 48}
               </div>
               <div className="text-[11px] text-[#83A893] font-medium">ไร่</div>
             </div>
 
-            {/* Row 1, Col 3: สายพันธุ์ */}
             <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">🔬</span>
               <div className="text-base sm:text-lg font-black text-white tabular-nums">
-                {farm.varietiesCount || farm.topVarieties?.length || 6}
+                {currentFarm.varietiesCount || currentFarm.topVarieties?.length || 6}
               </div>
               <div className="text-[11px] text-[#83A893] font-medium">สายพันธุ์</div>
             </div>
 
-            {/* Row 2, Col 1: เก็บ/ปี */}
             <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">🪚</span>
               <div className="text-base sm:text-lg font-black text-white tabular-nums">
-                {farm.harvestRounds || 3}
+                {currentFarm.harvestRounds || 3}
               </div>
               <div className="text-[11px] text-[#83A893] font-medium">เก็บ/ปี</div>
             </div>
 
-            {/* Row 2, Col 2: กก./ปี หรือผลผลิต */}
             <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">⚖️</span>
               <div className="text-base sm:text-lg font-black text-white tabular-nums">
-                {farm.harvestedFruits ? (farm.harvestedFruits * 3.5).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '2,840'}
+                {currentFarm.harvestedFruits ? (currentFarm.harvestedFruits * 3.5).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '2,840'}
               </div>
               <div className="text-[11px] text-[#83A893] font-medium">กก./ปี</div>
             </div>
 
-            {/* Row 2, Col 3: คะแนนรีวิว */}
             <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">⭐</span>
               <div className="text-base sm:text-lg font-black text-[#E5A93C] tabular-nums">
-                {farm.rating.toFixed(1)}/5
+                {currentFarm.rating.toFixed(1)}/5
               </div>
               <div className="text-[11px] text-[#83A893] font-medium">คะแนนรีวิว</div>
             </div>
           </div>
 
-          {/* SmartFarm Innovation Card matching exact design from uploaded screenshot */}
-          <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#122b1c] border border-[#1c442c] p-4 sm:p-5 shadow-lg">
-            {/* Background Ambient Glow */}
-            <div className="absolute top-0 right-0 w-64 h-32 bg-emerald-600/10 blur-3xl pointer-events-none" />
+          {/* SmartFarm Innovation Section (Optional & Toggleable by Farm Manager) */}
+          {showSmartFarmCard ? (
+            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#122b1c] border border-[#1c442c] p-4 sm:p-5 shadow-lg">
+              <div className="absolute top-0 right-0 w-64 h-32 bg-emerald-600/10 blur-3xl pointer-events-none" />
 
-            {/* Top Header */}
-            <div className="flex items-center justify-between mb-2 relative z-10">
-              <div>
-                <h3 className="font-serif font-black text-[#F5D280] text-base sm:text-lg tracking-wide leading-tight">
-                  SmartFarm
-                </h3>
-                <p className="text-xs text-[#83A893] font-medium mt-0.5">เทคโนโลยีภายในฟาร์ม</p>
+              <div className="flex items-center justify-between mb-2 relative z-10">
+                <div>
+                  <h3 className="font-serif font-black text-[#F5D280] text-base sm:text-lg tracking-wide leading-tight flex items-center gap-1.5">
+                    <span>SmartFarm</span>
+                    <span className="text-xs font-normal text-[#83A893]">({activeSmartTech.length} ระบบ)</span>
+                  </h3>
+                  <p className="text-xs text-[#83A893] font-medium mt-0.5">เทคโนโลยีแม่นยำภายในฟาร์ม</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isOwnerOrAdmin && (
+                    <button
+                      onClick={() => {
+                        setTempHasSmartFarm(currentFarm.hasSmartFarm ?? true);
+                        setTempSmartTechList(
+                          currentFarm.smartTechnologies && currentFarm.smartTechnologies.length > 0
+                            ? currentFarm.smartTechnologies
+                            : DEFAULT_SMART_TECH_OPTIONS.map((t) => ({ ...t, active: true }))
+                        );
+                        setIsSmartTechModalOpen(true);
+                      }}
+                      className="p-1.5 bg-[#143523] hover:bg-[#1f4e34] text-[#F5D280] rounded-xl border border-[#225739] transition-colors cursor-pointer text-xs flex items-center gap-1"
+                      title="ตั้งค่า SmartFarm"
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">ตั้งค่า</span>
+                    </button>
+                  )}
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#153e28] text-[#4ADE80] border border-[#225739] shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-pulse" />
+                    ใช้งานจริง
+                  </span>
+                </div>
               </div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#153e28] text-[#4ADE80] border border-[#225739] shadow-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-pulse" />
-                ใช้งานจริง
-              </span>
-            </div>
 
-            {/* Technologies List */}
-            <div className="divide-y divide-[#1c442c] relative z-10">
-              {smartTechList.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between py-3 first:pt-2 last:pb-1"
-                >
-                  <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <span className="text-xl sm:text-2xl w-8 text-center shrink-0">
-                      {item.iconEmoji}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-bold text-xs sm:text-sm text-white truncate">
-                        {item.name}
-                      </div>
-                      <div className="text-[11px] sm:text-xs text-[#83A893] font-medium mt-0.5 truncate">
-                        {item.subtext}
+              {/* Technologies List */}
+              <div className="divide-y divide-[#1c442c] relative z-10">
+                {activeSmartTech.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between py-3 first:pt-2 last:pb-1"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <span className="text-xl sm:text-2xl w-8 text-center shrink-0">
+                        {item.iconEmoji}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm text-white truncate">
+                          {item.name}
+                        </div>
+                        <div className="text-[11px] sm:text-xs text-[#83A893] font-medium mt-0.5 truncate">
+                          {item.subtext}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="shrink-0 pl-2">
-                    <span className="block w-2.5 h-2.5 rounded-full bg-[#4ADE80] shadow-[0_0_8px_rgba(74,222,128,0.8)] ring-2 ring-emerald-500/30" />
+                    <div className="shrink-0 pl-2">
+                      <span className="block w-2.5 h-2.5 rounded-full bg-[#4ADE80] shadow-[0_0_8px_rgba(74,222,128,0.8)] ring-2 ring-emerald-500/30" />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Traditional Farming Banner (When SmartFarm is disabled or not present) */
+            <div className="p-4 rounded-2xl bg-[#122b1c] border border-[#1c442c] flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-2xl">🌱</span>
+                <div className="min-w-0">
+                  <div className="text-xs sm:text-sm font-bold text-white">
+                    วิถีเกษตรประณีตและธรรมชาติ (Traditional Sustainable Practice)
+                  </div>
+                  <p className="text-[11px] text-[#83A893] truncate">
+                    ดูแลด้วยภูมิปัญญาชาวสวนทุเรียนดั้งเดิมและปุ๋ยอินทรีย์บำรุงดินธรรมชาติ
+                  </p>
+                </div>
+              </div>
+
+              {isOwnerOrAdmin && (
+                <button
+                  onClick={() => {
+                    setTempHasSmartFarm(false);
+                    setTempSmartTechList(DEFAULT_SMART_TECH_OPTIONS.map((t) => ({ ...t, active: true })));
+                    setIsSmartTechModalOpen(true);
+                  }}
+                  className="shrink-0 ml-2 px-3 py-1.5 bg-[#143523] hover:bg-[#1f4e34] text-[#E5A93C] text-xs font-bold rounded-xl border border-[#225739] transition-colors cursor-pointer"
+                >
+                  ⚙️ เพิ่มระบบ SmartFarm
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Navigation Tabs - Clean 3-Column Responsive Grid without horizontal scrollbar */}
+      {/* Navigation Tabs */}
       <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full pt-1">
         <button
           onClick={() => setActiveTab('trees')}
@@ -397,7 +587,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
           }`}
         >
           <span>📜</span>
-          <span className="truncate">ใบรับรอง ({farm.certificationDetails?.length || farm.certifications?.length || 1})</span>
+          <span className="truncate">ใบรับรอง ({currentFarm.certificationDetails?.length || currentFarm.certifications?.length || 1})</span>
         </button>
 
         <button
@@ -416,9 +606,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
       {/* Tab: Individual Trees List */}
       {activeTab === 'trees' && (
         <div className="space-y-3">
-          {/* Filter Pills and Search Bar without horizontal scrollbar */}
           <div className="flex flex-col gap-2.5 w-full">
-            {/* Filter Pills with natural wrapping for mobile */}
             <div className="flex flex-wrap items-center gap-1.5 w-full text-xs font-semibold">
               <button
                 onClick={() => setSelectedFilter('all')}
@@ -471,7 +659,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               )}
             </div>
 
-            {/* Quick Search and Sort Grid */}
+            {/* Search and Sort */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
               <div className="relative w-full">
                 <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#E5A93C]" />
@@ -500,7 +688,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
             </div>
           </div>
 
-          {/* Sequential Tree List Items */}
+          {/* Tree List */}
           <div className="bg-[#0e2619] rounded-3xl border border-[#1c442c] shadow-2xl overflow-hidden divide-y divide-[#1c442c]">
             {filteredAndSortedTrees.length === 0 ? (
               <div className="p-10 text-center text-[#83A893] text-xs">
@@ -513,9 +701,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                   onClick={() => setSelectedTree(tree)}
                   className="group flex items-center justify-between p-3.5 sm:p-4 hover:bg-[#143523] transition-colors cursor-pointer"
                 >
-                  {/* Left: Thumbnail + Name + Code + Zone */}
                   <div className="flex items-center gap-3 min-w-0 pr-2">
-                    {/* Tree Photo Thumbnail */}
                     <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[#07190f] shrink-0 border border-[#1c442c]">
                       <img
                         src="https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=200&auto=format&fit=crop&q=80"
@@ -527,7 +713,6 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Tree Details */}
                     <div className="min-w-0 flex flex-col">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-bold text-xs sm:text-sm text-white group-hover:text-[#E5A93C] truncate transition-colors">
@@ -548,7 +733,6 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Right: Rating + Diaries Count */}
                   <div className="flex flex-col items-end shrink-0 text-right pl-2">
                     <div className="flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 text-[#E5A93C] fill-[#E5A93C]" />
@@ -569,42 +753,104 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
         </div>
       )}
 
-      {/* Tab: Certifications */}
+      {/* Tab: Certifications with Inspection Button */}
       {activeTab === 'certs' && (
         <div className="bg-[#0e2619] rounded-3xl border border-[#1c442c] p-5 shadow-2xl space-y-4">
-          <div className="flex items-center gap-2 border-b border-[#1c442c] pb-3">
-            <ShieldCheck className="w-5 h-5 text-[#E5A93C]" />
-            <h3 className="font-bold text-sm text-white">
-              ใบรับรองมาตรฐานทางการเกษตร (GAP / GI)
-            </h3>
+          <div className="flex items-center justify-between border-b border-[#1c442c] pb-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-[#4ADE80]" />
+              <h3 className="font-bold text-sm text-white">
+                ใบรับรองมาตรฐานทางการเกษตร (Official Certificates)
+              </h3>
+            </div>
+            <span className="text-[10px] font-bold bg-[#143523] text-[#4ADE80] border border-[#235b3a] px-2.5 py-1 rounded-full">
+              ✓ ผ่านการตรวจสอบ ({currentFarm.certificationDetails?.length || 1} รายการ)
+            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {farm.certificationDetails && farm.certificationDetails.length > 0 ? (
-              farm.certificationDetails.map((cert, idx) => (
-                <div
-                  key={idx}
-                  className="p-3.5 rounded-2xl border border-[#1c442c] bg-[#122b1c] space-y-1"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-[#E5A93C]">{cert.shortCode}</span>
-                    <span className="text-[10px] font-bold bg-[#E5A93C]/20 text-[#F5D280] px-2 py-0.5 rounded-full border border-[#E5A93C]/40">
-                      ตรวจสอบแล้ว
-                    </span>
+            {currentFarm.certificationDetails && currentFarm.certificationDetails.length > 0 ? (
+              currentFarm.certificationDetails.map((cert, idx) => {
+                const certPhoto = cert.documentPhoto || currentFarm.certDocumentPhoto || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80';
+                const isPdf = cert.fileType === 'pdf' || certPhoto.includes('application/pdf') || certPhoto.toLowerCase().endsWith('.pdf');
+
+                return (
+                  <div
+                    key={cert.id || idx}
+                    className="p-4 rounded-2xl border border-[#1c442c] bg-[#122b1c] space-y-2.5 flex flex-col justify-between"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-[#E5A93C] font-mono">{cert.shortCode}</span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${
+                            isPdf
+                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          }`}>
+                            {isPdf ? 'PDF' : 'PNG/รูป'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold bg-[#E5A93C]/20 text-[#F5D280] px-2 py-0.5 rounded-full border border-[#E5A93C]/40">
+                          ตรวจสอบแล้ว
+                        </span>
+                      </div>
+                      <div className="text-xs text-white font-bold">{cert.nameTh || cert.name}</div>
+                      <div className="text-[11px] text-[#83A893] font-mono">
+                        เลขที่: <span className="text-[#F5D280] font-bold">{cert.certNumber}</span>
+                      </div>
+                      <div className="text-[10px] text-[#83A893]">
+                        ออกโดย: {cert.issuedBy} (ใช้ได้ถึง {cert.validUntil})
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() =>
+                        setSelectedCertDoc({
+                          name: cert.nameTh || cert.name,
+                          certNumber: cert.certNumber,
+                          issuedBy: cert.issuedBy,
+                          validUntil: cert.validUntil,
+                          photoUrl: certPhoto,
+                          fileType: isPdf ? 'pdf' : 'image',
+                          fileName: cert.fileName || `${cert.shortCode}_Certificate.${isPdf ? 'pdf' : 'png'}`,
+                        })
+                      }
+                      className="w-full py-2 bg-[#04140b] hover:bg-[#143523] border border-[#1c442c] hover:border-[#E5A93C] rounded-xl text-xs font-bold text-[#F5D280] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                    >
+                      {isPdf ? (
+                        <FileText className="w-3.5 h-3.5 text-rose-400" />
+                      ) : (
+                        <Eye className="w-3.5 h-3.5 text-[#E5A93C]" />
+                      )}
+                      <span>{isPdf ? 'เปิดดูเอกสารใบรับรอง (PDF)' : 'ดูภาพถ่ายใบรับรองฉบับจริง'}</span>
+                    </button>
                   </div>
-                  <div className="text-xs text-white font-semibold">{cert.nameTh}</div>
-                  <div className="text-[11px] text-[#83A893] font-mono">
-                    เลขที่: {cert.certNumber}
-                  </div>
-                  <div className="text-[10px] text-[#83A893]">
-                    ออกโดย: {cert.issuedBy}
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="p-4 rounded-2xl border border-[#1c442c] bg-[#122b1c] text-xs text-[#F5D280] font-semibold flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-[#4ADE80]" />
-                <span>ได้รับการรับรองมาตรฐาน GAP กรมวิชาการเกษตร (ตรวจสอบแล้ว)</span>
+              <div className="p-4 rounded-2xl border border-[#1c442c] bg-[#122b1c] space-y-3 col-span-2">
+                <div className="flex items-center gap-2 text-xs text-[#F5D280] font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-[#4ADE80]" />
+                  <span>ได้รับการรับรองมาตรฐาน GAP กรมวิชาการเกษตร (ตรวจสอบแล้ว)</span>
+                </div>
+                <button
+                  onClick={() =>
+                    setSelectedCertDoc({
+                      name: 'GAP มาตรฐานการปฏิบัติทางการเกษตรที่ดี',
+                      certNumber: 'GAP-DOA-TH-2026',
+                      issuedBy: 'กรมวิชาการเกษตร',
+                      validUntil: '2028',
+                      photoUrl: currentFarm.certDocumentPhoto || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80',
+                      fileType: 'image',
+                      fileName: 'GAP_Certificate.png',
+                    })
+                  }
+                  className="py-2 px-4 bg-[#04140b] hover:bg-[#143523] border border-[#1c442c] hover:border-[#E5A93C] rounded-xl text-xs font-bold text-[#F5D280] inline-flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5 text-[#E5A93C]" />
+                  <span>ดูภาพถ่ายใบรับรองฉบับจริง</span>
+                </button>
               </div>
             )}
           </div>
@@ -619,18 +865,427 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
             <span>ประวัติความเป็นมาและเรื่องราวของฟาร์ม</span>
           </h3>
           <p className="text-xs text-[#83A893] leading-relaxed whitespace-pre-line">
-            {farm.aboutStory || farm.highlight || 'ฟาร์มทุเรียนคุณภาพ มุ่งเน้นการผลิตทุเรียนคุณภาพสูงด้วยระบบเกษตรแม่นยำ พร้อมระบบติดตามตรวจสอบย้อนกลับด้วยเทคโนโลยี NFC'}
+            {currentFarm.aboutStory || currentFarm.highlight || 'ฟาร์มทุเรียนคุณภาพ มุ่งเน้นการผลิตทุเรียนคุณภาพสูงด้วยระบบเกษตรแม่นยำ พร้อมระบบติดตามตรวจสอบย้อนกลับด้วยเทคโนโลยี NFC'}
           </p>
         </div>
       )}
 
-      {/* Tree Detail Modal when a tree is clicked */}
+      {/* MODAL 1: Certificate Lightbox Modal (Supports PDF & PNG/JPG Images) */}
+      {selectedCertDoc && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in"
+          onClick={() => setSelectedCertDoc(null)}
+        >
+          <div
+            className="bg-[#07190f] text-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#1c442c] relative flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-[#1c442c] bg-gradient-to-r from-[#0e2619] to-[#07190f] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-[#E5A93C]" />
+                <div>
+                  <h3 className="font-bold text-sm text-white">{selectedCertDoc.name}</h3>
+                  <p className="text-[11px] text-[#83A893] font-mono">
+                    เลขที่: {selectedCertDoc.certNumber}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedCertDoc(null)}
+                className="p-1.5 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-full border border-[#1c442c] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-1 space-y-3">
+              {selectedCertDoc.fileType === 'pdf' ||
+              selectedCertDoc.photoUrl.includes('application/pdf') ||
+              selectedCertDoc.photoUrl.toLowerCase().endsWith('.pdf') ? (
+                <div className="space-y-3">
+                  {/* PDF Document Preview Card */}
+                  <div className="p-6 sm:p-8 bg-gradient-to-b from-[#0e2619] to-[#04140b] rounded-2xl border border-rose-500/30 text-center space-y-4 shadow-inner">
+                    <div className="w-16 h-16 rounded-2xl bg-rose-950/70 border border-rose-500/40 flex items-center justify-center text-rose-400 mx-auto shadow-md">
+                      <FileText className="w-8 h-8" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
+                        <span>เอกสารรับรองมาตรฐานทางการเกษตร (PDF)</span>
+                      </div>
+                      <h4 className="text-base font-bold text-white pt-1">
+                        {selectedCertDoc.fileName || `${selectedCertDoc.shortCode}_Certificate.pdf`}
+                      </h4>
+                      <p className="text-xs text-[#83A893]">
+                        เอกสารตรวจสอบความถูกต้องฉบับจริง ออกโดย {selectedCertDoc.issuedBy}
+                      </p>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center justify-center pt-2">
+                      <button
+                        type="button"
+                        onClick={() => openPdfDocument(selectedCertDoc.photoUrl, selectedCertDoc.fileName)}
+                        className="px-6 py-2.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:shadow-rose-900/40 transition-all cursor-pointer transform active:scale-95"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span>เปิดอ่านไฟล์ PDF เต็มจอ</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl overflow-hidden border border-[#1c442c] bg-black">
+                  <img
+                    src={selectedCertDoc.photoUrl}
+                    alt="Official Certificate Document"
+                    className="w-full max-h-[60vh] object-contain mx-auto"
+                  />
+                </div>
+              )}
+
+              <div className="p-3 bg-[#0e2619] rounded-2xl border border-[#1c442c] text-xs space-y-1 text-[#83A893]">
+                <div className="flex justify-between">
+                  <span>หน่วยงานผู้ออก:</span>
+                  <span className="font-semibold text-white">{selectedCertDoc.issuedBy}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>สถานะการรับรอง:</span>
+                  <span className="text-[#4ADE80] font-bold">✓ ผ่านการรับรองถูกต้อง</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>หมดอายุ:</span>
+                  <span className="font-mono text-[#F5D280]">{selectedCertDoc.validUntil}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Photo Manager for Farm Atmosphere Photos (PNG / JPG file upload support) */}
+      {isPhotoManagerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in"
+          onClick={() => setIsPhotoManagerOpen(false)}
+        >
+          <div
+            className="bg-[#07190f] text-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#1c442c] relative flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-[#1c442c] bg-gradient-to-r from-[#0e2619] to-[#07190f] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-[#E5A93C]" />
+                <div>
+                  <h3 className="font-bold text-sm text-white">จัดการรูปภาพบรรยากาศสวน</h3>
+                  <p className="text-[11px] text-[#83A893]">
+                    เพิ่มหรือแก้ไขภาพถ่ายแปลงสวน ต้นทุเรียน และบรรยากาศธรรมชาติ
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsPhotoManagerOpen(false)}
+                className="p-1.5 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-full border border-[#1c442c] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-1 space-y-4 text-xs">
+              {/* Local File Upload Button (PNG / JPG / WebP) */}
+              <div className="p-3.5 bg-[#04140b] rounded-2xl border border-dashed border-[#1c442c] hover:border-[#E5A93C] flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-bold text-white text-xs">อัปโหลดไฟล์รูปภาพ PNG / JPG</div>
+                  <div className="text-[10px] text-[#83A893]">เลือกไฟล์ภาพจากอุปกรณ์ของคุณโดยตรง</div>
+                </div>
+                <label className="px-3 py-1.5 bg-[#143523] hover:bg-[#1f4e34] border border-[#225739] text-[#F5D280] hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>เลือกรูป</span>
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp, image/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (!files) return;
+                      Array.from(files).forEach((file: File) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const dataUrl = event.target?.result as string;
+                          if (dataUrl) {
+                            setPhotoList((prev) => [...prev, dataUrl]);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* Photo list (Responsive 16:10 aspect ratio) */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {photoList.map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="relative group rounded-xl overflow-hidden aspect-16/10 bg-[#04140b] border border-[#1c442c]"
+                  >
+                    <img src={url} alt={`Atmosphere ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => {
+                        if (photoList.length > 1) {
+                          setPhotoList(photoList.filter((_, i) => i !== idx));
+                        }
+                      }}
+                      className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-rose-600 text-white rounded-md transition-colors cursor-pointer"
+                      title="ลบรูปนี้"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                    <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-[#F5D280] px-1 py-0.5 text-center truncate">
+                      รูปที่ {idx + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Quick sample photo selector */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] text-[#83A893] block font-medium">
+                  หรือเลือกภาพบรรยากาศสวนตัวอย่าง:
+                </span>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {SAMPLE_GARDEN_PHOTOS.map((sampleUrl, sIdx) => {
+                    const isSelected = photoList.includes(sampleUrl);
+                    return (
+                      <div
+                        key={sIdx}
+                        onClick={() => {
+                          if (isSelected) {
+                            if (photoList.length > 1) {
+                              setPhotoList(photoList.filter((p) => p !== sampleUrl));
+                            }
+                          } else {
+                            setPhotoList([...photoList, sampleUrl]);
+                          }
+                        }}
+                        className={`relative rounded-xl overflow-hidden aspect-square cursor-pointer transition-all border ${
+                          isSelected
+                            ? 'ring-2 ring-[#E5A93C] border-[#E5A93C] scale-102'
+                            : 'border-[#1c442c] opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={sampleUrl} alt={`Sample ${sIdx}`} className="w-full h-full object-cover" />
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-[#E5A93C] text-[#1c1202] rounded-full flex items-center justify-center font-bold text-[8px]">
+                            ✓
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-[#1c442c] flex justify-end gap-2 shrink-0">
+              <button
+                onClick={() => setIsPhotoManagerOpen(false)}
+                className="px-4 py-2 bg-[#04140b] hover:bg-[#143523] text-white rounded-xl text-xs font-bold border border-[#1c442c] cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const updatedFarm: DurianFarm = {
+                      ...currentFarm,
+                      atmospherePhotos: photoList,
+                      photos: photoList,
+                    };
+                    setCurrentFarm(updatedFarm);
+                    await saveFarmToFirestore(updatedFarm);
+                    setIsPhotoManagerOpen(false);
+                    setUpdateSuccessToast('บันทึกรูปภาพบรรยากาศสวนเรียบร้อยแล้ว');
+                    setTimeout(() => setUpdateSuccessToast(''), 3500);
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
+                className="px-4 py-2 bg-[#E5A93C] hover:bg-[#f0b548] text-[#1c1202] font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <Check className="w-4 h-4" />
+                <span>บันทึกการเปลี่ยนแปลง</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Smart Farm Configuration Modal */}
+      {isSmartTechModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in"
+          onClick={() => setIsSmartTechModalOpen(false)}
+        >
+          <div
+            className="bg-[#07190f] text-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#1c442c] relative flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-[#1c442c] bg-gradient-to-r from-[#0e2619] to-[#07190f] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Cpu className="w-5 h-5 text-[#E5A93C]" />
+                <div>
+                  <h3 className="font-bold text-sm text-white">ตั้งค่าระบบ SmartFarm</h3>
+                  <p className="text-[11px] text-[#83A893]">
+                    เปิด-ปิด หรือเลือกเทคโนโลยีอัจฉริยะที่มีการติดตั้งจริงในสวน
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSmartTechModalOpen(false)}
+                className="p-1.5 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-full border border-[#1c442c] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-1 space-y-4 text-xs">
+              {/* Main Toggle */}
+              <div className="p-4 bg-[#0e2619] rounded-2xl border border-[#1c442c] flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-sm text-white">
+                    เปิดใช้งานแท็บ SmartFarm บนหน้าสวน
+                  </div>
+                  <p className="text-[11px] text-[#83A893] mt-0.5">
+                    {tempHasSmartFarm
+                      ? 'เปิดใช้งาน (จะแสดงรายการเทคโนโลยีที่เลือกด้านล่าง)'
+                      : 'ปิด (แสดงเป็นวิถีเกษตรประณีตธรรมชาติ)'}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setTempHasSmartFarm(!tempHasSmartFarm)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                    tempHasSmartFarm ? 'bg-[#4ADE80]' : 'bg-[#1c442c]'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      tempHasSmartFarm ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Technologies Checklist */}
+              {tempHasSmartFarm && (
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-[#F5D280] block">
+                    เลือกเทคโนโลยีที่มีการใช้งานในสวน:
+                  </span>
+                  <div className="space-y-2">
+                    {tempSmartTechList.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() =>
+                          setTempSmartTechList(
+                            tempSmartTechList.map((t) =>
+                              t.id === item.id ? { ...t, active: !t.active } : t
+                            )
+                          )
+                        }
+                        className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                          item.active
+                            ? 'bg-[#143523] border-[#4ADE80]/50'
+                            : 'bg-[#04140b] border-[#1c442c] opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 pr-2">
+                          <span className="text-xl shrink-0">{item.iconEmoji}</span>
+                          <div className="min-w-0">
+                            <div className="font-bold text-xs text-white truncate">{item.name}</div>
+                            <div className="text-[11px] text-[#83A893] truncate">{item.subtext}</div>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={item.active}
+                          onChange={() => {}}
+                          className="w-4 h-4 rounded-sm text-[#4ADE80] focus:ring-0 cursor-pointer accent-[#4ADE80]"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-[#1c442c] flex justify-end gap-2 shrink-0">
+              <button
+                onClick={() => setIsSmartTechModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-[#83A893] hover:text-white rounded-xl cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={() => handleSaveSmartTech()}
+                className="px-5 py-2 bg-[#E5A93C] hover:bg-[#f0b548] text-[#1c1202] font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md cursor-pointer transition-transform active:scale-95"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>บันทึกการตั้งค่า</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tree Detail Modal */}
       {selectedTree && (
         <TreeDetailModal
           tree={selectedTree}
-          farm={farm}
+          farm={currentFarm}
           currentRole={currentRole}
           onClose={() => setSelectedTree(null)}
+        />
+      )}
+
+      {/* Farm Update Request Modal for Manager */}
+      {isUpdateRequestModalOpen && (
+        <FarmRegistrationModal
+          isOpen={isUpdateRequestModalOpen}
+          mode="update"
+          targetFarmId={currentFarm.id}
+          initialData={{
+            requestType: 'update_farm',
+            targetFarmId: currentFarm.id,
+            farmName: currentFarm.name,
+            farmNameEn: currentFarm.nameEn,
+            province: currentFarm.province,
+            district: currentFarm.district,
+            locationAddress: currentFarm.contact?.locationAddress,
+            areaRai: currentFarm.areaRai,
+            totalTreesEstimate: currentFarm.totalTrees,
+            topVarieties: currentFarm.topVarieties,
+            aboutStory: currentFarm.aboutStory,
+            contact: currentFarm.contact,
+            gapCertNumber: currentFarm.certificationDetails?.[0]?.certNumber || 'GAP-TH-2026',
+            certIssuedBy: currentFarm.certificationDetails?.[0]?.issuedBy || 'กรมวิชาการเกษตร',
+            certValidUntil: currentFarm.certificationDetails?.[0]?.validUntil || '2028',
+            certDocumentPhoto: currentFarm.certDocumentPhoto,
+            certificationList: currentFarm.certificationDetails || [],
+            atmospherePhotos: currentFarm.atmospherePhotos || currentFarm.photos || [],
+            hasSmartFarm: currentFarm.hasSmartFarm ?? false,
+            smartTechnologies: currentFarm.smartTechnologies || [],
+          }}
+          onClose={() => setIsUpdateRequestModalOpen(false)}
+          onSuccess={() => {
+            setIsUpdateRequestModalOpen(false);
+            setUpdateSuccessToast('ส่งคำขอแก้ไขข้อมูลสวนไปยังแอดมินเรียบร้อยแล้ว! แอดมินจะตรวจสอบและอนุมัติให้โดยเร็ว');
+            setTimeout(() => setUpdateSuccessToast(''), 5000);
+          }}
         />
       )}
     </div>

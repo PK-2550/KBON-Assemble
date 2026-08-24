@@ -349,7 +349,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
         {onGuestAccess && (
           <button
             type="button"
-            onClick={onGuestAccess}
+            onClick={() => onGuestAccess()}
             className="text-[#8DA796] hover:text-[#E5A93C] text-[10px] font-semibold underline underline-offset-2 transition-colors cursor-pointer"
           >
             เข้าชมตัวอย่างระบบชั่วคราว (Guest Preview)

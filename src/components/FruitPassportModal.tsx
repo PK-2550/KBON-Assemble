@@ -80,7 +80,7 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
         <div className="pt-3 px-4 pb-2 flex items-center justify-between text-xs shrink-0 z-10">
           {/* Close button / Back indicator */}
           <button
-            onClick={onClose}
+            onClick={() => onClose()}
             className="w-8 h-8 rounded-full bg-[#0e2619] border border-[#1c442c] flex items-center justify-center text-[#83A893] hover:text-white cursor-pointer transition-colors"
             title="ปิด"
           >
@@ -193,7 +193,7 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
             <div className="grid grid-cols-2 gap-2 pt-1">
               {/* Gold Button: เข้าชมโปรไฟล์ฟาร์ม → */}
               <button
-                onClick={handleOpenFarm}
+                onClick={() => handleOpenFarm()}
                 className="py-2.5 px-3 bg-[#E5A93C] hover:bg-[#d89727] text-[#1c1202] text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
               >
                 <span>เข้าชมโปรไฟล์ฟาร์ม</span>
@@ -201,17 +201,26 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
               </button>
 
               {/* Dark Emerald Button: 📍 ดูบนแผนที่ */}
-              <button
-                onClick={() => {
-                  if (farm) {
-                    window.open(`https://maps.google.com/?q=${encodeURIComponent(farm.name + ' ' + farm.province)}`, '_blank');
-                  }
-                }}
-                className="py-2.5 px-3 bg-[#122b1c] hover:bg-[#183a26] text-white border border-[#234d34] text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <MapPin className="w-3.5 h-3.5 text-[#E5A93C]" />
-                <span>ดูบนแผนที่</span>
-              </button>
+              {farm ? (
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(farm.name + ' ' + farm.province)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-2.5 px-3 bg-[#122b1c] hover:bg-[#183a26] text-white border border-[#234d34] text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-[#E5A93C]" />
+                  <span>ดูบนแผนที่</span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="py-2.5 px-3 bg-[#122b1c] text-white/50 border border-[#234d34] text-xs font-semibold rounded-xl flex items-center justify-center gap-1"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-[#E5A93C]" />
+                  <span>ดูบนแผนที่</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -229,7 +238,7 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
 
             {/* Card 2: รหัสต้น → (Interactive Link) */}
             <div
-              onClick={handleOpenTree}
+              onClick={() => handleOpenTree()}
               className="bg-[#0e2619] border border-[#E5A93C]/40 hover:border-[#E5A93C] rounded-2xl p-3 space-y-0.5 cursor-pointer transition-colors group"
             >
               <span className="text-[11px] font-bold text-[#E5A93C] flex items-center justify-between">

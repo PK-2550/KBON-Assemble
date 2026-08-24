@@ -1,16 +1,59 @@
-import React from 'react';
-import { Trees, Sprout, Star, Award, TrendingUp, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Trees,
+  Sprout,
+  Star,
+  Award,
+  TrendingUp,
+  MapPin,
+  ShieldCheck,
+  PlusCircle,
+  Clock,
+  CheckCircle2,
+  Database,
+  ArrowRight,
+  Sparkles,
+  BarChart3,
+  Layers,
+} from 'lucide-react';
 import { DurianFarm } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { isUserAdmin } from '../services/authService';
+import { subscribeAllFarmRequests } from '../services/farmRequestService';
 
 interface DashboardViewProps {
   farms: DurianFarm[];
   onSelectFarm: (farm: DurianFarm) => void;
+  isAdmin?: boolean;
+  onOpenAdminApproval?: () => void;
+  onOpenAddFarm?: () => void;
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ farms, onSelectFarm }) => {
-  const totalTrees = farms.reduce((acc, f) => acc + f.totalTrees, 0);
-  const totalHarvested = farms.reduce((acc, f) => acc + f.harvestedFruits, 0);
+export const DashboardView: React.FC<DashboardViewProps> = ({
+  farms,
+  onSelectFarm,
+  isAdmin: propIsAdmin,
+  onOpenAdminApproval,
+  onOpenAddFarm,
+}) => {
+  const { currentUser } = useAuth();
+  const isAdmin = propIsAdmin ?? isUserAdmin(currentUser);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  // Subscribe to pending requests count for Admin
+  useEffect(() => {
+    if (!isAdmin) return;
+    const unsubscribe = subscribeAllFarmRequests((reqs) => {
+      const pending = reqs.filter((r) => r.status === 'pending').length;
+      setPendingRequestsCount(pending);
+    });
+    return () => unsubscribe();
+  }, [isAdmin]);
+
+  const totalTrees = farms.reduce((acc, f) => acc + (f.totalTrees || 0), 0);
+  const totalHarvested = farms.reduce((acc, f) => acc + (f.harvestedFruits || 0), 0);
   const avgYieldPerTree = totalTrees > 0 ? (totalHarvested / totalTrees).toFixed(1) : '0';
+  const certifiedFarmsCount = farms.filter((f) => f.certifications && f.certifications.length > 0).length;
 
   // Province breakdown
   const provinceStats = React.useMemo(() => {
@@ -20,18 +63,60 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ farms, onSelectFar
         map[f.province] = { count: 0, harvested: 0, trees: 0 };
       }
       map[f.province].count += 1;
-      map[f.province].harvested += f.harvestedFruits;
-      map[f.province].trees += f.totalTrees;
+      map[f.province].harvested += f.harvestedFruits || 0;
+      map[f.province].trees += f.totalTrees || 0;
     });
     return Object.entries(map)
       .map(([province, data]) => ({ province, ...data }))
       .sort((a, b) => b.harvested - a.harvested);
   }, [farms]);
 
+  // Variety distribution estimate based on top varieties
+  const varietyStats = React.useMemo(() => {
+    const counts: Record<string, number> = {
+      'หมอนทอง (Monthong)': 0,
+      'ก้านยาว (Kan Yao)': 0,
+      'ชะนี (Chanee)': 0,
+      'พวงมณี (Puang Manee)': 0,
+      'นกกระจิบ / สายพันธุ์อื่นๆ': 0,
+    };
+
+    farms.forEach((f) => {
+      const farmHarvest = f.harvestedFruits || 0;
+      if (f.topVarieties?.some((v) => v.includes('หมอนทอง'))) {
+        counts['หมอนทอง (Monthong)'] += Math.round(farmHarvest * 0.65);
+      }
+      if (f.topVarieties?.some((v) => v.includes('ก้านยาว'))) {
+        counts['ก้านยาว (Kan Yao)'] += Math.round(farmHarvest * 0.15);
+      }
+      if (f.topVarieties?.some((v) => v.includes('ชะนี'))) {
+        counts['ชะนี (Chanee)'] += Math.round(farmHarvest * 0.1);
+      }
+      if (f.topVarieties?.some((v) => v.includes('พวงมณี'))) {
+        counts['พวงมณี (Puang Manee)'] += Math.round(farmHarvest * 0.05);
+      }
+      counts['นกกระจิบ / สายพันธุ์อื่นๆ'] += Math.round(farmHarvest * 0.05);
+    });
+
+    const totalEstimated = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+    return Object.entries(counts).map(([name, val]) => ({
+      name,
+      val,
+      percentage: ((val / totalEstimated) * 100).toFixed(1),
+    }));
+  }, [farms]);
+
+  // Top 5 Ranked Farms
+  const topFarms = React.useMemo(() => {
+    return [...farms]
+      .sort((a, b) => (b.harvestedFruits || 0) - (a.harvestedFruits || 0))
+      .slice(0, 5);
+  }, [farms]);
+
   return (
     <div className="space-y-6">
       {/* Top Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#092215] rounded-3xl p-5 border border-[#18422b] shadow-xl text-white">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-[#8DA796]">ผลผลิตรวมทั้งระบบ</span>
@@ -72,11 +157,135 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ farms, onSelectFar
             </div>
           </div>
           <div className="text-2xl font-black text-white tracking-tight">
-            {farms.filter((f) => f.certifications && f.certifications.length > 0).length}{' '}
+            {certifiedFarmsCount}{' '}
             <span className="text-sm font-medium text-[#8DA796]">/ {farms.length} ฟาร์ม</span>
           </div>
-          <div className="text-xs text-[#E5A93C] font-semibold mt-2">
-            100% ผ่านเกณฑ์ควบคุมคุณภาพ
+          <div className="text-xs text-[#4ADE80] font-semibold mt-2 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            {farms.length > 0 ? `${((certifiedFarmsCount / farms.length) * 100).toFixed(0)}% ได้รับการรับรอง` : '100%'}
+          </div>
+        </div>
+
+        <div className="bg-[#092215] rounded-3xl p-5 border border-[#18422b] shadow-xl text-white">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-[#8DA796]">คำขอลงทะเบียนรออนุมัติ</span>
+            <div className="w-8 h-8 rounded-xl bg-[#0e311f] border border-[#1e5236] text-amber-400 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-amber-300 tracking-tight">
+            {pendingRequestsCount}{' '}
+            <span className="text-sm font-medium text-[#8DA796]">รายการ</span>
+          </div>
+          <div className="text-xs text-[#8DA796] font-medium mt-2">
+            {pendingRequestsCount > 0 ? 'ต้องการการตรวจสอบจาก Admin' : 'ตรวจสอบครบถ้วนทุกรายการ'}
+          </div>
+        </div>
+      </div>
+
+      {/* Grid: Variety Breakdown & Top Farms */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Variety Distribution */}
+        <div className="bg-[#092215] rounded-3xl p-5 border border-[#18422b] shadow-xl text-white">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-[#E5A93C]" />
+              สัดส่วนผลผลิตแยกตามสายพันธุ์
+            </h3>
+            <span className="text-xs text-[#8DA796]">โดยประมาณ</span>
+          </div>
+
+          <div className="space-y-3.5">
+            {varietyStats.map((item, idx) => (
+              <div key={item.name} className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-medium">
+                  <span className="text-white flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#E5A93C]" />
+                    {item.name}
+                  </span>
+                  <span className="text-[#8DA796] font-mono font-bold">
+                    {item.percentage}% ({item.val.toLocaleString()} ลูก)
+                  </span>
+                </div>
+                <div className="w-full bg-[#04140b] rounded-full h-2.5 overflow-hidden border border-[#18422b]">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${item.percentage}%`,
+                      backgroundColor:
+                        idx === 0
+                          ? '#E5A93C'
+                          : idx === 1
+                          ? '#4ADE80'
+                          : idx === 2
+                          ? '#38BDF8'
+                          : idx === 3
+                          ? '#F472B6'
+                          : '#A78BFA',
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top 5 Performing Farms Leaderboard */}
+        <div className="bg-[#092215] rounded-3xl p-5 border border-[#18422b] shadow-xl text-white">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <Star className="w-5 h-5 text-[#E5A93C] fill-[#E5A93C]" />
+              5 อันดับฟาร์มผลผลิตสูงสุด
+            </h3>
+            <span className="text-xs text-[#8DA796]">Leaderboard</span>
+          </div>
+
+          <div className="space-y-2.5">
+            {topFarms.map((farm, idx) => (
+              <div
+                key={farm.id}
+                onClick={() => onSelectFarm(farm)}
+                className="p-3 bg-[#0d2a1b] hover:bg-[#123623] border border-[#1e5236] rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all hover:scale-[1.01]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                      idx === 0
+                        ? 'bg-[#E5A93C] text-[#1c1202]'
+                        : idx === 1
+                        ? 'bg-slate-300 text-slate-900'
+                        : idx === 2
+                        ? 'bg-amber-700 text-white'
+                        : 'bg-[#18422b] text-[#8DA796]'
+                    }`}
+                  >
+                    #{idx + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs sm:text-sm font-bold text-white truncate">
+                      {farm.name}
+                    </h4>
+                    <p className="text-[11px] text-[#8DA796] truncate flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-[#E5A93C]" />
+                      <span>{farm.province}</span>
+                      <span>• {farm.totalTrees} ต้น</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0 flex items-center gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-[#E5A93C] font-mono">
+                      {(farm.harvestedFruits || 0).toLocaleString()} ลูก
+                    </div>
+                    <div className="text-[10px] text-[#8DA796]">
+                      ⭐ {farm.rating?.toFixed(1) || '5.0'}
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-[#8DA796]" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -85,7 +294,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ farms, onSelectFar
       <div className="bg-[#092215] rounded-3xl p-5 border border-[#18422b] shadow-xl text-white">
         <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-[#E5A93C]" />
-          สรุปผลผลิตแยกตามจังหวัด
+          สรุปผลผลิตแยกตามจังหวัดทั่วประเทศ
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -135,3 +344,4 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ farms, onSelectFar
     </div>
   );
 };
+

@@ -8,12 +8,17 @@ export interface SocialContact {
 }
 
 export interface CertificationDetail {
+  id?: string;
   name: string; // e.g. 'GAP (Good Agricultural Practice)', 'GI (Geographical Indication)', 'Organic Thailand'
+  nameTh?: string;
   shortCode: string; // 'GAP', 'GI', 'Organic', 'Q-Mark'
   certNumber: string; // e.g. 'GAP-502-66-8891'
   issuedBy: string; // e.g. 'กรมวิชาการเกษตร', 'กรมทรัพย์สินทางปัญญา'
   validUntil: string; // e.g. '2027'
   verified: boolean;
+  documentPhoto?: string; // ภาพถ่ายใบรับรองฉบับจริง หรือ Base64 Data URL (PNG/JPG/PDF)
+  fileType?: 'image' | 'pdf'; // 'image' or 'pdf'
+  fileName?: string; // e.g. 'GAP_Certificate_2026.pdf'
 }
 
 export interface TreeReview {
@@ -82,10 +87,12 @@ export interface DurianFarm {
   nameEn?: string;
   province: string;
   district?: string;
+  areaRai?: number;
   varietiesCount: number;
   topVarieties: string[];
   totalTrees: number;
   harvestedFruits: number;
+  harvestRounds?: number;
   rating: number;
   reviewCount: number;
   logoBgColor?: string;
@@ -93,13 +100,20 @@ export interface DurianFarm {
   establishedYear?: number;
   certifications?: string[];
   certificationDetails?: CertificationDetail[];
+  certDocumentPhoto?: string; // ภาพถ่ายใบรับรอง GAP/GI ฉบับจริง
   contact?: SocialContact;
   highlight?: string;
   aboutStory?: string;
-  photos?: string[];
+  photos?: string[]; // รูปภาพบรรยากาศสวน
+  atmospherePhotos?: string[]; // รูปภาพบรรยากาศสวน
   treeVarieties?: FruitTreeVariety[];
   individualTrees?: IndividualTree[]; // รายชื่อแต่ละต้นอย่างละเอียดพร้อมรหัส
+  hasSmartFarm?: boolean; // มีเทคโนโลยี Smart Farm หรือไม่
   smartTechnologies?: SmartTechItem[];
+  coordinates?: { lat: number; lng: number }; // พิกัด GPS แปลงสวนจริง
+  managerId?: string; // UID ของผู้จัดการสวนที่เป็นเจ้าของ
+  managerName?: string;
+  verifiedAt?: string;
 }
 
 export interface SmartTechItem {
@@ -112,7 +126,60 @@ export interface SmartTechItem {
 
 export type SortField = 'harvested' | 'trees' | 'rating' | 'rank' | 'name';
 
-export type UserRole = 'user' | 'admin'; // 'user' = โหมดผู้บริโภค (Consumer Flow), 'admin' = โหมดเจ้าของสวน/แอดมิน (Admin Flow)
+export type UserRole = 'user' | 'manager' | 'admin'; // 'user' = ผู้บริโภคทั่วไป, 'manager' = ผู้จัดการสวน/เจ้าของสวนที่ได้รับอนุมัติแล้ว, 'admin' = ผู้ดูแลระบบ
+
+export type RequestCategory = 'manager_application' | 'farm_verification';
+
+export interface FarmRegistrationRequest {
+  id: string; // e.g. "req_1720000000"
+  requestCategory?: RequestCategory; // 'manager_application' = คำขอสิทธิ์ผู้จัดการสวน, 'farm_verification' = ตรวจสอบและรับรองมาตรฐานฟาร์ม
+  requestType?: 'new_farm' | 'update_farm'; // 'new_farm' = ขอขึ้นทะเบียนสวนใหม่, 'update_farm' = ขอแก้ไข/เพิ่มเติมข้อมูลสวนที่มีอยู่
+  targetFarmId?: string; // ID ของฟาร์มเดิมที่ต้องการขอแก้ไข (กรณี update_farm)
+  updateNotes?: string; // รายละเอียดหรือสิ่งที่ต้องการแก้ไข/เพิ่มเติมที่ Manager แจ้ง Admin
+  userId: string;
+  userDisplayName: string;
+  userEmailOrUsername: string;
+  farmName: string;
+  farmNameEn?: string;
+  province: string;
+  district: string;
+  locationAddress?: string;
+  areaRai: number;
+  totalTreesEstimate: number;
+  topVarieties: string[];
+  aboutStory: string;
+  contact: SocialContact;
+  // Standard Certification
+  gapCertNumber: string;
+  certIssuedBy: string;
+  certValidUntil: string;
+  certDocumentPhoto?: string; // รูปหรือไฟล์ PDF ใบรับรองทางการเกษตรหลัก
+  certificationList?: CertificationDetail[]; // รายการใบรับรองมาตรฐานทั้งหมด (รองรับ PDF / PNG หลายไฟล์)
+  otherCerts?: string[];
+  // Garden Atmosphere Photos
+  atmospherePhotos?: string[]; // รูปบรรยากาศสวน
+  // Smart Farm
+  hasSmartFarm?: boolean;
+  smartTechnologies?: SmartTechItem[];
+  // Farmer Identity & Eligibility Verification
+  farmerFullName?: string; // ชื่อ-นามสกุลจริงเจ้าของสวน
+  farmerIdCardNumber?: string; // เลขประจำตัวประชาชน 13 หลัก
+  farmerIdCardPhoto?: string; // รูปถ่ายหรือ PDF บัตรประชาชนเจ้าของสวน (มี Watermark ปลอดภัย)
+  farmerIdCardFileType?: 'image' | 'pdf'; // 'image' | 'pdf'
+  agreedToCriteria?: boolean; // ยินยอมตามเกณฑ์คัดเลือกสวนพรีเมียม 3 ข้อ
+  coordinates?: { lat: number; lng: number }; // พิกัดแปลงจริงบนแผนที่ GPS
+  googleMapsUrl?: string; // ลิงก์ปักหมุด Google Maps จากผู้ใช้
+  // Approval state
+  status: 'pending' | 'approved' | 'rejected' | 'needs_revision';
+  adminNotes?: string;
+  previousAdminNotes?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  resubmittedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdFarmId?: string;
+}
 
 export interface NfcScannedFruit {
   tagId: string; // e.g. "NFC Tag: #VK-MT01-F042"

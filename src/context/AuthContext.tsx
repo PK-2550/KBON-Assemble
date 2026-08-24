@@ -21,6 +21,14 @@ interface AuthContextType {
   /** ติดต่อ server ไม่ได้ -- คนละเรื่องกับการยังไม่ได้ล็อกอิน */
   connectionError: string | null;
   retryConnection: () => void;
+  /**
+   * ดึงโปรไฟล์ล่าสุดจาก server ใหม่
+   *
+   * ใช้แทน onSnapshot ของ Firestore ที่เดิมคอยฟังการเปลี่ยน role แบบ realtime
+   * (เช่นตอนแอดมินอนุมัติให้ผู้ใช้เป็นผู้จัดการสวน)
+   * ให้เรียกหลังทำรายการที่อาจเปลี่ยนสิทธิ์ของตัวเอง
+   */
+  refreshUser: () => Promise<void>;
   signInWithUsername: (username: string, pass: string) => Promise<AppUserProfile>;
   registerWithUsername: (username: string, pass: string) => Promise<AppUserProfile>;
   signOutUser: () => Promise<void>;
@@ -76,6 +84,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const retryConnection = () => setRetryCount((n) => n + 1);
 
+  const refreshUser = async () => {
+    try {
+      const profile = await fetchCurrentUser();
+      setCurrentUser(profile);
+      if (profile?.role !== 'admin') setRoleModeState('user');
+    } catch (err) {
+      // ดึงไม่สำเร็จก็ใช้โปรไฟล์เดิมต่อไป ไม่ต้องเตะผู้ใช้ออกจากระบบ
+      console.warn('ดึงโปรไฟล์ล่าสุดไม่สำเร็จ:', err);
+    }
+  };
+
   const signInWithUsername = async (username: string, pass: string) => {
     const profile = await apiLogin(username, pass);
     setCurrentUser(profile);
@@ -120,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         connectionError,
         retryConnection,
+        refreshUser,
         signInWithUsername,
         registerWithUsername,
         signOutUser,

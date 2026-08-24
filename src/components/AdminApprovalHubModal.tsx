@@ -1,0 +1,950 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  X,
+  ShieldCheck,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  FileCheck,
+  Eye,
+  Award,
+  Phone,
+  Facebook,
+  Instagram,
+  MessageCircle,
+  ExternalLink,
+  Loader2,
+  Sparkles,
+  User,
+  Clock,
+  Send,
+  Building2,
+  TreePine,
+  FileText,
+  PlusCircle,
+  RotateCcw,
+  MapPin,
+  CheckSquare,
+  Droplets,
+  Layers,
+  ChevronRight,
+  Sprout,
+} from 'lucide-react';
+import { FarmRegistrationRequest, DurianFarm } from '../types';
+import { useAuth } from '../context/AuthContext';
+import {
+  subscribeAllFarmRequests,
+  approveFarmRequest,
+  rejectFarmRequest,
+  resetFarmRequestToPending,
+  seedSampleManagerRequests,
+  getInitialFarmRequests,
+  getReadRequestIds,
+  markRequestsAsRead,
+  subscribeReadRequestIds,
+} from '../services/farmRequestService';
+import { DocumentViewerModal, DocumentViewerData } from './DocumentViewerModal';
+
+interface AdminApprovalHubModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onFarmApproved?: (newFarm: DurianFarm) => void;
+}
+
+export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
+  isOpen,
+  onClose,
+  onFarmApproved,
+}) => {
+  const { currentUser } = useAuth();
+
+  const [requests, setRequests] = useState<FarmRegistrationRequest[]>(() => getInitialFarmRequests());
+  const [readIds, setReadIds] = useState<Set<string>>(() => getReadRequestIds());
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    const init = getInitialFarmRequests();
+    return init[0] ? init[0].id : null;
+  });
+  const [activeFilter, setActiveFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [revisionNotes, setRevisionNotes] = useState('');
+  const [isRevisionBoxOpen, setIsRevisionBoxOpen] = useState(false);
+  const [isRejectBoxOpen, setIsRejectBoxOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [successToast, setSuccessToast] = useState('');
+  const [previewDoc, setPreviewDoc] = useState<DocumentViewerData | null>(null);
+
+  // Subscribe to read IDs in real time
+  useEffect(() => {
+    const unsub = subscribeReadRequestIds((ids) => {
+      setReadIds(new Set(ids));
+    });
+    return () => unsub();
+  }, []);
+
+  // Subscribe to all farm requests in real time
+  useEffect(() => {
+    if (!isOpen) return;
+    const unsubscribe = subscribeAllFarmRequests((reqList) => {
+      setRequests(reqList);
+    });
+    return () => unsubscribe();
+  }, [isOpen]);
+
+  // Mark all currently visible requests as read when modal is opened
+  useEffect(() => {
+    if (isOpen && requests.length > 0) {
+      requests.forEach((r) => markRequestsAsRead(r.id));
+    }
+  }, [isOpen, requests]);
+
+  // Filtered requests inside unified list
+  const filteredRequests = useMemo(
+    () =>
+      requests.filter((r) => {
+        if (activeFilter === 'all') return true;
+        if (activeFilter === 'rejected') return r.status === 'rejected' || r.status === 'needs_revision';
+        return r.status === activeFilter;
+      }),
+    [requests, activeFilter]
+  );
+
+  // Derive active selected request without cascading effects
+  const selectedRequest = useMemo(() => {
+    if (filteredRequests.length === 0) return null;
+    const found = filteredRequests.find((r) => r.id === selectedId);
+    return found || filteredRequests[0] || null;
+  }, [filteredRequests, selectedId]);
+
+  if (!isOpen) return null;
+
+  // Counts
+  const pendingCount = requests.filter((r) => r.status === 'pending').length;
+  const approvedCount = requests.filter((r) => r.status === 'approved').length;
+  const rejectedCount = requests.filter((r) => r.status === 'rejected' || r.status === 'needs_revision').length;
+  const allCount = requests.length;
+  const unreadPendingCount = requests.filter((r) => r.status === 'pending' && !readIds.has(r.id)).length;
+
+  const handleFilterChange = (filter: 'pending' | 'approved' | 'rejected' | 'all') => {
+    setActiveFilter(filter);
+    setIsRevisionBoxOpen(false);
+    setIsRejectBoxOpen(false);
+    const newFiltered = requests.filter((r) => {
+      if (filter === 'all') return true;
+      if (filter === 'rejected') return r.status === 'rejected' || r.status === 'needs_revision';
+      return r.status === filter;
+    });
+    if (newFiltered.length > 0) {
+      setSelectedId(newFiltered[0].id);
+      markRequestsAsRead(newFiltered[0].id);
+    }
+  };
+
+  const handleApprove = async (req: FarmRegistrationRequest) => {
+    setProcessingId(req.id);
+    const adminName = currentUser?.displayName || currentUser?.username || 'Admin';
+    const now = new Date().toISOString();
+    try {
+      const createdFarm = await approveFarmRequest(req, adminName);
+
+      const updatedReq: FarmRegistrationRequest = {
+        ...req,
+        status: 'approved',
+        reviewedBy: adminName,
+        reviewedAt: now,
+        createdFarmId: createdFarm ? createdFarm.id : undefined,
+      };
+
+      // Optimistically update state immediately
+      setRequests((prev) => prev.map((r) => (r.id === req.id ? updatedReq : r)));
+      setSelectedId(updatedReq.id);
+      setActiveFilter('approved');
+
+      if (createdFarm) {
+        setSuccessToast(`อนุมัติสิทธิ์ Manager และเผยแพร่ฟาร์ม "${createdFarm.name}" เข้าสู่ทำเนียบฟาร์มมาตรฐานสำเร็จเรียบร้อย`);
+        if (onFarmApproved) {
+          onFarmApproved(createdFarm);
+        }
+      } else {
+        setSuccessToast(`อนุมัติสิทธิ์ Manager ให้แก่ "${req.userDisplayName}" สำเร็จเรียบร้อย`);
+      }
+      setTimeout(() => setSuccessToast(''), 4500);
+    } catch (err: any) {
+      console.error('Error approving request:', err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleSeedSamples = async () => {
+    setIsSeeding(true);
+    try {
+      const seeded = await seedSampleManagerRequests();
+      if (seeded.length > 0) {
+        setRequests((prev) => [...seeded, ...prev]);
+        setSelectedId(seeded[0].id);
+        setActiveFilter('pending');
+      }
+      setSuccessToast('สร้างตัวอย่างคำขอลงทะเบียนฟาร์ม & ขอสิทธิ์ Manager เรียบร้อยแล้ว');
+      setTimeout(() => setSuccessToast(''), 4000);
+    } catch (err: any) {
+      console.error('Error seeding requests:', err);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handleReject = async (reasonOverride?: string) => {
+    if (!selectedRequest) return;
+    const finalReason = (reasonOverride || rejectReason || '').trim() || 'เอกสารหรือข้อมูลไม่ผ่านเกณฑ์การตรวจสอบ';
+    const adminName = currentUser?.displayName || currentUser?.username || 'Admin';
+    const now = new Date().toISOString();
+
+    setProcessingId(selectedRequest.id);
+    try {
+      await rejectFarmRequest(selectedRequest.id, adminName, finalReason, 'rejected');
+
+      const updatedReq: FarmRegistrationRequest = {
+        ...selectedRequest,
+        status: 'rejected',
+        reviewedBy: adminName,
+        reviewedAt: now,
+        adminNotes: finalReason,
+      };
+
+      setRequests((prev) => prev.map((r) => (r.id === selectedRequest.id ? updatedReq : r)));
+      setSelectedId(updatedReq.id);
+      setActiveFilter('rejected');
+
+      setIsRejectBoxOpen(false);
+      setRejectReason('');
+      setSuccessToast(`ปฏิเสธคำขอของ "${selectedRequest.userDisplayName}" เรียบร้อยแล้ว`);
+      setTimeout(() => setSuccessToast(''), 4000);
+    } catch (err: any) {
+      console.error('Error rejecting request:', err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleSendRevision = async () => {
+    if (!selectedRequest) return;
+    if (!revisionNotes.trim()) {
+      return;
+    }
+
+    const adminName = currentUser?.displayName || currentUser?.username || 'Admin';
+    const now = new Date().toISOString();
+
+    setProcessingId(selectedRequest.id);
+    try {
+      await rejectFarmRequest(selectedRequest.id, adminName, revisionNotes.trim(), 'needs_revision');
+
+      const updatedReq: FarmRegistrationRequest = {
+        ...selectedRequest,
+        status: 'needs_revision',
+        reviewedBy: adminName,
+        reviewedAt: now,
+        adminNotes: revisionNotes.trim(),
+      };
+
+      setRequests((prev) => prev.map((r) => (r.id === selectedRequest.id ? updatedReq : r)));
+      setSelectedId(updatedReq.id);
+      setActiveFilter('rejected');
+
+      setIsRevisionBoxOpen(false);
+      setRevisionNotes('');
+      setSuccessToast(`ส่งข้อความแจ้งเตือนให้ "${selectedRequest.userDisplayName}" แก้ไขข้อมูลเรียบร้อย`);
+      setTimeout(() => setSuccessToast(''), 4000);
+    } catch (err: any) {
+      console.error('Error sending revision:', err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleResetToPending = async () => {
+    if (!selectedRequest) return;
+    const adminName = currentUser?.displayName || currentUser?.username || 'Admin';
+    const now = new Date().toISOString();
+
+    setProcessingId(selectedRequest.id);
+    try {
+      await resetFarmRequestToPending(selectedRequest.id, adminName);
+
+      const updatedReq: FarmRegistrationRequest = {
+        ...selectedRequest,
+        status: 'pending',
+        reviewedBy: adminName,
+        reviewedAt: now,
+        adminNotes: '',
+      };
+
+      setRequests((prev) => prev.map((r) => (r.id === selectedRequest.id ? updatedReq : r)));
+      setSelectedId(updatedReq.id);
+      setActiveFilter('pending');
+      setSuccessToast(`ดึงคำขอของ "${selectedRequest.userDisplayName}" กลับมารอการตรวจสอบแล้ว`);
+      setTimeout(() => setSuccessToast(''), 3500);
+    } catch (err: any) {
+      console.error('Error resetting request:', err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in"
+      onClick={() => onClose()}
+    >
+      <div
+        className="bg-[#07190f] text-white rounded-3xl max-w-5xl w-full h-[90vh] flex flex-col shadow-2xl border border-[#1c442c] relative overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Top Header */}
+        <div className="px-4 py-3.5 sm:px-6 sm:py-4 border-b border-[#1c442c] bg-[#0a2014] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#E5A93C] to-[#ab761b] text-[#1c1202] flex items-center justify-center font-black shadow-md shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                  ระบบอนุมัติคำขอ & ตรวจรับรองมาตรฐานฟาร์ม (Admin Approval Hub)
+                </h2>
+                <span className="text-[10px] font-black bg-[#E5A93C]/20 text-[#F5D280] border border-[#E5A93C]/40 px-2 py-0.5 rounded-full">
+                  Admin Central
+                </span>
+              </div>
+              <p className="text-xs text-[#83A893]">
+                ตรวจสอบยืนยันตัวตนเจ้าของสวน พร้อมตรวจรับรองมาตรฐานแปลง GAP/GI เพื่ออนุมัติสิทธิ์ Manager และเปิดหน้าฟาร์ม
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleSeedSamples()}
+              disabled={isSeeding}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#143523] hover:bg-[#1e4c33] text-[#4ADE80] border border-[#235b3a] rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              title="เพิ่มข้อมูลตัวอย่างคำขอสำหรับทดสอบระบบ"
+            >
+              {isSeeding ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <PlusCircle className="w-3.5 h-3.5" />
+              )}
+              <span>+ ตัวอย่างคำขอทดสอบ</span>
+            </button>
+
+            <button
+              onClick={() => onClose()}
+              className="p-2 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-full transition-colors border border-[#1c442c] cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Success Alert Toast */}
+        {successToast && (
+          <div className="bg-[#143523] border-b border-[#4ADE80]/50 px-4 py-2 text-xs font-bold text-[#4ADE80] flex items-center justify-center gap-2 animate-in slide-in-from-top">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{successToast}</span>
+          </div>
+        )}
+
+        {/* Filter Bar */}
+        <div className="px-4 sm:px-6 py-2.5 bg-[#05140c] border-b border-[#1c442c] flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => handleFilterChange('pending')}
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
+                activeFilter === 'pending'
+                  ? 'bg-gradient-to-r from-[#E5A93C] to-[#c28723] text-[#1c1202] font-black shadow-xs'
+                  : 'bg-[#0e2619] text-[#83A893] hover:text-white border border-[#1c442c]'
+              }`}
+            >
+              <span>รอการตรวจสอบ ({pendingCount})</span>
+              {unreadPendingCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              )}
+            </button>
+
+            <button
+              onClick={() => handleFilterChange('approved')}
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer text-xs font-bold ${
+                activeFilter === 'approved'
+                  ? 'bg-[#4ADE80] text-[#07190f] font-black shadow-xs'
+                  : 'bg-[#0e2619] text-[#83A893] hover:text-white border border-[#1c442c]'
+              }`}
+            >
+              อนุมัติแล้ว ({approvedCount})
+            </button>
+
+            <button
+              onClick={() => handleFilterChange('rejected')}
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer text-xs font-bold ${
+                activeFilter === 'rejected'
+                  ? 'bg-rose-600 text-white font-black shadow-xs'
+                  : 'bg-[#0e2619] text-[#83A893] hover:text-white border border-[#1c442c]'
+              }`}
+            >
+              ส่งกลับแก้ไข / ปฏิเสธ ({rejectedCount})
+            </button>
+
+            <button
+              onClick={() => handleFilterChange('all')}
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer text-xs font-bold ${
+                activeFilter === 'all'
+                  ? 'bg-[#1e4c33] text-white font-black shadow-xs border border-[#4ADE80]'
+                  : 'bg-[#0e2619] text-[#83A893] hover:text-white border border-[#1c442c]'
+              }`}
+            >
+              ทั้งหมด ({allCount})
+            </button>
+          </div>
+        </div>
+
+        {/* Main Body: 2-Column Split (List & Details) */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          {/* Left Column: Request List Cards */}
+          <div className="w-full md:w-5/12 border-b md:border-b-0 md:border-r border-[#1c442c] overflow-y-auto p-3 space-y-2.5 bg-[#05140c]">
+            {filteredRequests.length === 0 ? (
+              <div className="py-12 text-center text-xs text-[#83A893] space-y-3 px-4">
+                <FileCheck className="w-10 h-10 mx-auto text-[#1c442c]" />
+                <p className="font-semibold text-white">ไม่มีคำขอในหมวดนี้</p>
+                <p className="text-[11px] text-[#83A893]">
+                  เมื่อมีเกษตรกรยื่นเรื่องขอสิทธิ์หรือลงทะเบียนฟาร์ม รายการจะปรากฏที่นี่
+                </p>
+                <button
+                  onClick={() => handleSeedSamples()}
+                  disabled={isSeeding}
+                  className="mt-2 px-4 py-2 bg-gradient-to-r from-[#E5A93C] to-[#c28723] hover:from-[#f0b548] hover:to-[#d4992e] text-[#1c1202] font-black text-xs rounded-xl shadow-md inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>สร้างคำขอตัวอย่างเพื่อทดสอบ</span>
+                </button>
+              </div>
+            ) : (
+              filteredRequests.map((req) => {
+                const isSelected = selectedRequest?.id === req.id;
+                return (
+                  <div
+                    key={req.id}
+                    onClick={() => {
+                      setSelectedId(req.id);
+                      markRequestsAsRead(req.id);
+                      setIsRevisionBoxOpen(false);
+                      setIsRejectBoxOpen(false);
+                    }}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer text-left space-y-1.5 ${
+                      isSelected
+                        ? 'bg-[#0e2e1e] border-[#E5A93C] shadow-md ring-1 ring-[#E5A93C]/40'
+                        : 'bg-[#092215] border-[#1c442c] hover:border-[#2a613f]'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="flex items-center gap-1.5 truncate">
+                        {!readIds.has(req.id) && req.status === 'pending' && (
+                          <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 shadow-sm animate-pulse" title="คำขอใหม่ ยังไม่ได้เปิดดู" />
+                        )}
+                        <div className="font-bold text-xs sm:text-sm text-white truncate">
+                          {req.farmName || req.userDisplayName}
+                        </div>
+                        {req.requestType === 'update_farm' && (
+                          <span className="text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1.5 py-0.5 rounded-md shrink-0">
+                            ขอแก้ไข
+                          </span>
+                        )}
+                      </div>
+                      {req.status === 'pending' && (
+                        <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded-md shrink-0">
+                          รอตรวจ
+                        </span>
+                      )}
+                      {req.status === 'approved' && (
+                        <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded-md shrink-0">
+                          อนุมัติแล้ว
+                        </span>
+                      )}
+                      {req.status === 'needs_revision' && (
+                        <span className="text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40 px-1.5 py-0.5 rounded-md shrink-0">
+                          ขอให้แก้ไข
+                        </span>
+                      )}
+                      {req.status === 'rejected' && (
+                        <span className="text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1.5 py-0.5 rounded-md shrink-0">
+                          ปฏิเสธ
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-[#83A893]">
+                      <span className="text-white font-medium">{req.farmerFullName || req.userDisplayName}</span>
+                      <span>•</span>
+                      <span>{req.province}</span>
+                      <span>•</span>
+                      <span className="font-mono text-[#4ADE80]">{req.gapCertNumber || 'GAP'}</span>
+                    </div>
+
+                    {req.adminNotes && (
+                      <div className="text-[10px] text-amber-200 bg-amber-950/40 px-2 py-1 rounded-md truncate border border-amber-800/40">
+                        ⚠️ บันทึก: {req.adminNotes}
+                      </div>
+                    )}
+
+                    <div className="text-[10px] text-[#83A893] flex items-center justify-between pt-1 border-t border-[#1c442c]/60">
+                      <span className="truncate">พื้นที่: <strong className="text-white">{req.areaRai} ไร่</strong> (~{req.totalTreesEstimate} ต้น)</span>
+                      <span className="shrink-0">{new Date(req.createdAt).toLocaleDateString('th-TH')}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Right Column: Detailed Request Inspection Card */}
+          <div className="w-full md:w-7/12 overflow-y-auto p-4 sm:p-6 bg-[#07190f] flex flex-col justify-between space-y-4">
+            {selectedRequest ? (
+              <div className="space-y-4 text-xs sm:text-sm">
+                {/* Header Status Banner */}
+                <div className="bg-gradient-to-r from-[#0e2619] via-[#07190f] to-[#0e2619] p-3.5 rounded-2xl border border-[#1c442c] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#E5A93C] to-[#ab761b] text-[#1c1202] flex items-center justify-center font-black text-sm shrink-0 shadow-md">
+                      <Sprout className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-white">
+                          {selectedRequest.farmName}
+                        </span>
+                        <span className="text-[10px] font-black bg-[#E5A93C]/20 text-[#F5D280] border border-[#E5A93C]/40 px-2 py-0.5 rounded-full">
+                          {selectedRequest.requestType === 'update_farm' ? 'Update Farm' : 'New Farm & Manager'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#83A893]">
+                        ผู้ยื่น: <strong className="text-white">{selectedRequest.userDisplayName}</strong> ({selectedRequest.userEmailOrUsername})
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] text-[#83A893]">
+                      ยื่นเมื่อ: {new Date(selectedRequest.createdAt).toLocaleDateString('th-TH')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Section 1: Farmer Identity Verification */}
+                <div className="p-3.5 bg-[#04140b] rounded-2xl border border-[#1c442c] space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#E5A93C]">
+                    <div className="flex items-center gap-1.5">
+                      <User className="w-4 h-4" />
+                      <span>1. ข้อมูลยืนยันตัวตนเจ้าของสวน (Farmer Identity)</span>
+                    </div>
+                    <span className="text-[10px] font-mono bg-[#143523] text-[#4ADE80] px-2 py-0.5 rounded-full">
+                      ยืนยันตัวตนแล้ว
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-[#092215] p-3 rounded-xl border border-[#1c442c]">
+                    <div>
+                      <span className="text-[#83A893]">ชื่อ-นามสกุลจริง:</span>
+                      <p className="font-bold text-white mt-0.5">{selectedRequest.farmerFullName || selectedRequest.userDisplayName}</p>
+                    </div>
+                    <div>
+                      <span className="text-[#83A893]">เลขประจำตัวประชาชน (13 หลัก):</span>
+                      <p className="font-mono font-bold text-[#F5D280] mt-0.5">
+                        {selectedRequest.farmerIdCardNumber || '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[#83A893]">เบอร์โทรศัพท์ติดต่อ:</span>
+                      <p className="font-bold text-white mt-0.5">{selectedRequest.contact?.phoneNumber || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[#83A893]">LINE ID:</span>
+                      <p className="font-bold text-white mt-0.5">{selectedRequest.contact?.lineId || '-'}</p>
+                    </div>
+                  </div>
+
+                  {/* ID Card Document View Button */}
+                  {selectedRequest.farmerIdCardPhoto && (
+                    <div className="flex items-center justify-between p-2.5 bg-[#092215] rounded-xl border border-[#1c442c]">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#E5A93C]" />
+                        <span className="text-xs text-white font-medium">เอกสารสำเนาบัตรประชาชนเจ้าของสวน</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreviewDoc({
+                            title: `สำเนาบัตรประชาชน - ${selectedRequest.farmerFullName || selectedRequest.userDisplayName}`,
+                            fileUrl: selectedRequest.farmerIdCardPhoto!,
+                            fileType: selectedRequest.farmerIdCardFileType || 'image',
+                          })
+                        }
+                        className="px-3 py-1.5 bg-[#143523] hover:bg-[#1f4c33] text-[#4ADE80] border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>เปิดดูเอกสารบัตร</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 2: Farm Location & GPS Details */}
+                <div className="p-3.5 bg-[#04140b] rounded-2xl border border-[#1c442c] space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#E5A93C]">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4" />
+                      <span>2. ข้อมูลแปลงสวน & แผนที่พิกัด GPS</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-[#092215] p-3 rounded-xl border border-[#1c442c]">
+                    <div>
+                      <span className="text-[#83A893]">จังหวัด:</span>
+                      <p className="font-bold text-white mt-0.5">{selectedRequest.province}</p>
+                    </div>
+                    <div>
+                      <span className="text-[#83A893]">อำเภอ:</span>
+                      <p className="font-bold text-white mt-0.5">{selectedRequest.district}</p>
+                    </div>
+                    <div>
+                      <span className="text-[#83A893]">ขนาดพื้นที่:</span>
+                      <p className="font-bold text-white mt-0.5">{selectedRequest.areaRai} ไร่</p>
+                    </div>
+                    <div>
+                      <span className="text-[#83A893]">จำนวนต้นโดยประมาณ:</span>
+                      <p className="font-bold text-white mt-0.5">{selectedRequest.totalTreesEstimate} ต้น</p>
+                    </div>
+                  </div>
+
+                  {selectedRequest.locationAddress && (
+                    <div className="text-xs bg-[#092215] p-2.5 rounded-xl border border-[#1c442c] text-[#83A893]">
+                      ที่ตั้งแปลง: <span className="text-white font-medium">{selectedRequest.locationAddress}</span>
+                    </div>
+                  )}
+
+                  {selectedRequest.coordinates && (
+                    <div className="flex items-center justify-between p-2.5 bg-[#092215] rounded-xl border border-[#1c442c]">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-[#83A893]">พิกัด GPS แปลงจริง:</span>
+                        <span className="font-mono text-[#4ADE80] font-bold">
+                          {selectedRequest.coordinates.lat.toFixed(4)}, {selectedRequest.coordinates.lng.toFixed(4)}
+                        </span>
+                      </div>
+                      <a
+                        href={selectedRequest.googleMapsUrl || `https://maps.google.com/?q=${selectedRequest.coordinates.lat},${selectedRequest.coordinates.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1.5 bg-[#143523] hover:bg-[#1f4c33] text-[#4ADE80] border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>เปิด Google Maps</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 3: Standard Certifications (GAP / GI / Organic) */}
+                <div className="p-3.5 bg-[#04140b] rounded-2xl border border-[#1c442c] space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#E5A93C]">
+                    <div className="flex items-center gap-1.5">
+                      <Award className="w-4 h-4" />
+                      <span>3. การรับรองมาตรฐานทางการเกษตร (GAP / GI / Organic)</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-[#092215] p-3 rounded-xl border border-[#1c442c]">
+                    <div>
+                      <span className="text-[#83A893]">เลขที่ใบรับรอง GAP:</span>
+                      <p className="font-mono font-bold text-[#4ADE80] mt-0.5">{selectedRequest.gapCertNumber || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[#83A893]">หน่วยงานผู้ออกใบรับรอง:</span>
+                      <p className="font-bold text-white mt-0.5">{selectedRequest.certIssuedBy || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[#83A893]">ใช้ได้ถึงปี:</span>
+                      <p className="font-bold text-white mt-0.5">{selectedRequest.certValidUntil || '-'}</p>
+                    </div>
+                  </div>
+
+                  {/* Certificate Documents List */}
+                  {selectedRequest.certificationList && selectedRequest.certificationList.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] text-[#83A893]">เอกสารใบรับรองมาตรฐานที่แนบมา:</span>
+                      {selectedRequest.certificationList.map((cert, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-2 bg-[#092215] rounded-xl border border-[#1c442c]">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-[#143523] text-[#4ADE80] font-black text-[10px]">
+                              {cert.shortCode}
+                            </span>
+                            <span className="text-xs text-white">{cert.name}</span>
+                            <span className="text-xs font-mono text-[#83A893]">({cert.certNumber})</span>
+                          </div>
+                          {cert.documentPhoto && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPreviewDoc({
+                                  title: `${cert.name} - ${selectedRequest.farmName}`,
+                                  fileUrl: cert.documentPhoto!,
+                                  fileType: cert.fileType || 'image',
+                                  fileName: cert.fileName,
+                                })
+                              }
+                              className="px-2.5 py-1 bg-[#143523] hover:bg-[#1f4c33] text-[#4ADE80] border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>เปิดดู</span>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 4: Atmosphere, Story & Tech */}
+                <div className="p-3.5 bg-[#04140b] rounded-2xl border border-[#1c442c] space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#E5A93C]">
+                    <div className="flex items-center gap-1.5">
+                      <TreePine className="w-4 h-4" />
+                      <span>4. เรื่องราวสวน, พันธุ์ทุเรียน & ภาพบรรยากาศ</span>
+                    </div>
+                  </div>
+
+                  {selectedRequest.topVarieties && selectedRequest.topVarieties.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedRequest.topVarieties.map((v, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded-lg bg-[#143523] text-[#F5D280] text-xs font-medium border border-[#235b3a]">
+                          🍈 {v}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedRequest.aboutStory && (
+                    <div className="text-xs text-[#83A893] bg-[#092215] p-3 rounded-xl border border-[#1c442c] leading-relaxed">
+                      "{selectedRequest.aboutStory}"
+                    </div>
+                  )}
+
+                  {selectedRequest.atmospherePhotos && selectedRequest.atmospherePhotos.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {selectedRequest.atmospherePhotos.map((photo, i) => (
+                        <img
+                          key={i}
+                          src={photo}
+                          alt="Atmosphere"
+                          className="h-20 w-full object-cover rounded-xl border border-[#1c442c]"
+                          referrerPolicy="no-referrer"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Revision Form Box */}
+                {isRevisionBoxOpen && (
+                  <div className="bg-[#122216] p-4 rounded-2xl border border-sky-500/60 space-y-3 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-sky-300 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-sky-400" />
+                        <span>ระบุสิ่งที่ต้องการให้เกษตรกรแก้ไขเพิ่มเติม:</span>
+                      </label>
+                      <span className="text-[10px] text-[#83A893]">คลิกข้อความด่วนหรือพิมพ์เอง</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        'แนบรูปถ่ายใบรับรอง GAP ที่ชัดเจนขึ้น',
+                        'รูปถ่ายบัตรประชาชนไม่ชัดเจน โปรดถ่ายใหม่อีกครั้ง',
+                        'กรุณาตรวจสอบพิกัด GPS แปลงสวนให้ตรงกับความเป็นจริง',
+                        'เพิ่มภาพถ่ายบรรยากาศแปลงปลูกจริง',
+                      ].map((tag, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setRevisionNotes(tag)}
+                          className="text-[10px] bg-sky-950/60 hover:bg-sky-900 text-sky-200 border border-sky-800/80 px-2 py-1 rounded-lg cursor-pointer transition-colors"
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                      rows={2}
+                      placeholder="พิมพ์คำแนะนำในการแก้ไข..."
+                      value={revisionNotes}
+                      onChange={(e) => setRevisionNotes(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#08150c] border border-sky-900/80 rounded-xl text-white placeholder-sky-700/60 focus:outline-hidden focus:border-sky-500 text-xs resize-none"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setIsRevisionBoxOpen(false)}
+                        className="px-3 py-1.5 text-xs text-[#83A893] hover:text-white rounded-lg cursor-pointer"
+                      >
+                        ยกเลิก
+                      </button>
+                      <button
+                        onClick={() => handleSendRevision()}
+                        disabled={Boolean(processingId) || !revisionNotes.trim()}
+                        className="px-4 py-1.5 text-xs font-bold bg-sky-600 hover:bg-sky-500 text-white rounded-lg flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>ส่งข้อความแจ้งแก้ไข</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Reject Form Box */}
+                {isRejectBoxOpen && (
+                  <div className="bg-[#180808] p-4 rounded-2xl border border-rose-600/60 space-y-3 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                        <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                        <span>เหตุผลในการปฏิเสธคำขอ:</span>
+                      </label>
+                      <span className="text-[10px] text-[#83A893]">คลิกเหตุผลด่วนหรือพิมพ์เอง</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        'ไม่สามารถยืนยันตัวตนเจ้าของสวนได้',
+                        'ข้อมูลบัตรประชาชนไม่ถูกต้อง',
+                        'เอกสาร GAP ไม่ถูกต้องตามเกณฑ์มาตรฐาน',
+                        'ข้อมูลแปลงปลูกไม่ตรงกับความเป็นจริง',
+                      ].map((tag, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setRejectReason(tag)}
+                          className="text-[10px] bg-rose-950/60 hover:bg-rose-900 text-rose-200 border border-rose-800/80 px-2 py-1 rounded-lg cursor-pointer transition-colors"
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                      rows={2}
+                      placeholder="ระบุเหตุผลการปฏิเสธ (หากเว้นว่างจะใช้ข้อความมาตรฐาน)..."
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#0d0404] border border-rose-900/80 rounded-xl text-white placeholder-rose-700/60 focus:outline-hidden focus:border-rose-500 text-xs resize-none"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setIsRejectBoxOpen(false)}
+                        className="px-3 py-1.5 text-xs text-[#83A893] hover:text-white rounded-lg cursor-pointer"
+                      >
+                        ยกเลิก
+                      </button>
+                      <button
+                        onClick={() => handleReject()}
+                        disabled={Boolean(processingId)}
+                        className="px-4 py-1.5 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-lg flex items-center gap-1.5 cursor-pointer shadow-md"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>ยืนยันปฏิเสธคำขอ</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons Bar */}
+                <div className="pt-3 border-t border-[#1c442c] flex flex-wrap items-center justify-between gap-2.5">
+                  {/* Left Side: Reset to Pending if rejected or needs_revision */}
+                  <div>
+                    {(selectedRequest.status === 'rejected' || selectedRequest.status === 'needs_revision') && (
+                      <button
+                        onClick={() => handleResetToPending()}
+                        disabled={Boolean(processingId)}
+                        className="px-3 py-2 bg-[#0e2619] hover:bg-[#143523] border border-[#1c442c] text-[#83A893] hover:text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                        title="เปลี่ยนสถานะกลับเป็นรอการตรวจสอบเพื่อให้พิจารณาใหม่"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-[#F5D280]" />
+                        <span>ดึงกลับมาเป็นรอตรวจ</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Right Side: Primary Actions */}
+                  <div className="flex items-center gap-2">
+                    {/* Reject Button */}
+                    <button
+                      onClick={() => {
+                        setIsRejectBoxOpen(!isRejectBoxOpen);
+                        setIsRevisionBoxOpen(false);
+                      }}
+                      disabled={Boolean(processingId)}
+                      className="px-3.5 py-2.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 hover:text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                      <span>ปฏิเสธคำขอ</span>
+                    </button>
+
+                    {/* Request Revision Button */}
+                    <button
+                      onClick={() => {
+                        setIsRevisionBoxOpen(!isRevisionBoxOpen);
+                        setIsRejectBoxOpen(false);
+                      }}
+                      disabled={Boolean(processingId)}
+                      className="px-3.5 py-2.5 bg-[#0e2619] hover:bg-[#143523] border border-[#1c442c] text-sky-300 hover:text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                      <span>ขอให้แก้ไข / ส่งกลับ</span>
+                    </button>
+
+                    {/* Approve Button */}
+                    <button
+                      onClick={() => handleApprove(selectedRequest)}
+                      disabled={Boolean(processingId) || selectedRequest.status === 'approved'}
+                      className="px-5 py-2.5 bg-gradient-to-r from-[#E5A93C] to-[#c28723] hover:from-[#f0b548] hover:to-[#d4992e] text-[#1c1202] font-black text-xs sm:text-sm rounded-xl shadow-lg transition-transform active:scale-95 cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {processingId === selectedRequest.id ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>กำลังดำเนินการ...</span>
+                        </>
+                      ) : selectedRequest.status === 'approved' ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>อนุมัติและนำฟาร์มขึ้นระบบแล้ว</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          <span>อนุมัติสิทธิ์ Manager & รับรองมาตรฐานฟาร์ม</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-[#83A893] space-y-2">
+                <FileCheck className="w-10 h-10 text-[#1c442c]" />
+                <p className="text-xs">กรุณาเลือกรายการคำขอทางด้านซ้ายเพื่อดูรายละเอียด</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* High-Resolution Document & File Lightbox Viewer */}
+      <DocumentViewerModal
+        data={previewDoc}
+        onClose={() => setPreviewDoc(null)}
+      />
+    </div>
+  );
+};

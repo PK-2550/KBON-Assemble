@@ -92,7 +92,7 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
           </div>
 
           <button
-            onClick={onClose}
+            onClick={() => onClose()}
             className="p-1.5 rounded-xl text-[#83A893] hover:text-white hover:bg-[#0e2619] border border-[#1c442c] transition-colors cursor-pointer shrink-0"
             title="ปิดหน้าต่าง"
           >
