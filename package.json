@@ -14,7 +14,8 @@
     "import:postgres": "tsx scripts/import-postgres.ts",
     "verify:migration": "tsx scripts/verify-migration.ts",
     "make:admin": "tsx scripts/make-admin.ts",
-    "smoke:api": "tsx scripts/smoke-api.ts"
+    "smoke:api": "tsx scripts/smoke-api.ts",
+    "export:farm-requests": "tsx scripts/export-farm-requests.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
