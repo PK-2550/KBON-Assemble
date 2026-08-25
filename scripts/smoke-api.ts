@@ -41,6 +41,10 @@ async function api(path: string, init: RequestInit = {}) {
 
 const TEST_USER = `smoketest_${Date.now()}`;
 const TEST_PASS = 'durian2026';
+const STAMP = Date.now();
+const FIXTURE_FARM = 'farm-fixture-smoke';
+const FIXTURE_FARM_NAME = 'สวนทุเรียนทดสอบระบบ ภูเขาไฟ';
+const FIXTURE_TREE = 'FX-MT-001';
 const TEST_FARM = `farm-smoke-${Date.now()}`;
 
 // ข้อความไทยที่มีสระบน สระล่าง วรรณยุกต์ และวรรณยุกต์ซ้อน -- ถ้า encoding เพี้ยนจะจับได้
@@ -62,29 +66,63 @@ async function main() {
   ok('endpoint ที่ไม่มีตอบ 404 เป็น JSON', notFound.status === 404 && !!notFound.body?.error);
 
   // ---------------------------------------------------------------
+  // สร้างข้อมูลทดสอบเอง ไม่พึ่งข้อมูลที่ย้ายมาจาก Firestore
+  // เพราะข้อมูลชุดนั้นถูกลบทิ้งไปแล้ว และฐานข้อมูลอาจว่างเปล่าตอนรัน
+  // ---------------------------------------------------------------
+  const fx = await import('pg').then(async ({ default: pg }) => {
+    const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    await c.connect();
+    return c;
+  });
+
+  await fx.query('DELETE FROM farms WHERE id = $1', [FIXTURE_FARM]);
+  await fx.query(
+    `INSERT INTO farms (id, rank, name, province, district, top_varieties, total_trees,
+                        harvested_fruits, rating, review_count, contact_line_id, varieties_count)
+     VALUES ($1, 1, $2, 'ศรีสะเกษ', 'อ.กันทรลักษ์', ARRAY['หมอนทอง','ก้านยาว'], 120, 4500, 9.8, 42, '@fixture', 2)`,
+    [FIXTURE_FARM, FIXTURE_FARM_NAME]
+  );
+  await fx.query(
+    `INSERT INTO farm_certifications (farm_id, name, short_code, cert_number, verified, document_photo)
+     VALUES ($1, 'GAP (Good Agricultural Practice)', 'GAP', 'GAP-TEST-0001', true,
+             'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/')`,
+    [FIXTURE_FARM]
+  );
+  await fx.query(
+    `INSERT INTO trees (id, farm_id, code, name, variety, age_years, yield_fruit_count,
+                        rating, health_status, sweetness_brix)
+     VALUES ($1, $2, $3, $4, 'หมอนทอง', 16, 84, 9.9, 'excellent', 34)`,
+    [`tree-${FIXTURE_TREE}`, FIXTURE_FARM, FIXTURE_TREE, 'หมอนทองภูเขาไฟ ต้นแม่พันธุ์ทดสอบ']
+  );
+  await fx.query(
+    `INSERT INTO reviews (tree_id, tree_code, farm_id, author_name, rating, comment, tasting_notes, source_id)
+     VALUES ($1, $2, $3, 'คุณ ว.', 5, 'หวานมันกรอบนอกนุ่มใน เม็ดลีบมาก', ARRAY['34 Brix'], $4)`,
+    [`tree-${FIXTURE_TREE}`, FIXTURE_TREE, FIXTURE_FARM, `fixture:${STAMP}`]
+  );
+
   console.log('\n--- 2. อ่านข้อมูลฟาร์ม ---');
   const farms = await api('/farms');
   const list = farms.body?.farms ?? [];
   ok('GET /farms ได้ข้อมูล', farms.status === 200 && list.length > 0, `${list.length} ฟาร์ม`);
 
-  const farm01 = list.find((f: any) => f.id === 'farm-01');
-  ok('มี farm-01 และชื่อภาษาไทยถูกต้อง', farm01?.name === 'สวนทุเรียนภูเขาไฟ ลุงดำ', farm01?.name);
-  ok('รูปร่างซ้อนเหมือนเดิม (individualTrees)', Array.isArray(farm01?.individualTrees) && farm01.individualTrees.length === 12);
-  ok('รีวิวซ้อนอยู่ในต้นไม้', farm01?.individualTrees?.some((t: any) => (t.reviews?.length ?? 0) > 0));
-  ok('ตัวเลขเป็น number ไม่ใช่ string', typeof farm01?.rating === 'number' && typeof farm01?.totalTrees === 'number');
-  ok('contact ถูกประกอบกลับเป็น object', typeof farm01?.contact?.lineId === 'string');
+  const fixture = list.find((f: any) => f.id === FIXTURE_FARM);
+  ok('อ่านฟาร์มที่สร้างไว้ได้ ชื่อภาษาไทยถูกต้อง', fixture?.name === FIXTURE_FARM_NAME, fixture?.name);
+  ok('รูปร่างซ้อนเหมือนเดิม (individualTrees)', Array.isArray(fixture?.individualTrees) && fixture.individualTrees.length === 1);
+  ok('รีวิวซ้อนอยู่ในต้นไม้', fixture?.individualTrees?.some((t: any) => (t.reviews?.length ?? 0) > 0));
+  ok('ตัวเลขเป็น number ไม่ใช่ string', typeof fixture?.rating === 'number' && typeof fixture?.totalTrees === 'number');
+  ok('contact ถูกประกอบกลับเป็น object', typeof fixture?.contact?.lineId === 'string');
   ok('หน้า list ไม่แนบรูป base64 มาด้วย', !JSON.stringify(list).includes('documentPhoto'));
 
-  const detail = await api('/farms/farm-178740948613728x');
+  const detail = await api(`/farms/${FIXTURE_FARM}`);
   const hasPhoto = detail.body?.farm?.certificationDetails?.some((c: any) => typeof c.documentPhoto === 'string' && c.documentPhoto.startsWith('data:image'));
   ok('GET /farms/:id แนบรูปใบรับรองมาด้วย', hasPhoto === true);
   ok('GET /farms/:id ที่ไม่มีจริงตอบ 404', (await api('/farms/ไม่มีฟาร์มนี้')).status === 404);
 
   // ---------------------------------------------------------------
   console.log('\n--- 3. ต้นไม้และรีวิว ---');
-  const tree = await api('/trees/VK-MT-001');
-  ok('GET /trees/:code ค้นด้วยรหัส NFC ได้', tree.status === 200 && tree.body?.tree?.code === 'VK-MT-001');
-  const treeReviews = await api('/trees/VK-MT-001/reviews');
+  const tree = await api(`/trees/${FIXTURE_TREE}`);
+  ok('GET /trees/:code ค้นด้วยรหัส NFC ได้', tree.status === 200 && tree.body?.tree?.code === FIXTURE_TREE);
+  const treeReviews = await api(`/trees/${FIXTURE_TREE}/reviews`);
   ok('GET /trees/:code/reviews', treeReviews.status === 200 && Array.isArray(treeReviews.body?.reviews),
     `${treeReviews.body?.reviews?.length ?? 0} รีวิว`);
   const firstReview = treeReviews.body?.reviews?.[0];
@@ -161,9 +199,9 @@ async function main() {
 
   // ---------------------------------------------------------------
   console.log('\n--- 7. เขียนรีวิวใหม่ (ของเดิมทำไม่ได้เลย) ---');
-  const beforeCount = (await api('/trees/VK-MT-001/reviews')).body?.reviews?.length ?? 0;
+  const beforeCount = (await api(`/trees/${FIXTURE_TREE}/reviews`)).body?.reviews?.length ?? 0;
   const REVIEW_TEXT = 'เนื้อเหลืองทองแห้งเนียน หวานมัน ๓๔ บริกซ์ เม็ดลีบมาก';
-  const newReview = await api('/trees/VK-MT-001/reviews', {
+  const newReview = await api(`/trees/${FIXTURE_TREE}/reviews`, {
     method: 'POST',
     body: JSON.stringify({ rating: 5, comment: REVIEW_TEXT, tastingNotes: ['หวานมัน', 'เม็ดลีบ'], verifiedNfc: true }),
   });
@@ -171,13 +209,13 @@ async function main() {
   ok('ข้อความรีวิวภาษาไทยตรงเป๊ะ', newReview.body?.review?.comment === REVIEW_TEXT);
   ok('ชื่อผู้เขียนมาจาก token ไม่ใช่จาก body', newReview.body?.review?.authorName === TEST_USER);
 
-  const afterCount = (await api('/trees/VK-MT-001/reviews')).body?.reviews?.length ?? 0;
+  const afterCount = (await api(`/trees/${FIXTURE_TREE}/reviews`)).body?.reviews?.length ?? 0;
   ok('รีวิวใหม่ถูกบันทึกจริง', afterCount === beforeCount + 1, `${beforeCount} -> ${afterCount}`);
 
   ok('รีวิวต้นไม้ที่ไม่มีจริงตอบ 404',
     (await api('/trees/NO-SUCH-TREE/reviews', { method: 'POST', body: JSON.stringify({ rating: 5, comment: 'x' }) })).status === 404);
   ok('คะแนนนอกช่วงถูกปฏิเสธ',
-    (await api('/trees/VK-MT-001/reviews', { method: 'POST', body: JSON.stringify({ rating: 99, comment: 'x' }) })).status === 400);
+    (await api(`/trees/${FIXTURE_TREE}/reviews`, { method: 'POST', body: JSON.stringify({ rating: 99, comment: 'x' }) })).status === 400);
 
   // ---------------------------------------------------------------
   console.log('\n--- 8. ออกจากระบบ ---');
@@ -189,6 +227,8 @@ async function main() {
   // ---------------------------------------------------------------
   console.log('\n--- ล้างข้อมูลทดสอบ ---');
   await dbClient.query('DELETE FROM reviews WHERE source_id LIKE $1', ['api:%']);
+  await dbClient.query('DELETE FROM farms WHERE id = $1', [FIXTURE_FARM]);
+  await fx.end();
   await dbClient.query('DELETE FROM farms WHERE id LIKE $1', ['farm-smoke-%']);
   await dbClient.query('DELETE FROM farms WHERE id LIKE $1', ['farm-e2e-%']);
   await dbClient.query('DELETE FROM users WHERE username_lower LIKE $1', ['smoketest_%']);

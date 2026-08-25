@@ -71,6 +71,16 @@ async function main() {
   const db = new Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
 
+  // จดยอดตั้งต้นไว้เทียบตอนจบ แทนการ hardcode ตัวเลข
+  // ฐานข้อมูลอาจว่างหรือมีข้อมูลอยู่แล้วก็ได้ แล้วแต่ว่ารันตอนไหน
+  const baseline = (
+    await db.query(
+      `SELECT (SELECT count(*)::int FROM farms) AS farms,
+              (SELECT count(*)::int FROM trees) AS trees,
+              (SELECT count(*)::int FROM reviews) AS reviews`
+    )
+  ).rows[0];
+
   const farmer = new Session('farmer');
   const other = new Session('other');
   const admin = new Session('admin');
@@ -228,7 +238,7 @@ async function main() {
     stillOwned.rows[0]?.name === THAI_FARM);
 
   ok('ต้นไม้ของฟาร์มเดิมไม่ถูกลบตอนเขียนทับ',
-    Number((await db.query('SELECT count(*)::int AS n FROM trees')).rows[0].n) === 164,
+    Number((await db.query('SELECT count(*)::int AS n FROM trees')).rows[0].n) === baseline.trees,
     '(upsertFarm ไม่แตะตาราง trees)');
 
   // ---------------------------------------------------------------
@@ -252,8 +262,8 @@ async function main() {
   const finalCounts = await db.query(
     'SELECT (SELECT count(*)::int FROM farms) AS f, (SELECT count(*)::int FROM trees) AS t, (SELECT count(*)::int FROM reviews) AS rv'
   );
-  ok('ข้อมูลที่ย้ายมายังครบเท่าเดิม',
-    finalCounts.rows[0].f === 15 && finalCounts.rows[0].t === 164 && finalCounts.rows[0].rv === 286,
+  ok('ยอดข้อมูลกลับมาเท่าตอนเริ่มทดสอบ',
+    finalCounts.rows[0].f === baseline.farms && finalCounts.rows[0].t === baseline.trees && finalCounts.rows[0].rv === baseline.reviews,
     `farms=${finalCounts.rows[0].f} trees=${finalCounts.rows[0].t} reviews=${finalCounts.rows[0].rv}`);
 
   await db.end();
