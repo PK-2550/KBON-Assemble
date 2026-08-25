@@ -113,18 +113,41 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
 
   // ถ้าเป็นการส่งใหม่หลังถูกตีกลับ ให้เก็บหมายเหตุเดิมของแอดมินไว้ดูย้อนหลัง
   const existing = await pool.query(
-    'SELECT status, admin_notes FROM farm_requests WHERE id = $1 AND user_id = $2',
+    `SELECT status, admin_notes, agreed_to_criteria, has_smart_farm
+     FROM farm_requests WHERE id = $1 AND user_id = $2`,
     [id, req.user!.uid]
   );
   const isResubmit = existing.rows.length > 0;
+  const prev = existing.rows[0];
 
-  const payload = {
-    contact: b.contact ?? {},
-    certificationList: Array.isArray(b.certificationList) ? b.certificationList : [],
-    atmospherePhotos: Array.isArray(b.atmospherePhotos) ? b.atmospherePhotos : [],
-    smartTechnologies: Array.isArray(b.smartTechnologies) ? b.smartTechnologies : [],
-    coordinates: b.coordinates ?? null,
-  };
+  // ใส่เฉพาะคีย์ที่ client ส่งมาจริง เพื่อให้ตอน merge ฝั่ง SQL
+  // ข้อมูลเดิมที่ไม่ได้ส่งมารอบนี้ไม่ถูกล้างทิ้ง
+  //
+  // ของเดิมฝั่ง Firestore ใช้ setDoc(..., { merge: true }) ซึ่งคงฟิลด์ที่ไม่ได้
+  // ส่งมาไว้ ถ้าเขียนทับทุกคีย์ ผู้ใช้ที่ถูกตีกลับแล้วส่งแก้ไขใหม่จะเสียไฟล์
+  // ใบรับรองและข้อมูล SmartFarm ที่แนบไว้ตั้งแต่รอบแรก
+  const payload: Record<string, unknown> = {};
+  if (b.contact !== undefined) payload.contact = b.contact;
+  if (Array.isArray(b.certificationList) && b.certificationList.length > 0)
+    payload.certificationList = b.certificationList;
+  if (Array.isArray(b.atmospherePhotos) && b.atmospherePhotos.length > 0)
+    payload.atmospherePhotos = b.atmospherePhotos;
+  if (Array.isArray(b.smartTechnologies) && b.smartTechnologies.length > 0)
+    payload.smartTechnologies = b.smartTechnologies;
+  if (b.coordinates) payload.coordinates = b.coordinates;
+
+  /** ส่ง null เมื่อ client ไม่ได้ส่งคีย์นั้นมา เพื่อให้ COALESCE คงค่าเดิมไว้ */
+  const opt = (v: unknown) => (v === undefined || v === '' ? null : v);
+
+  /**
+   * คอลัมน์ boolean เป็น NOT NULL จึงส่ง null ไปให้ COALESCE ฝั่ง SQL ไม่ได้
+   *
+   * Postgres ตรวจ NOT NULL ตอนสร้าง tuple ที่จะ insert ซึ่งเกิดก่อนการเช็ค
+   * conflict เสมอ ต่อให้สุดท้ายจะเข้าทาง DO UPDATE ก็ตาม
+   * จึงต้องเติมค่าเดิมให้ตั้งแต่ฝั่ง JS แทน
+   */
+  const optBool = (v: unknown, previous: boolean | undefined) =>
+    v === undefined ? (previous ?? false) : v === true;
 
   const { rows } = await pool.query(
     `INSERT INTO farm_requests (
@@ -138,27 +161,43 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
        status, previous_admin_notes, resubmitted_at
      ) VALUES (
        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
-       $23,$24,$25,$26,$27,$28,$29,$30,'pending',$31,$32
+       $23,$24,$25,$26,$27,$28,$29,$30,
+       'pending',$31,$32
      )
      ON CONFLICT (id) DO UPDATE SET
-       request_category=EXCLUDED.request_category, request_type=EXCLUDED.request_type,
-       target_farm_id=EXCLUDED.target_farm_id, update_notes=EXCLUDED.update_notes,
-       user_display_name=EXCLUDED.user_display_name,
-       user_email_or_username=EXCLUDED.user_email_or_username,
-       farm_name=EXCLUDED.farm_name, farm_name_en=EXCLUDED.farm_name_en,
-       province=EXCLUDED.province, district=EXCLUDED.district,
-       location_address=EXCLUDED.location_address, area_rai=EXCLUDED.area_rai,
-       total_trees_estimate=EXCLUDED.total_trees_estimate, top_varieties=EXCLUDED.top_varieties,
-       about_story=EXCLUDED.about_story, gap_cert_number=EXCLUDED.gap_cert_number,
-       cert_issued_by=EXCLUDED.cert_issued_by, cert_valid_until=EXCLUDED.cert_valid_until,
-       cert_document_photo=EXCLUDED.cert_document_photo, other_certs=EXCLUDED.other_certs,
-       farmer_full_name=EXCLUDED.farmer_full_name,
-       farmer_id_card_number=EXCLUDED.farmer_id_card_number,
-       farmer_id_card_photo=EXCLUDED.farmer_id_card_photo,
-       farmer_id_card_file_type=EXCLUDED.farmer_id_card_file_type,
-       agreed_to_criteria=EXCLUDED.agreed_to_criteria,
-       google_maps_url=EXCLUDED.google_maps_url, has_smart_farm=EXCLUDED.has_smart_farm,
-       payload=EXCLUDED.payload,
+       -- ทุกคอลัมน์ใช้ COALESCE เพื่อเลียนแบบ merge:true ของ Firestore
+       -- ถ้ารอบนี้ไม่ได้ส่งค่ามา (เป็น null) ให้คงค่าเดิมไว้ ไม่ล้างทิ้ง
+       request_category=COALESCE(EXCLUDED.request_category, farm_requests.request_category),
+       request_type=COALESCE(EXCLUDED.request_type, farm_requests.request_type),
+       target_farm_id=COALESCE(EXCLUDED.target_farm_id, farm_requests.target_farm_id),
+       update_notes=COALESCE(EXCLUDED.update_notes, farm_requests.update_notes),
+       user_display_name=COALESCE(EXCLUDED.user_display_name, farm_requests.user_display_name),
+       user_email_or_username=COALESCE(EXCLUDED.user_email_or_username, farm_requests.user_email_or_username),
+       farm_name=EXCLUDED.farm_name,
+       farm_name_en=COALESCE(EXCLUDED.farm_name_en, farm_requests.farm_name_en),
+       province=EXCLUDED.province,
+       district=COALESCE(EXCLUDED.district, farm_requests.district),
+       location_address=COALESCE(EXCLUDED.location_address, farm_requests.location_address),
+       area_rai=COALESCE(NULLIF(EXCLUDED.area_rai, 0), farm_requests.area_rai),
+       total_trees_estimate=COALESCE(NULLIF(EXCLUDED.total_trees_estimate, 0), farm_requests.total_trees_estimate),
+       top_varieties=CASE WHEN cardinality(EXCLUDED.top_varieties) > 0
+                          THEN EXCLUDED.top_varieties ELSE farm_requests.top_varieties END,
+       about_story=COALESCE(EXCLUDED.about_story, farm_requests.about_story),
+       gap_cert_number=COALESCE(EXCLUDED.gap_cert_number, farm_requests.gap_cert_number),
+       cert_issued_by=COALESCE(EXCLUDED.cert_issued_by, farm_requests.cert_issued_by),
+       cert_valid_until=COALESCE(EXCLUDED.cert_valid_until, farm_requests.cert_valid_until),
+       cert_document_photo=COALESCE(EXCLUDED.cert_document_photo, farm_requests.cert_document_photo),
+       other_certs=CASE WHEN cardinality(EXCLUDED.other_certs) > 0
+                        THEN EXCLUDED.other_certs ELSE farm_requests.other_certs END,
+       farmer_full_name=COALESCE(EXCLUDED.farmer_full_name, farm_requests.farmer_full_name),
+       farmer_id_card_number=COALESCE(EXCLUDED.farmer_id_card_number, farm_requests.farmer_id_card_number),
+       farmer_id_card_photo=COALESCE(EXCLUDED.farmer_id_card_photo, farm_requests.farmer_id_card_photo),
+       farmer_id_card_file_type=COALESCE(EXCLUDED.farmer_id_card_file_type, farm_requests.farmer_id_card_file_type),
+       agreed_to_criteria=COALESCE(EXCLUDED.agreed_to_criteria, farm_requests.agreed_to_criteria),
+       google_maps_url=COALESCE(EXCLUDED.google_maps_url, farm_requests.google_maps_url),
+       has_smart_farm=COALESCE(EXCLUDED.has_smart_farm, farm_requests.has_smart_farm),
+       -- || รวม jsonb สองก้อน คีย์ที่ส่งมาใหม่ทับของเดิม คีย์ที่ไม่ได้ส่งคงไว้
+       payload=farm_requests.payload || EXCLUDED.payload,
        status='pending', admin_notes=NULL,
        previous_admin_notes=EXCLUDED.previous_admin_notes,
        resubmitted_at=EXCLUDED.resubmitted_at
@@ -166,33 +205,33 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
     [
       id,
       category,
-      b.requestType ?? null,
-      b.targetFarmId ?? null,
-      b.updateNotes ?? null,
+      opt(b.requestType),
+      opt(b.targetFarmId),
+      opt(b.updateNotes),
       req.user!.uid,
       b.userDisplayName ?? req.user!.username,
       b.userEmailOrUsername ?? req.user!.username,
       b.farmName.trim(),
-      b.farmNameEn ?? null,
+      opt(b.farmNameEn),
       b.province.trim(),
-      b.district ?? null,
-      b.locationAddress ?? null,
+      opt(b.district),
+      opt(b.locationAddress),
       Number(b.areaRai) || 0,
       Number(b.totalTreesEstimate) || 0,
       Array.isArray(b.topVarieties) ? b.topVarieties.map(String) : [],
-      b.aboutStory ?? null,
-      b.gapCertNumber ?? null,
-      b.certIssuedBy ?? null,
-      b.certValidUntil ?? null,
-      b.certDocumentPhoto ?? null,
+      opt(b.aboutStory),
+      opt(b.gapCertNumber),
+      opt(b.certIssuedBy),
+      opt(b.certValidUntil),
+      opt(b.certDocumentPhoto),
       Array.isArray(b.otherCerts) ? b.otherCerts.map(String) : [],
-      b.farmerFullName ?? null,
-      b.farmerIdCardNumber ?? null,
-      b.farmerIdCardPhoto ?? null,
-      b.farmerIdCardFileType ?? null,
-      b.agreedToCriteria === true,
-      b.googleMapsUrl ?? null,
-      b.hasSmartFarm === true,
+      opt(b.farmerFullName),
+      opt(b.farmerIdCardNumber),
+      opt(b.farmerIdCardPhoto),
+      opt(b.farmerIdCardFileType),
+      optBool(b.agreedToCriteria, prev?.agreed_to_criteria),
+      opt(b.googleMapsUrl),
+      optBool(b.hasSmartFarm, prev?.has_smart_farm),
       JSON.stringify(payload),
       isResubmit ? existing.rows[0].admin_notes : null,
       isResubmit ? new Date() : null,
