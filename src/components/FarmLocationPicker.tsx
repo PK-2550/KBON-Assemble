@@ -197,11 +197,11 @@ export const FarmLocationPicker: React.FC<FarmLocationPickerProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <label className="block text-xs font-bold text-white flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-[#E5A93C]" />
+            <MapPin className="w-3.5 h-3.5 text-gold" />
             <span>พิกัดแปลงจริงบน Google Maps (Google Maps Location)</span>
             <span className="text-rose-400">*</span>
           </label>
-          <p className="text-[11px] text-[#83A893]">
+          <p className="text-[11px] text-fg-2">
             วางลิงก์ Google Maps ของสวน หรือกดดึงพิกัดจากเครื่อง (GPS)
           </p>
         </div>
@@ -211,17 +211,17 @@ export const FarmLocationPicker: React.FC<FarmLocationPickerProps> = ({
           type="button"
           onClick={handleGetCurrentLocation}
           disabled={isLocating}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#143523] hover:bg-[#1a462e] border border-[#4ADE80]/40 text-[#4ADE80] rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2 hover:bg-[#1a462e] border border-leaf/40 text-leaf rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
           title="ดึงพิกัดตำแหน่งปัจจุบันจากอุปกรณ์ของคุณ"
         >
           {isLocating ? (
             <>
-              <Crosshair className="w-3.5 h-3.5 animate-spin text-[#4ADE80]" />
+              <Crosshair className="w-3.5 h-3.5 animate-spin text-leaf" />
               <span>กำลังดึงพิกัด...</span>
             </>
           ) : (
             <>
-              <Navigation className="w-3.5 h-3.5 text-[#4ADE80]" />
+              <Navigation className="w-3.5 h-3.5 text-leaf" />
               <span>ดึงพิกัดจากเครื่อง (GPS)</span>
             </>
           )}
@@ -229,15 +229,15 @@ export const FarmLocationPicker: React.FC<FarmLocationPickerProps> = ({
       </div>
 
       {/* Main Google Maps Link Input Box */}
-      <div className="p-3.5 bg-[#092215] border border-[#1c442c] rounded-2xl space-y-3">
+      <div className="p-3.5 bg-panel border border-line rounded-2xl space-y-3">
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs font-bold text-white flex items-center gap-1.5">
-              <LinkIcon className="w-3.5 h-3.5 text-[#4ADE80]" />
+              <LinkIcon className="w-3.5 h-3.5 text-leaf" />
               <span>วางลิงก์ Google Maps แปลงสวน</span>
             </span>
             {parsedSuccess && (
-              <span className="text-[10px] text-[#4ADE80] font-bold flex items-center gap-1 bg-[#143523] px-2 py-0.5 rounded-full border border-[#235b3a]">
+              <span className="text-[10px] text-leaf font-bold flex items-center gap-1 bg-surface-2 px-2 py-0.5 rounded-full border border-[#235b3a]">
                 <Check className="w-3 h-3" />
                 <span>ดึงพิกัดสำเร็จ</span>
               </span>
@@ -250,14 +250,14 @@ export const FarmLocationPicker: React.FC<FarmLocationPickerProps> = ({
               placeholder="วางลิงก์ Google Maps เช่น https://maps.app.goo.gl/... หรือแชร์พิกัดจาก Google Maps"
               value={mapInputUrl}
               onChange={(e) => handleMapInputChange(e.target.value)}
-              className="w-full pl-3.5 pr-24 py-2.5 bg-[#04140b] border border-[#1c442c] rounded-xl text-white placeholder-[#527861] focus:outline-hidden focus:border-[#4ADE80] text-xs font-mono"
+              className="w-full pl-3.5 pr-24 py-2.5 bg-well border border-line rounded-xl text-white placeholder-[#527861] focus:outline-hidden focus:border-leaf text-xs font-mono"
             />
             <div className="absolute right-1.5 top-1.5 bottom-1.5 flex items-center gap-1">
               <a
                 href={directGoogleMapOpenUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-2.5 py-1 bg-[#143523] hover:bg-[#1e4c33] text-[#4ADE80] hover:text-white border border-[#235b3a] rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                className="px-2.5 py-1 bg-surface-2 hover:bg-[#1e4c33] text-leaf hover:text-white border border-[#235b3a] rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
                 title="เปิดตรวจสอบพิกัดนี้บน Google Maps"
               >
                 <ExternalLink className="w-3 h-3" />
@@ -268,9 +268,9 @@ export const FarmLocationPicker: React.FC<FarmLocationPickerProps> = ({
         </div>
 
         {/* Quick Helper: Open Google Maps to Find Orchard */}
-        <div className="p-2.5 bg-[#04140b] rounded-xl border border-[#1c442c] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 text-[#83A893]">
-            <Info className="w-4 h-4 text-[#E5A93C] shrink-0" />
+        <div className="p-2.5 bg-well rounded-xl border border-line flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-fg-2">
+            <Info className="w-4 h-4 text-gold shrink-0" />
             <span className="text-[11px]">
               ยังไม่มีลิงก์? ค้นหาและคัดลอกลิงก์แปลงสวนใน Google Maps ได้ทันที
             </span>
@@ -280,7 +280,7 @@ export const FarmLocationPicker: React.FC<FarmLocationPickerProps> = ({
             href={openSearchOnGoogleMapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-1.5 bg-gradient-to-r from-[#E5A93C] to-[#c78b23] hover:from-[#f3b544] hover:to-[#d89828] text-[#1c1202] rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-xs cursor-pointer"
+            className="px-3 py-1.5 bg-gradient-to-r from-gold to-[#c78b23] hover:from-[#f3b544] hover:to-[#d89828] text-gold-ink rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-xs cursor-pointer"
           >
             <Globe className="w-3.5 h-3.5" />
             <span>ไปค้นหาใน Google Maps</span>

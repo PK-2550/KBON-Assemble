@@ -74,35 +74,35 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-0 sm:p-4 overflow-y-auto">
       {/* Mobile-Sized Luxury Frame matching the screenshot */}
-      <div className="relative w-full max-w-md bg-[#07190f] text-[#f3f6f4] min-h-screen sm:min-h-0 sm:rounded-[32px] overflow-hidden border sm:border-[#1c442c] shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col pb-8">
+      <div className="relative w-full max-w-md bg-canvas text-fg min-h-screen sm:min-h-0 sm:rounded-[32px] overflow-hidden border sm:border-line shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col pb-8">
         
         {/* Top Header Bar */}
         <div className="pt-3 px-4 pb-2 flex items-center justify-between text-xs shrink-0 z-10">
           {/* Close button / Back indicator */}
           <button
             onClick={() => onClose()}
-            className="w-8 h-8 rounded-full bg-[#0e2619] border border-[#1c442c] flex items-center justify-center text-[#83A893] hover:text-white cursor-pointer transition-colors"
+            className="w-8 h-8 rounded-full bg-surface border border-line flex items-center justify-center text-fg-2 hover:text-white cursor-pointer transition-colors"
             title="ปิด"
           >
             <X className="w-4 h-4" />
           </button>
 
           {/* Verified Origin Header Title */}
-          <div className="flex items-center gap-1.5 font-bold tracking-tight text-[#f3f6f4]">
-            <ShieldCheck className="w-4 h-4 text-[#E5A93C]" />
+          <div className="flex items-center gap-1.5 font-bold tracking-tight text-fg">
+            <ShieldCheck className="w-4 h-4 text-gold" />
             <span className="text-sm font-semibold tracking-wide">Verified Origin</span>
           </div>
 
           {/* Language Switcher Badges (TH, ZH, EN) */}
-          <div className="flex items-center gap-1 bg-[#0e2619] p-0.5 rounded-full border border-[#1c442c]">
+          <div className="flex items-center gap-1 bg-surface p-0.5 rounded-full border border-line">
             {(['TH', 'ZH', 'EN'] as const).map((lang) => (
               <button
                 key={lang}
                 onClick={() => setActiveLang(lang)}
                 className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold transition-all cursor-pointer ${
                   activeLang === lang
-                    ? 'bg-[#E5A93C] text-[#1c1202] shadow-xs'
-                    : 'text-[#83A893] hover:text-white'
+                    ? 'bg-gold text-gold-ink shadow-xs'
+                    : 'text-fg-2 hover:text-white'
                 }`}
               >
                 {lang}
@@ -114,7 +114,7 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
         {/* Scrollable Passport Content */}
         <div className="px-3.5 sm:px-4 space-y-3 flex-1">
           {/* Main Hero Durian Image Card */}
-          <div className="relative aspect-4/3 rounded-2xl overflow-hidden bg-[#0a2014] border border-[#1c442c]">
+          <div className="relative aspect-4/3 rounded-2xl overflow-hidden bg-[#0a2014] border border-line">
             <img
               src={fruitImage}
               alt="ทุเรียนแท้ที่ผ่านการตรวจสอบ"
@@ -122,24 +122,24 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
               referrerPolicy="no-referrer"
             />
             {/* Dark Vignette Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#07190f] via-transparent to-black/30" />
+            <div className="absolute inset-0 bg-gradient-to-t from-canvas via-transparent to-black/30" />
 
             {/* Top Left Golden Tag Badge: ● #DUR-2026-0817-042 */}
-            <div className="absolute top-3 left-3 bg-[#0c2417]/90 backdrop-blur-md border border-[#E5A93C]/50 text-[#F5D280] px-3 py-1 rounded-full text-xs font-mono font-bold flex items-center gap-1.5 shadow-md">
-              <span className="w-2 h-2 rounded-full bg-[#E5A93C] animate-pulse" />
+            <div className="absolute top-3 left-3 bg-[#0c2417]/90 backdrop-blur-md border border-gold/50 text-gold-soft px-3 py-1 rounded-full text-xs font-mono font-bold flex items-center gap-1.5 shadow-md">
+              <span className="w-2 h-2 rounded-full bg-gold animate-pulse" />
               <span>{tagId.startsWith('#') ? tagId : `#${tagId}`}</span>
             </div>
 
             {/* Floating Ripeness Card at bottom of photo */}
             <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-[#153422]/95 backdrop-blur-md border border-[#235337] rounded-2xl p-3 flex items-center justify-between shadow-lg">
               <div className="space-y-0.5">
-                <div className="text-xs font-bold text-[#4ADE80] flex items-center gap-1">
+                <div className="text-xs font-bold text-leaf flex items-center gap-1">
                   <span>พร้อมทานวันนี้</span>
                 </div>
                 <div className="text-xs font-bold text-white">
                   เนื้อกรอบนอก นุ่มในพอดี
                 </div>
-                <div className="text-[10px] text-[#83A893]">
+                <div className="text-[10px] text-fg-2">
                   เก็บเกี่ยวเมื่อ 5 วันก่อน
                 </div>
               </div>
@@ -153,7 +153,7 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
                       key={bar}
                       className={`w-2 h-7 rounded-full transition-all ${
                         isFilled
-                          ? 'bg-[#4ADE80] shadow-[0_0_6px_rgba(74,222,128,0.7)]'
+                          ? 'bg-leaf shadow-[0_0_6px_rgba(74,222,128,0.7)]'
                           : 'bg-[#10291b]'
                       }`}
                     />
@@ -164,10 +164,10 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
           </div>
 
           {/* Farm Info Card matching screenshot */}
-          <div className="bg-[#0e2619] border border-[#1c442c] rounded-2xl p-3.5 space-y-3 shadow-lg">
+          <div className="bg-surface border border-line rounded-2xl p-3.5 space-y-3 shadow-lg">
             <div className="flex items-center gap-3">
               {/* Farm Avatar / TC Logo */}
-              <div className="w-12 h-12 rounded-xl bg-[#143523] border border-[#225538] text-[#E5A93C] flex items-center justify-center font-serif text-lg font-black shrink-0 shadow-inner">
+              <div className="w-12 h-12 rounded-xl bg-surface-2 border border-line-strong text-gold flex items-center justify-center font-serif text-lg font-black shrink-0 shadow-inner">
                 {farmInitials}
               </div>
 
@@ -176,14 +176,14 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
                   <h3 className="font-extrabold text-sm sm:text-base text-white truncate">
                     {farmName}
                   </h3>
-                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#153e28] text-[#4ADE80] border border-[#225739]">
-                    <Check className="w-3 h-3 text-[#4ADE80]" />
+                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#153e28] text-leaf border border-[#225739]">
+                    <Check className="w-3 h-3 text-leaf" />
                     <span>ฟาร์มรับรอง</span>
                   </span>
                 </div>
 
-                <p className="text-[11px] text-[#83A893] mt-0.5 flex items-center gap-1 truncate">
-                  <MapPin className="w-3 h-3 text-[#E5A93C] shrink-0" />
+                <p className="text-[11px] text-fg-2 mt-0.5 flex items-center gap-1 truncate">
+                  <MapPin className="w-3 h-3 text-gold shrink-0" />
                   <span>{farmLocation}</span>
                 </p>
               </div>
@@ -194,7 +194,7 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
               {/* Gold Button: เข้าชมโปรไฟล์ฟาร์ม → */}
               <button
                 onClick={() => handleOpenFarm()}
-                className="py-2.5 px-3 bg-[#E5A93C] hover:bg-[#d89727] text-[#1c1202] text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
+                className="py-2.5 px-3 bg-gold hover:bg-[#d89727] text-gold-ink text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
               >
                 <span>เข้าชมโปรไฟล์ฟาร์ม</span>
                 <span>→</span>
@@ -208,7 +208,7 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
                   rel="noopener noreferrer"
                   className="py-2.5 px-3 bg-[#122b1c] hover:bg-[#183a26] text-white border border-[#234d34] text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#E5A93C]" />
+                  <MapPin className="w-3.5 h-3.5 text-gold" />
                   <span>ดูบนแผนที่</span>
                 </a>
               ) : (
@@ -217,7 +217,7 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
                   disabled
                   className="py-2.5 px-3 bg-[#122b1c] text-white/50 border border-[#234d34] text-xs font-semibold rounded-xl flex items-center justify-center gap-1"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#E5A93C]" />
+                  <MapPin className="w-3.5 h-3.5 text-gold" />
                   <span>ดูบนแผนที่</span>
                 </button>
               )}
@@ -227,8 +227,8 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
           {/* 2-Column Luxury Information Grid matching screenshot */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             {/* Card 1: สายพันธุ์ */}
-            <div className="bg-[#0e2619] border border-[#1c442c] rounded-2xl p-3 space-y-1">
-              <span className="text-[11px] font-medium text-[#83A893] block">
+            <div className="bg-surface border border-line rounded-2xl p-3 space-y-1">
+              <span className="text-[11px] font-medium text-fg-2 block">
                 สายพันธุ์
               </span>
               <span className="text-sm font-extrabold text-white block truncate">
@@ -239,12 +239,12 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
             {/* Card 2: รหัสต้น → (Interactive Link) */}
             <div
               onClick={() => handleOpenTree()}
-              className="bg-[#0e2619] border border-[#E5A93C]/40 hover:border-[#E5A93C] rounded-2xl p-3 space-y-0.5 cursor-pointer transition-colors group"
+              className="bg-surface border border-gold/40 hover:border-gold rounded-2xl p-3 space-y-0.5 cursor-pointer transition-colors group"
             >
-              <span className="text-[11px] font-bold text-[#E5A93C] flex items-center justify-between">
+              <span className="text-[11px] font-bold text-gold flex items-center justify-between">
                 <span>รหัสต้น →</span>
               </span>
-              <span className="text-sm font-black font-mono text-[#E5A93C] block group-hover:underline">
+              <span className="text-sm font-black font-mono text-gold block group-hover:underline">
                 {treeCode}
               </span>
               <span className="text-[10px] text-[#A9884C] block">
@@ -253,8 +253,8 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
             </div>
 
             {/* Card 3: อายุต้น */}
-            <div className="bg-[#0e2619] border border-[#1c442c] rounded-2xl p-3 space-y-1">
-              <span className="text-[11px] font-medium text-[#83A893] block">
+            <div className="bg-surface border border-line rounded-2xl p-3 space-y-1">
+              <span className="text-[11px] font-medium text-fg-2 block">
                 อายุต้น
               </span>
               <span className="text-sm font-extrabold text-white block">
@@ -263,28 +263,28 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
             </div>
 
             {/* Card 4: วันปลูก */}
-            <div className="bg-[#0e2619] border border-[#1c442c] rounded-2xl p-3 space-y-1">
-              <span className="text-[11px] font-medium text-[#83A893] block">
+            <div className="bg-surface border border-line rounded-2xl p-3 space-y-1">
+              <span className="text-[11px] font-medium text-fg-2 block">
                 วันปลูก
               </span>
-              <span className="text-sm font-bold text-[#F5D280] block font-mono">
+              <span className="text-sm font-bold text-gold-soft block font-mono">
                 {plantingDate}
               </span>
             </div>
 
             {/* Card 5: วันเก็บเกี่ยว */}
-            <div className="bg-[#0e2619] border border-[#1c442c] rounded-2xl p-3 space-y-1">
-              <span className="text-[11px] font-medium text-[#83A893] block">
+            <div className="bg-surface border border-line rounded-2xl p-3 space-y-1">
+              <span className="text-[11px] font-medium text-fg-2 block">
                 วันเก็บเกี่ยว
               </span>
-              <span className="text-sm font-bold text-[#F5D280] block font-mono">
+              <span className="text-sm font-bold text-gold-soft block font-mono">
                 {harvestDate}
               </span>
             </div>
 
             {/* Card 6: เกรด */}
-            <div className="bg-[#0e2619] border border-[#1c442c] rounded-2xl p-3 space-y-1">
-              <span className="text-[11px] font-medium text-[#83A893] block">
+            <div className="bg-surface border border-line rounded-2xl p-3 space-y-1">
+              <span className="text-[11px] font-medium text-fg-2 block">
                 เกรด
               </span>
               <span className="text-sm font-black text-white block">
@@ -293,8 +293,8 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
             </div>
 
             {/* Card 7: น้ำหนัก */}
-            <div className="bg-[#0e2619] border border-[#1c442c] rounded-2xl p-3 space-y-1">
-              <span className="text-[11px] font-medium text-[#83A893] block">
+            <div className="bg-surface border border-line rounded-2xl p-3 space-y-1">
+              <span className="text-[11px] font-medium text-fg-2 block">
                 น้ำหนัก
               </span>
               <span className="text-sm font-extrabold text-white block">
@@ -303,23 +303,23 @@ export const FruitPassportModal: React.FC<FruitPassportModalProps> = ({
             </div>
 
             {/* Card 8: เลขที่ใบอนุญาต GAP */}
-            <div className="bg-[#0e2619] border border-[#1c442c] rounded-2xl p-3 space-y-1">
-              <span className="text-[11px] font-medium text-[#83A893] block">
+            <div className="bg-surface border border-line rounded-2xl p-3 space-y-1">
+              <span className="text-[11px] font-medium text-fg-2 block">
                 เลขที่ใบอนุญาต GAP
               </span>
-              <span className="text-xs font-bold text-[#F5D280] block font-mono truncate">
+              <span className="text-xs font-bold text-gold-soft block font-mono truncate">
                 {gapNumber}
               </span>
             </div>
           </div>
 
           {/* Blockchain & NFC Cryptographic Stamp */}
-          <div className="bg-[#0b2216] border border-[#18402a] rounded-2xl p-3 text-[11px] flex items-center justify-between text-[#83A893]">
+          <div className="bg-[#0b2216] border border-[#18402a] rounded-2xl p-3 text-[11px] flex items-center justify-between text-fg-2">
             <span className="flex items-center gap-1.5 text-white">
-              <Sparkles className="w-3.5 h-3.5 text-[#E5A93C]" />
+              <Sparkles className="w-3.5 h-3.5 text-gold" />
               <span>NFC Cryptographic Signature Verified</span>
             </span>
-            <span className="font-mono text-[10px] text-[#4ADE80] font-bold">100% Authentic</span>
+            <span className="font-mono text-[10px] text-leaf font-bold">100% Authentic</span>
           </div>
         </div>
       </div>

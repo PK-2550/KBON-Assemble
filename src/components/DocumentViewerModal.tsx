@@ -86,16 +86,16 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       onClick={onClose}
     >
       <div
-        className={`bg-[#06140b] text-white rounded-3xl overflow-hidden shadow-2xl border border-[#1c442c] relative flex flex-col transition-all ${
+        className={`bg-[#06140b] text-white rounded-3xl overflow-hidden shadow-2xl border border-line relative flex flex-col transition-all ${
           isFullScreen ? 'w-full h-full max-w-none max-h-none rounded-none' : 'w-full max-w-4xl max-h-[92vh]'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="p-3.5 sm:p-4 border-b border-[#1c442c] bg-gradient-to-r from-[#0c2617] via-[#081b10] to-[#04140b] flex items-center justify-between gap-3 shrink-0">
+        <div className="p-3.5 sm:p-4 border-b border-line bg-gradient-to-r from-[#0c2617] via-[#081b10] to-well flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold shrink-0 ${
-              isPdf ? 'bg-rose-950/80 text-rose-300 border border-rose-600/50' : 'bg-[#143523] text-[#4ADE80] border border-[#245b38]'
+              isPdf ? 'bg-rose-950/80 text-rose-300 border border-rose-600/50' : 'bg-surface-2 text-leaf border border-[#245b38]'
             }`}>
               {isPdf ? <FileText className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
             </div>
@@ -105,12 +105,12 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   {data.title}
                 </h3>
                 {data.badge && (
-                  <span className="text-[10px] font-bold bg-[#E5A93C]/20 text-[#F5D280] border border-[#E5A93C]/40 px-2 py-0.5 rounded-full shrink-0">
+                  <span className="text-[10px] font-bold bg-gold/20 text-gold-soft border border-gold/40 px-2 py-0.5 rounded-full shrink-0">
                     {data.badge}
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-[#83A893] truncate">
+              <p className="text-[11px] text-fg-2 truncate">
                 {data.subtitle || (isPdf ? 'เอกสารอิเล็กทรอนิกส์ (PDF)' : 'ไฟล์รูปภาพความละเอียดสูง')}
               </p>
             </div>
@@ -124,7 +124,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   type="button"
                   onClick={handleZoomIn}
                   title="ซูมเข้า (+)"
-                  className="p-1.5 sm:p-2 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-xl border border-[#1c442c] transition-colors cursor-pointer"
+                  className="p-1.5 sm:p-2 text-fg-2 hover:text-white hover:bg-surface-2 rounded-xl border border-line transition-colors cursor-pointer"
                 >
                   <ZoomIn className="w-4 h-4" />
                 </button>
@@ -132,7 +132,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   type="button"
                   onClick={handleZoomOut}
                   title="ซูมออก (-)"
-                  className="p-1.5 sm:p-2 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-xl border border-[#1c442c] transition-colors cursor-pointer"
+                  className="p-1.5 sm:p-2 text-fg-2 hover:text-white hover:bg-surface-2 rounded-xl border border-line transition-colors cursor-pointer"
                 >
                   <ZoomOut className="w-4 h-4" />
                 </button>
@@ -140,7 +140,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   type="button"
                   onClick={handleRotate}
                   title="หมุนรูป 90°"
-                  className="p-1.5 sm:p-2 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-xl border border-[#1c442c] transition-colors cursor-pointer"
+                  className="p-1.5 sm:p-2 text-fg-2 hover:text-white hover:bg-surface-2 rounded-xl border border-line transition-colors cursor-pointer"
                 >
                   <RotateCw className="w-4 h-4" />
                 </button>
@@ -151,7 +151,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               type="button"
               onClick={handleDownload}
               title="ดาวน์โหลดไฟล์ลงเครื่อง"
-              className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-[#143523] hover:bg-[#1f4e34] border border-[#4ADE80]/40 text-[#4ADE80] font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-surface-2 hover:bg-[#1f4e34] border border-leaf/40 text-leaf font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">ดาวน์โหลด</span>
@@ -161,7 +161,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               type="button"
               onClick={() => setIsFullScreen(!isFullScreen)}
               title={isFullScreen ? 'ย่อหน้าต่าง' : 'ขยายเต็มจอ'}
-              className="p-1.5 sm:p-2 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-xl border border-[#1c442c] transition-colors cursor-pointer hidden sm:flex"
+              className="p-1.5 sm:p-2 text-fg-2 hover:text-white hover:bg-surface-2 rounded-xl border border-line transition-colors cursor-pointer hidden sm:flex"
             >
               {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
@@ -169,7 +169,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 sm:p-2 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-xl border border-[#1c442c] transition-colors cursor-pointer ml-1"
+              className="p-1.5 sm:p-2 text-fg-2 hover:text-white hover:bg-surface-2 rounded-xl border border-line transition-colors cursor-pointer ml-1"
             >
               <X className="w-4 h-4" />
             </button>
@@ -185,12 +185,12 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 title={data.title}
                 className="w-full flex-1 min-h-[500px] sm:min-h-[580px] border-0 bg-[#121c16]"
               />
-              <div className="p-2.5 bg-[#092215] border-t border-[#1c442c] flex items-center justify-between text-xs text-[#83A893] shrink-0">
+              <div className="p-2.5 bg-panel border-t border-line flex items-center justify-between text-xs text-fg-2 shrink-0">
                 <span>หากเอกสารไม่แสดงในกรอบ สามารถกดเปิดหรือดาวน์โหลดดูได้</span>
                 <button
                   type="button"
                   onClick={handleDownload}
-                  className="text-[#4ADE80] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                  className="text-leaf hover:underline font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <ExternalLink className="w-3 h-3" />
                   <span>ดาวน์โหลดไฟล์ PDF ต้นฉบับ</span>
@@ -211,7 +211,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 <img
                   src={data.fileUrl}
                   alt={data.title}
-                  className="max-w-full max-h-[68vh] object-contain rounded-xl shadow-2xl border border-[#1c442c]/60 select-none pointer-events-auto"
+                  className="max-w-full max-h-[68vh] object-contain rounded-xl shadow-2xl border border-line/60 select-none pointer-events-auto"
                   referrerPolicy="no-referrer"
                 />
               </div>
@@ -221,10 +221,10 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 
         {/* Footer Meta info */}
         {data.metaDetails && data.metaDetails.length > 0 && (
-          <div className="p-3 bg-[#092215] border-t border-[#1c442c] flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
+          <div className="p-3 bg-panel border-t border-line flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
             {data.metaDetails.map((meta, idx) => (
               <div key={idx} className="flex items-center gap-1.5 text-[11px]">
-                <span className="text-[#83A893]">{meta.label}:</span>
+                <span className="text-fg-2">{meta.label}:</span>
                 <span className="font-semibold text-white">{meta.value}</span>
               </div>
             ))}

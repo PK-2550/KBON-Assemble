@@ -1,10 +1,51 @@
 @import "tailwindcss";
 
+/**
+ * โทนสีของแบรนด์ DuriTrack "Luxury Origin" -- เขียวเข้ม + ทอง
+ *
+ * เดิมสีถูกเขียนเป็นค่า hex ตรง ๆ กระจายอยู่ในคอมโพเนนต์กว่า 1,300 จุด
+ * ทำให้เขียวเข้มมีหลายเฉดที่ใกล้เคียงกันมากปนกันอยู่โดยไม่ตั้งใจ
+ * และแก้สีทีหนึ่งต้องไล่แก้ทุกไฟล์
+ *
+ * ประกาศไว้ใน @theme ของ Tailwind v4 จึงใช้เป็น utility ได้เลย
+ * เช่น bg-surface, text-fg-2, border-line, bg-gold/20
+ */
+@theme {
+  /* พื้นหลัง ไล่จากลึกสุดไปสว่างสุด */
+  --color-canvas: #07190f;      /* พื้นหลังหลักของทั้งแอป */
+  --color-surface: #0e2619;     /* การ์ด แถบ พาเนล */
+  --color-surface-2: #143523;   /* ยกขึ้นอีกชั้น หรือสถานะ hover */
+  --color-well: #04140b;        /* ช่องกรอกข้อมูล พื้นที่จมลงไป */
+  --color-panel: #092215;       /* การ์ดกระจกในหน้าเข้าสู่ระบบ */
+  --color-panel-2: #092013;     /* แถบสถิติในหน้าต่างรายละเอียด */
+
+  /* เส้นขอบ */
+  --color-line: #1c442c;        /* เส้นขอบมาตรฐาน */
+  --color-line-soft: #18422b;   /* จาง ใช้ในฟอร์ม */
+  --color-line-strong: #225538; /* เน้น ใช้กับไอคอนและป้าย */
+
+  /* ตัวอักษร ไล่จากเด่นสุดไปจางสุด */
+  --color-fg: #f3f6f4;          /* หัวข้อและเนื้อหาหลัก */
+  --color-fg-2: #83a893;        /* ข้อความรอง */
+  --color-fg-3: #8da796;        /* ป้ายกำกับในฟอร์ม */
+  --color-fg-4: #5d7c67;        /* จางสุด ไอคอนในช่องกรอก */
+
+  /* ทอง -- สีเน้นของแบรนด์ */
+  --color-gold: #e5a93c;
+  --color-gold-hi: #d4992e;     /* ตอน hover */
+  --color-gold-soft: #f5d280;   /* ตัวอักษรทองบนพื้นเข้ม */
+  --color-gold-ink: #1c1202;    /* ตัวอักษรบนพื้นทอง */
+  --color-gold-ink-2: #241603;  /* ตัวอักษรบนพื้นทองอีกเฉด */
+
+  /* เขียวสด -- ใช้บอกสถานะสำเร็จและป้ายยืนยัน */
+  --color-leaf: #4ade80;
+}
+
 @layer base {
   html, body {
     font-family: 'Prompt', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #07190f;
-    color: #f3f6f4;
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
     overflow-x: hidden;
     max-width: 100vw;
   }
@@ -17,11 +58,11 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #07190f;
+  background: var(--color-canvas);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1c442c;
+  background: var(--color-line);
   border-radius: 9999px;
 }
 
@@ -37,4 +78,3 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-

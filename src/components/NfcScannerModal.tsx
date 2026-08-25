@@ -201,33 +201,33 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-[#07190f] text-[#f3f6f4] rounded-t-[32px] sm:rounded-[32px] max-w-md w-full max-h-[94vh] overflow-y-auto shadow-2xl border border-[#1c442c] animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+      <div className="bg-canvas text-fg rounded-t-[32px] sm:rounded-[32px] max-w-md w-full max-h-[94vh] overflow-y-auto shadow-2xl border border-line animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
         {/* Mobile Pull Bar Indicator */}
         <div className="sm:hidden pt-3 pb-1 flex justify-center">
-          <div className="w-12 h-1.5 bg-[#1c442c] rounded-full" />
+          <div className="w-12 h-1.5 bg-line rounded-full" />
         </div>
 
         {/* Header */}
-        <div className="p-4 sm:p-5 px-5 sm:px-6 flex items-center justify-between border-b border-[#1c442c]">
+        <div className="p-4 sm:p-5 px-5 sm:px-6 flex items-center justify-between border-b border-line">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#143523] border border-[#225538] flex items-center justify-center text-[#E5A93C] shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-surface-2 border border-line-strong flex items-center justify-center text-gold shrink-0">
               <Radio className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <h3 className="font-bold text-sm sm:text-base text-white flex items-center gap-1.5">
                 <span>สแกน NFC ผลทุเรียน</span>
-                <span className="text-[9px] bg-[#E5A93C]/20 text-[#F5D280] font-mono px-2 py-0.5 rounded-full border border-[#E5A93C]/40">
+                <span className="text-[9px] bg-gold/20 text-gold-soft font-mono px-2 py-0.5 rounded-full border border-gold/40">
                   NFC Verified
                 </span>
               </h3>
-              <p className="text-[11px] text-[#83A893]">
+              <p className="text-[11px] text-fg-2">
                 แตะโทรศัพท์มือถือที่ชิป NFC ติดขั้วผลทุเรียน
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#83A893] hover:text-white hover:bg-[#0e2619] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-fg-2 hover:text-white hover:bg-surface transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -239,9 +239,9 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
             <div className="space-y-4 py-1">
               {/* Radar & Phone Animation */}
               <div className="relative mx-auto w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full bg-[#1c442c] animate-ping opacity-25" />
-                <div className="absolute inset-2 rounded-full bg-[#0e2619] border border-[#1c442c]" />
-                <div className="relative w-16 h-16 sm:w-18 sm:h-18 bg-gradient-to-br from-[#143523] to-[#0a2014] text-[#E5A93C] rounded-2xl flex flex-col items-center justify-center border border-[#E5A93C]/40 shadow-lg">
+                <div className="absolute inset-0 rounded-full bg-line animate-ping opacity-25" />
+                <div className="absolute inset-2 rounded-full bg-surface border border-line" />
+                <div className="relative w-16 h-16 sm:w-18 sm:h-18 bg-gradient-to-br from-surface-2 to-[#0a2014] text-gold rounded-2xl flex flex-col items-center justify-center border border-gold/40 shadow-lg">
                   <Smartphone className="w-8 h-8 sm:w-9 sm:h-9 animate-bounce" />
                 </div>
               </div>
@@ -250,11 +250,11 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
                 <h4 className="font-extrabold text-white text-base">
                   นำมือถือแตะที่ชิป NFC ขั้วทุเรียน
                 </h4>
-                <p className="text-xs text-[#83A893] max-w-xs mx-auto leading-relaxed">
+                <p className="text-xs text-fg-2 max-w-xs mx-auto leading-relaxed">
                   {targetTree ? (
                     <>
                       เพื่อตรวจสอบต้น{' '}
-                      <span className="font-bold text-[#E5A93C]">[{targetTree.code}] {targetTree.name}</span>
+                      <span className="font-bold text-gold">[{targetTree.code}] {targetTree.name}</span>
                     </>
                   ) : (
                     'ระบบจะอ่านรหัสผล น้ำหนัก และตรวจสอบย้อนกลับสู่ต้นแม่พันธุ์และพิกัดแปลงปลูกจริง'
@@ -265,20 +265,20 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
               {/* Main Quick Scan Action */}
               <button
                 onClick={() => handleStartScan()}
-                className="w-full py-3.5 bg-gradient-to-r from-[#E5A93C] to-[#d89727] hover:from-[#d89727] hover:to-[#c6861d] text-[#1c1202] text-sm font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                className="w-full py-3.5 bg-gradient-to-r from-gold to-[#d89727] hover:from-[#d89727] hover:to-[#c6861d] text-gold-ink text-sm font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
               >
                 <Radio className="w-4 h-4 animate-pulse" />
                 <span>แตะเริ่มสแกน NFC ทันที</span>
               </button>
 
               {/* 1-Tap Demo Durian Fruit Presets for Easy Mobile Testing */}
-              <div className="pt-3 text-left border-t border-[#1c442c]">
+              <div className="pt-3 text-left border-t border-line">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-bold text-[#f3f6f4] flex items-center gap-1">
-                    <Zap className="w-3.5 h-3.5 text-[#E5A93C]" />
+                  <span className="text-[11px] font-bold text-fg flex items-center gap-1">
+                    <Zap className="w-3.5 h-3.5 text-gold" />
                     <span>หรือทดสอบแตะผลทุเรียนจำลอง (Demo NFC Tag)</span>
                   </span>
-                  <span className="text-[10px] text-[#83A893]">1-Tap Test</span>
+                  <span className="text-[10px] text-fg-2">1-Tap Test</span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-2">
@@ -286,24 +286,24 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
                     <button
                       key={idx}
                       onClick={() => handleStartScan(preset)}
-                      className="w-full p-2.5 bg-[#0e2619] hover:bg-[#143523] border border-[#1c442c] hover:border-[#E5A93C]/50 rounded-xl text-left transition-all flex items-center justify-between group cursor-pointer"
+                      className="w-full p-2.5 bg-surface hover:bg-surface-2 border border-line hover:border-gold/50 rounded-xl text-left transition-all flex items-center justify-between group cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="w-6 h-6 rounded-lg bg-[#143523] border border-[#225538] text-[#E5A93C] text-xs font-black flex items-center justify-center shrink-0">
+                        <span className="w-6 h-6 rounded-lg bg-surface-2 border border-line-strong text-gold text-xs font-black flex items-center justify-center shrink-0">
                           {idx + 1}
                         </span>
                         <div>
-                          <div className="text-xs font-bold text-white group-hover:text-[#E5A93C] leading-tight">
+                          <div className="text-xs font-bold text-white group-hover:text-gold leading-tight">
                             {preset.variety}
                           </div>
-                          <div className="text-[10px] text-[#83A893] flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-2.5 h-2.5 text-[#E5A93C]" />
+                          <div className="text-[10px] text-fg-2 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-2.5 h-2.5 text-gold" />
                             <span>{preset.farmName}</span>
-                            <span className="text-[#4ADE80] font-bold">• {preset.sweetnessBrix}° Brix</span>
+                            <span className="text-leaf font-bold">• {preset.sweetnessBrix}° Brix</span>
                           </div>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-[#83A893] group-hover:text-[#E5A93C] shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-fg-2 group-hover:text-gold shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -314,8 +314,8 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
           {scanState === 'scanning' && (
             <div className="py-8 space-y-6">
               <div className="relative mx-auto w-28 h-28 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-4 border-[#E5A93C] border-t-transparent animate-spin" />
-                <div className="w-18 h-18 rounded-full bg-[#0e2619] text-[#E5A93C] flex items-center justify-center border border-[#1c442c]">
+                <div className="absolute inset-0 rounded-full border-4 border-gold border-t-transparent animate-spin" />
+                <div className="w-18 h-18 rounded-full bg-surface text-gold flex items-center justify-center border border-line">
                   <Radio className="w-9 h-9 animate-pulse" />
                 </div>
               </div>
@@ -324,13 +324,13 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
                 <h4 className="font-extrabold text-white text-base">
                   กำลังอ่านคลื่นความถี่ NFC จากขั้วผล...
                 </h4>
-                <p className="text-xs text-[#83A893]">
+                <p className="text-xs text-fg-2">
                   กำลังถอดรหัสและตรวจสอบลายเซ็นดิจิทัล (NFC Cryptographic Check)
                 </p>
                 {/* Progress bar */}
-                <div className="w-48 mx-auto bg-[#07190f] rounded-full h-2 overflow-hidden mt-3 border border-[#1c442c]">
+                <div className="w-48 mx-auto bg-canvas rounded-full h-2 overflow-hidden mt-3 border border-line">
                   <div
-                    className="bg-gradient-to-r from-[#E5A93C] to-[#4ADE80] h-full transition-all duration-300 rounded-full"
+                    className="bg-gradient-to-r from-gold to-leaf h-full transition-all duration-300 rounded-full"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -341,13 +341,13 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
           {scanState === 'success' && verifiedFruit && (
             <div className="py-1 space-y-3.5 text-left animate-in fade-in">
               {/* Verified Origin Tag & Header */}
-              <div className="bg-[#0e2619] border border-[#1c442c] rounded-2xl p-3.5 flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-[#143523] border border-[#225538] text-[#E5A93C] flex items-center justify-center shrink-0 shadow-md">
-                  <CheckCircle2 className="w-6 h-6 text-[#4ADE80]" />
+              <div className="bg-surface border border-line rounded-2xl p-3.5 flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-surface-2 border border-line-strong text-gold flex items-center justify-center shrink-0 shadow-md">
+                  <CheckCircle2 className="w-6 h-6 text-leaf" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-bold text-[#4ADE80] flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#4ADE80]" />
+                  <span className="text-[10px] font-bold text-leaf flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-leaf" />
                     <span>ยืนยันผลทุเรียนแท้ 100% (Verified Origin)</span>
                   </span>
                   <div className="text-sm font-black text-white mt-0.5 font-mono truncate">
@@ -357,20 +357,20 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
               </div>
 
               {/* Scanned Fruit Details Grid */}
-              <div className="bg-[#0e2619] border border-[#1c442c] rounded-2xl p-3.5 space-y-2.5 text-xs">
-                <div className="flex items-center justify-between pb-2 border-b border-[#1c442c]">
-                  <span className="text-[#83A893] flex items-center gap-1 text-[11px]">
-                    <Tag className="w-3.5 h-3.5 text-[#E5A93C]" />
+              <div className="bg-surface border border-line rounded-2xl p-3.5 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-line">
+                  <span className="text-fg-2 flex items-center gap-1 text-[11px]">
+                    <Tag className="w-3.5 h-3.5 text-gold" />
                     <span>ต้นแม่พันธุ์:</span>
                   </span>
-                  <span className="font-bold font-mono text-[#E5A93C] text-[11px] text-right truncate max-w-[200px]">
+                  <span className="font-bold font-mono text-gold text-[11px] text-right truncate max-w-[200px]">
                     [{verifiedFruit.treeCode}] {verifiedFruit.treeName}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between pb-2 border-b border-[#1c442c]">
-                  <span className="text-[#83A893] flex items-center gap-1 text-[11px]">
-                    <Scale className="w-3.5 h-3.5 text-[#83A893]" />
+                <div className="flex items-center justify-between pb-2 border-b border-line">
+                  <span className="text-fg-2 flex items-center gap-1 text-[11px]">
+                    <Scale className="w-3.5 h-3.5 text-fg-2" />
                     <span>น้ำหนักผล:</span>
                   </span>
                   <span className="font-bold text-white text-[11px]">
@@ -378,9 +378,9 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between pb-2 border-b border-[#1c442c]">
-                  <span className="text-[#83A893] flex items-center gap-1 text-[11px]">
-                    <Calendar className="w-3.5 h-3.5 text-[#83A893]" />
+                <div className="flex items-center justify-between pb-2 border-b border-line">
+                  <span className="text-fg-2 flex items-center gap-1 text-[11px]">
+                    <Calendar className="w-3.5 h-3.5 text-fg-2" />
                     <span>วันที่ตัดจากต้น:</span>
                   </span>
                   <span className="font-bold text-white text-[11px]">
@@ -389,11 +389,11 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-[#83A893] flex items-center gap-1 text-[11px]">
-                    <Sparkles className="w-3.5 h-3.5 text-[#E5A93C]" />
+                  <span className="text-fg-2 flex items-center gap-1 text-[11px]">
+                    <Sparkles className="w-3.5 h-3.5 text-gold" />
                     <span>ความหวานมาตรฐาน:</span>
                   </span>
-                  <span className="font-extrabold text-[#F5D280] text-[11px]">
+                  <span className="font-extrabold text-gold-soft text-[11px]">
                     {verifiedFruit.sweetnessBrix}° Brix (การันตีความอร่อย)
                   </span>
                 </div>
@@ -403,7 +403,7 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
               <div className="space-y-2 pt-1">
                 <button
                   onClick={handleConfirmAndProceed}
-                  className="w-full py-3.5 bg-gradient-to-r from-[#E5A93C] to-[#d89727] hover:from-[#d89727] hover:to-[#c6861d] text-[#1c1202] text-xs sm:text-sm font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                  className="w-full py-3.5 bg-gradient-to-r from-gold to-[#d89727] hover:from-[#d89727] hover:to-[#c6861d] text-gold-ink text-xs sm:text-sm font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                 >
                   <Award className="w-4 h-4" />
                   <span>ดูใบรับรองประวัติต้น และส่งรีวิว (Verified Review)</span>
@@ -411,7 +411,7 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
 
                 <button
                   onClick={() => setScanState('ready')}
-                  className="w-full py-2 text-[#83A893] hover:text-white text-xs font-semibold cursor-pointer"
+                  className="w-full py-2 text-fg-2 hover:text-white text-xs font-semibold cursor-pointer"
                 >
                   ← สแกนผลทุเรียนลูกอื่น
                 </button>

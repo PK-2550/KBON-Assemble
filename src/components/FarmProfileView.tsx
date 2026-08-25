@@ -217,23 +217,23 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Main Container */}
-      <div className="bg-[#0e2619] text-[#f3f6f4] rounded-3xl overflow-hidden shadow-xl border border-[#1c442c]">
+      <div className="bg-surface text-fg rounded-3xl overflow-hidden shadow-xl border border-line">
         {/* Top Hero Photo Gallery (Pure Garden Atmosphere Photos) */}
-        <div className="relative aspect-4/3 sm:aspect-16/9 bg-[#07190f] overflow-hidden">
+        <div className="relative aspect-4/3 sm:aspect-16/9 bg-canvas overflow-hidden">
           <img
             src={displayPhotos[activePhotoIndex] || displayPhotos[0]}
             alt={currentFarm.name}
             className="w-full h-full object-cover transition-all duration-300"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e2619] via-transparent to-black/50 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-black/50 pointer-events-none" />
 
           {/* Top Bar: Back Button & Photo Controls */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
             <button
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-full text-xs font-bold text-[#F5D280] hover:text-white border border-[#E5A93C]/40 transition-all cursor-pointer shadow-sm active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-full text-xs font-bold text-gold-soft hover:text-white border border-gold/40 transition-all cursor-pointer shadow-sm active:scale-95"
             >
-              <ArrowLeft className="w-3.5 h-3.5 text-[#E5A93C]" />
+              <ArrowLeft className="w-3.5 h-3.5 text-gold" />
               <span>กลับ</span>
             </button>
 
@@ -244,7 +244,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                     setPhotoList(displayPhotos);
                     setIsPhotoManagerOpen(true);
                   }}
-                  className="px-3 py-1.5 bg-[#E5A93C] hover:bg-[#f0b548] text-[#1c1202] text-xs font-black rounded-full flex items-center gap-1.5 shadow-md cursor-pointer transition-transform active:scale-95"
+                  className="px-3 py-1.5 bg-gold hover:bg-[#f0b548] text-gold-ink text-xs font-black rounded-full flex items-center gap-1.5 shadow-md cursor-pointer transition-transform active:scale-95"
                 >
                   <Camera className="w-3.5 h-3.5" />
                   <span>จัดการรูปบรรยากาศ</span>
@@ -265,7 +265,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 onClick={() => setActivePhotoIndex(idx)}
                 className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
                   activePhotoIndex === idx
-                    ? 'w-6 bg-[#E5A93C]'
+                    ? 'w-6 bg-gold'
                     : 'w-1.5 bg-white/40 hover:bg-white/70'
                 }`}
                 aria-label={`รูปบรรยากาศสวนที่ ${idx + 1}`}
@@ -282,7 +282,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               onClick={() => setActivePhotoIndex(idx)}
               className={`relative shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden transition-all duration-150 cursor-pointer ${
                 activePhotoIndex === idx
-                  ? 'ring-2 ring-[#E5A93C] ring-offset-2 ring-offset-[#0e2619] scale-102'
+                  ? 'ring-2 ring-gold ring-offset-2 ring-offset-[#0e2619] scale-102'
                   : 'opacity-60 hover:opacity-100'
               }`}
             >
@@ -295,7 +295,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 setPhotoList(displayPhotos);
                 setIsPhotoManagerOpen(true);
               }}
-              className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-dashed border-[#1c442c] hover:border-[#E5A93C] flex flex-col items-center justify-center text-[#83A893] hover:text-[#E5A93C] text-[10px] font-bold cursor-pointer transition-colors"
+              className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-dashed border-line hover:border-gold flex flex-col items-center justify-center text-fg-2 hover:text-gold text-[10px] font-bold cursor-pointer transition-colors"
             >
               <Plus className="w-4 h-4 mb-0.5" />
               <span>เพิ่มรูป</span>
@@ -308,7 +308,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
           <div className="flex items-start justify-between gap-3">
             {/* Left: Square Logo & Farm Name */}
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#143523] border border-[#225538] flex items-center justify-center text-[#E5A93C] font-black text-lg sm:text-xl shrink-0 shadow-inner font-serif">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-surface-2 border border-line-strong flex items-center justify-center text-gold font-black text-lg sm:text-xl shrink-0 shadow-inner font-serif">
                 {farmInitials}
               </div>
 
@@ -316,8 +316,8 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">
                   {currentFarm.name}
                 </h1>
-                <div className="flex items-center gap-1 text-xs text-[#83A893] mt-0.5">
-                  <MapPin className="w-3.5 h-3.5 shrink-0 text-[#E5A93C]" />
+                <div className="flex items-center gap-1 text-xs text-fg-2 mt-0.5">
+                  <MapPin className="w-3.5 h-3.5 shrink-0 text-gold" />
                   <span className="truncate">
                     {currentFarm.district || 'อ.เมือง'} • {currentFarm.province}
                   </span>
@@ -326,14 +326,14 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
             </div>
 
             {/* Right: Rating Box */}
-            <div className="shrink-0 bg-[#143523] border border-[#225538] rounded-2xl px-3.5 py-2 text-center shadow-xs">
-              <div className="text-lg font-black text-[#E5A93C] tabular-nums leading-none">
+            <div className="shrink-0 bg-surface-2 border border-line-strong rounded-2xl px-3.5 py-2 text-center shadow-xs">
+              <div className="text-lg font-black text-gold tabular-nums leading-none">
                 {currentFarm.rating.toFixed(1)}
               </div>
-              <div className="flex items-center justify-center gap-0.5 text-[#E5A93C] text-[10px] my-1">
+              <div className="flex items-center justify-center gap-0.5 text-gold text-[10px] my-1">
                 {'★'.repeat(5)}
               </div>
-              <div className="text-[10px] text-[#83A893] font-medium">
+              <div className="text-[10px] text-fg-2 font-medium">
                 {currentFarm.reviewCount || 7} รีวิว
               </div>
             </div>
@@ -368,7 +368,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-[#122b1c] border border-[#234d34] hover:bg-[#183a26] text-[#4ADE80] rounded-xl transition-all text-center"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-[#122b1c] border border-[#234d34] hover:bg-[#183a26] text-leaf rounded-xl transition-all text-center"
             >
               <span>💬</span>
               <span className="truncate">LINE OA</span>
@@ -385,7 +385,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
           {/* Manager Action Banner: Request Farm Edit/Update to Admin */}
           {isOwnerOrAdmin && (
-            <div className="p-3.5 bg-gradient-to-r from-purple-950/40 via-[#0e2619] to-indigo-950/40 border border-purple-700/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-md">
+            <div className="p-3.5 bg-gradient-to-r from-purple-950/40 via-surface to-indigo-950/40 border border-purple-700/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-md">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-purple-900/60 border border-purple-600/50 flex items-center justify-center text-purple-300 shrink-0">
                   <FileEdit className="w-4 h-4" />
@@ -397,7 +397,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                       Manager
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#83A893]">
+                  <p className="text-[11px] text-fg-2">
                     ต้องการแก้ไขข้อมูลที่กรอกผิด หรือเพิ่มเติมใบรับรอง / บรรยากาศสวน?
                   </p>
                 </div>
@@ -415,67 +415,67 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
           {/* Key Stats Grid */}
           <div className="grid grid-cols-3 gap-2.5 pt-1">
-            <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
+            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">🌳</span>
               <div className="text-base sm:text-lg font-black text-white tabular-nums">
                 {currentFarm.totalTrees.toLocaleString()}
               </div>
-              <div className="text-[11px] text-[#83A893] font-medium">ต้นทุเรียน</div>
+              <div className="text-[11px] text-fg-2 font-medium">ต้นทุเรียน</div>
             </div>
 
-            <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
+            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">📐</span>
               <div className="text-base sm:text-lg font-black text-white tabular-nums">
                 {currentFarm.areaRai || 48}
               </div>
-              <div className="text-[11px] text-[#83A893] font-medium">ไร่</div>
+              <div className="text-[11px] text-fg-2 font-medium">ไร่</div>
             </div>
 
-            <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
+            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">🔬</span>
               <div className="text-base sm:text-lg font-black text-white tabular-nums">
                 {currentFarm.varietiesCount || currentFarm.topVarieties?.length || 6}
               </div>
-              <div className="text-[11px] text-[#83A893] font-medium">สายพันธุ์</div>
+              <div className="text-[11px] text-fg-2 font-medium">สายพันธุ์</div>
             </div>
 
-            <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
+            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">🪚</span>
               <div className="text-base sm:text-lg font-black text-white tabular-nums">
                 {currentFarm.harvestRounds || 3}
               </div>
-              <div className="text-[11px] text-[#83A893] font-medium">เก็บ/ปี</div>
+              <div className="text-[11px] text-fg-2 font-medium">เก็บ/ปี</div>
             </div>
 
-            <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
+            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">⚖️</span>
               <div className="text-base sm:text-lg font-black text-white tabular-nums">
                 {currentFarm.harvestedFruits ? (currentFarm.harvestedFruits * 3.5).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '2,840'}
               </div>
-              <div className="text-[11px] text-[#83A893] font-medium">กก./ปี</div>
+              <div className="text-[11px] text-fg-2 font-medium">กก./ปี</div>
             </div>
 
-            <div className="bg-[#122b1c] border border-[#1c442c] rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
+            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
               <span className="text-base mb-1">⭐</span>
-              <div className="text-base sm:text-lg font-black text-[#E5A93C] tabular-nums">
+              <div className="text-base sm:text-lg font-black text-gold tabular-nums">
                 {currentFarm.rating.toFixed(1)}/5
               </div>
-              <div className="text-[11px] text-[#83A893] font-medium">คะแนนรีวิว</div>
+              <div className="text-[11px] text-fg-2 font-medium">คะแนนรีวิว</div>
             </div>
           </div>
 
           {/* SmartFarm Innovation Section (Optional & Toggleable by Farm Manager) */}
           {showSmartFarmCard ? (
-            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#122b1c] border border-[#1c442c] p-4 sm:p-5 shadow-lg">
+            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#122b1c] border border-line p-4 sm:p-5 shadow-lg">
               <div className="absolute top-0 right-0 w-64 h-32 bg-emerald-600/10 blur-3xl pointer-events-none" />
 
               <div className="flex items-center justify-between mb-2 relative z-10">
                 <div>
-                  <h3 className="font-serif font-black text-[#F5D280] text-base sm:text-lg tracking-wide leading-tight flex items-center gap-1.5">
+                  <h3 className="font-serif font-black text-gold-soft text-base sm:text-lg tracking-wide leading-tight flex items-center gap-1.5">
                     <span>SmartFarm</span>
-                    <span className="text-xs font-normal text-[#83A893]">({activeSmartTech.length} ระบบ)</span>
+                    <span className="text-xs font-normal text-fg-2">({activeSmartTech.length} ระบบ)</span>
                   </h3>
-                  <p className="text-xs text-[#83A893] font-medium mt-0.5">เทคโนโลยีแม่นยำภายในฟาร์ม</p>
+                  <p className="text-xs text-fg-2 font-medium mt-0.5">เทคโนโลยีแม่นยำภายในฟาร์ม</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -490,22 +490,22 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                         );
                         setIsSmartTechModalOpen(true);
                       }}
-                      className="p-1.5 bg-[#143523] hover:bg-[#1f4e34] text-[#F5D280] rounded-xl border border-[#225739] transition-colors cursor-pointer text-xs flex items-center gap-1"
+                      className="p-1.5 bg-surface-2 hover:bg-[#1f4e34] text-gold-soft rounded-xl border border-[#225739] transition-colors cursor-pointer text-xs flex items-center gap-1"
                       title="ตั้งค่า SmartFarm"
                     >
                       <Sliders className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">ตั้งค่า</span>
                     </button>
                   )}
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#153e28] text-[#4ADE80] border border-[#225739] shadow-xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-pulse" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#153e28] text-leaf border border-[#225739] shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-leaf animate-pulse" />
                     ใช้งานจริง
                   </span>
                 </div>
               </div>
 
               {/* Technologies List */}
-              <div className="divide-y divide-[#1c442c] relative z-10">
+              <div className="divide-y divide-line relative z-10">
                 {activeSmartTech.map((item) => (
                   <div
                     key={item.id}
@@ -519,14 +519,14 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                         <div className="font-bold text-xs sm:text-sm text-white truncate">
                           {item.name}
                         </div>
-                        <div className="text-[11px] sm:text-xs text-[#83A893] font-medium mt-0.5 truncate">
+                        <div className="text-[11px] sm:text-xs text-fg-2 font-medium mt-0.5 truncate">
                           {item.subtext}
                         </div>
                       </div>
                     </div>
 
                     <div className="shrink-0 pl-2">
-                      <span className="block w-2.5 h-2.5 rounded-full bg-[#4ADE80] shadow-[0_0_8px_rgba(74,222,128,0.8)] ring-2 ring-emerald-500/30" />
+                      <span className="block w-2.5 h-2.5 rounded-full bg-leaf shadow-[0_0_8px_rgba(74,222,128,0.8)] ring-2 ring-emerald-500/30" />
                     </div>
                   </div>
                 ))}
@@ -534,14 +534,14 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
             </div>
           ) : (
             /* Traditional Farming Banner (When SmartFarm is disabled or not present) */
-            <div className="p-4 rounded-2xl bg-[#122b1c] border border-[#1c442c] flex items-center justify-between">
+            <div className="p-4 rounded-2xl bg-[#122b1c] border border-line flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <span className="text-2xl">🌱</span>
                 <div className="min-w-0">
                   <div className="text-xs sm:text-sm font-bold text-white">
                     วิถีเกษตรประณีตและธรรมชาติ (Traditional Sustainable Practice)
                   </div>
-                  <p className="text-[11px] text-[#83A893] truncate">
+                  <p className="text-[11px] text-fg-2 truncate">
                     ดูแลด้วยภูมิปัญญาชาวสวนทุเรียนดั้งเดิมและปุ๋ยอินทรีย์บำรุงดินธรรมชาติ
                   </p>
                 </div>
@@ -554,7 +554,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                     setTempSmartTechList(DEFAULT_SMART_TECH_OPTIONS.map((t) => ({ ...t, active: true })));
                     setIsSmartTechModalOpen(true);
                   }}
-                  className="shrink-0 ml-2 px-3 py-1.5 bg-[#143523] hover:bg-[#1f4e34] text-[#E5A93C] text-xs font-bold rounded-xl border border-[#225739] transition-colors cursor-pointer"
+                  className="shrink-0 ml-2 px-3 py-1.5 bg-surface-2 hover:bg-[#1f4e34] text-gold text-xs font-bold rounded-xl border border-[#225739] transition-colors cursor-pointer"
                 >
                   ⚙️ เพิ่มระบบ SmartFarm
                 </button>
@@ -570,8 +570,8 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
           onClick={() => setActiveTab('trees')}
           className={`py-2.5 px-1 sm:px-3 rounded-2xl transition-all font-bold text-center flex items-center justify-center gap-1 cursor-pointer text-xs sm:text-sm ${
             activeTab === 'trees'
-              ? 'bg-[#E5A93C] text-[#1c1202] shadow-md font-extrabold'
-              : 'bg-[#0e2619] text-[#83A893] hover:text-white hover:bg-[#143523] border border-[#1c442c]'
+              ? 'bg-gold text-gold-ink shadow-md font-extrabold'
+              : 'bg-surface text-fg-2 hover:text-white hover:bg-surface-2 border border-line'
           }`}
         >
           <span>🌳</span>
@@ -582,8 +582,8 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
           onClick={() => setActiveTab('certs')}
           className={`py-2.5 px-1 sm:px-3 rounded-2xl transition-all font-bold text-center flex items-center justify-center gap-1 cursor-pointer text-xs sm:text-sm ${
             activeTab === 'certs'
-              ? 'bg-[#E5A93C] text-[#1c1202] shadow-md font-extrabold'
-              : 'bg-[#0e2619] text-[#83A893] hover:text-white hover:bg-[#143523] border border-[#1c442c]'
+              ? 'bg-gold text-gold-ink shadow-md font-extrabold'
+              : 'bg-surface text-fg-2 hover:text-white hover:bg-surface-2 border border-line'
           }`}
         >
           <span>📜</span>
@@ -594,8 +594,8 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
           onClick={() => setActiveTab('about')}
           className={`py-2.5 px-1 sm:px-3 rounded-2xl transition-all font-bold text-center flex items-center justify-center gap-1 cursor-pointer text-xs sm:text-sm ${
             activeTab === 'about'
-              ? 'bg-[#E5A93C] text-[#1c1202] shadow-md font-extrabold'
-              : 'bg-[#0e2619] text-[#83A893] hover:text-white hover:bg-[#143523] border border-[#1c442c]'
+              ? 'bg-gold text-gold-ink shadow-md font-extrabold'
+              : 'bg-surface text-fg-2 hover:text-white hover:bg-surface-2 border border-line'
           }`}
         >
           <span>📖</span>
@@ -612,8 +612,8 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 onClick={() => setSelectedFilter('all')}
                 className={`px-3 py-1.5 rounded-full font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer text-xs ${
                   selectedFilter === 'all'
-                    ? 'bg-[#E5A93C] text-[#1c1202] shadow-md'
-                    : 'bg-[#0e2619] border border-[#1c442c] text-[#83A893] hover:text-white'
+                    ? 'bg-gold text-gold-ink shadow-md'
+                    : 'bg-surface border border-line text-fg-2 hover:text-white'
                 }`}
               >
                 <span>ทั้งหมด</span>
@@ -624,8 +624,8 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 onClick={() => setSelectedFilter('auto')}
                 className={`px-3 py-1.5 rounded-full font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer text-xs ${
                   selectedFilter === 'auto'
-                    ? 'bg-[#E5A93C] text-[#1c1202] shadow-md'
-                    : 'bg-[#0e2619] border border-[#1c442c] text-[#83A893] hover:text-white'
+                    ? 'bg-gold text-gold-ink shadow-md'
+                    : 'bg-surface border border-line text-fg-2 hover:text-white'
                 }`}
               >
                 <span>สายพันธุ์หลัก</span>
@@ -636,8 +636,8 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 onClick={() => setSelectedFilter('photo')}
                 className={`px-3 py-1.5 rounded-full font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer text-xs ${
                   selectedFilter === 'photo'
-                    ? 'bg-[#E5A93C] text-[#1c1202] shadow-md'
-                    : 'bg-[#0e2619] border border-[#1c442c] text-[#83A893] hover:text-white'
+                    ? 'bg-gold text-gold-ink shadow-md'
+                    : 'bg-surface border border-line text-fg-2 hover:text-white'
                 }`}
               >
                 <span>สายพันธุ์พิเศษ</span>
@@ -649,8 +649,8 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                   onClick={() => setSelectedFilter('companion')}
                   className={`px-3 py-1.5 rounded-full font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer text-xs ${
                     selectedFilter === 'companion'
-                      ? 'bg-[#E5A93C] text-[#1c1202] shadow-md'
-                      : 'bg-[#0e2619] border border-[#1c442c] text-[#83A893] hover:text-white'
+                      ? 'bg-gold text-gold-ink shadow-md'
+                      : 'bg-surface border border-line text-fg-2 hover:text-white'
                   }`}
                 >
                   <span>ไม้ผลร่วม</span>
@@ -662,13 +662,13 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
             {/* Search and Sort */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
               <div className="relative w-full">
-                <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#E5A93C]" />
+                <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-gold" />
                 <input
                   type="text"
                   placeholder="ค้นหารหัสต้น / ชื่อต้น..."
                   value={treeSearch}
                   onChange={(e) => setTreeSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-[#0e2619] border border-[#1c442c] rounded-xl text-xs text-white placeholder-[#688d77] focus:outline-hidden focus:border-[#E5A93C] shadow-inner"
+                  className="w-full pl-9 pr-3 py-2 bg-surface border border-line rounded-xl text-xs text-white placeholder-[#688d77] focus:outline-hidden focus:border-gold shadow-inner"
                 />
               </div>
 
@@ -676,22 +676,22 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full bg-[#0e2619] border border-[#1c442c] rounded-xl px-3 py-2 text-xs font-bold text-[#F5D280] focus:outline-hidden cursor-pointer shadow-inner"
+                  className="w-full bg-surface border border-line rounded-xl px-3 py-2 text-xs font-bold text-gold-soft focus:outline-hidden cursor-pointer shadow-inner"
                 >
-                  <option value="rating" className="bg-[#0e2619] text-white">คะแนนรีวิวสูงสุด ⭐</option>
-                  <option value="az" className="bg-[#0e2619] text-white">ชื่อต้น (ก-ฮ) 🌳</option>
-                  <option value="code" className="bg-[#0e2619] text-white">รหัสต้น (Tree Code) 🏷️</option>
-                  <option value="yield" className="bg-[#0e2619] text-white">ผลผลิตต่อต้น 📈</option>
-                  <option value="diaries" className="bg-[#0e2619] text-white">บันทึกดูแล (Diaries) 📖</option>
+                  <option value="rating" className="bg-surface text-white">คะแนนรีวิวสูงสุด ⭐</option>
+                  <option value="az" className="bg-surface text-white">ชื่อต้น (ก-ฮ) 🌳</option>
+                  <option value="code" className="bg-surface text-white">รหัสต้น (Tree Code) 🏷️</option>
+                  <option value="yield" className="bg-surface text-white">ผลผลิตต่อต้น 📈</option>
+                  <option value="diaries" className="bg-surface text-white">บันทึกดูแล (Diaries) 📖</option>
                 </select>
               </div>
             </div>
           </div>
 
           {/* Tree List */}
-          <div className="bg-[#0e2619] rounded-3xl border border-[#1c442c] shadow-2xl overflow-hidden divide-y divide-[#1c442c]">
+          <div className="bg-surface rounded-3xl border border-line shadow-2xl overflow-hidden divide-y divide-line">
             {filteredAndSortedTrees.length === 0 ? (
-              <div className="p-10 text-center text-[#83A893] text-xs">
+              <div className="p-10 text-center text-fg-2 text-xs">
                 ไม่พบรายชื่อต้นไม้ตามเงื่อนไขที่ค้นหา
               </div>
             ) : (
@@ -699,35 +699,35 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 <div
                   key={tree.id}
                   onClick={() => setSelectedTree(tree)}
-                  className="group flex items-center justify-between p-3.5 sm:p-4 hover:bg-[#143523] transition-colors cursor-pointer"
+                  className="group flex items-center justify-between p-3.5 sm:p-4 hover:bg-surface-2 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[#07190f] shrink-0 border border-[#1c442c]">
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-canvas shrink-0 border border-line">
                       <img
                         src="https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=200&auto=format&fit=crop&q=80"
                         alt={tree.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
-                      <div className="absolute bottom-0 left-0 right-0 bg-[#0e2619]/90 text-[8px] font-bold text-[#E5A93C] text-center py-0.2 uppercase border-t border-[#1c442c]">
+                      <div className="absolute bottom-0 left-0 right-0 bg-surface/90 text-[8px] font-bold text-gold text-center py-0.2 uppercase border-t border-line">
                         {tree.propagationCode || 'AUTO'}
                       </div>
                     </div>
 
                     <div className="min-w-0 flex flex-col">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-xs sm:text-sm text-white group-hover:text-[#E5A93C] truncate transition-colors">
+                        <span className="font-bold text-xs sm:text-sm text-white group-hover:text-gold truncate transition-colors">
                           {tree.name}
                         </span>
-                        <span className="font-mono text-[10px] font-semibold text-[#F5D280] bg-[#E5A93C]/20 px-1.5 py-0.2 rounded-sm border border-[#E5A93C]/40">
+                        <span className="font-mono text-[10px] font-semibold text-gold-soft bg-gold/20 px-1.5 py-0.2 rounded-sm border border-gold/40">
                           {tree.code}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2 text-[11px] text-[#83A893] mt-0.5">
+                      <div className="flex items-center gap-2 text-[11px] text-fg-2 mt-0.5">
                         <span className="text-[#c8dcd0] font-medium">{tree.variety}</span>
-                        <span className="text-[#1c442c]">•</span>
+                        <span className="text-line">•</span>
                         <span>โซน: {tree.zone}</span>
-                        <span className="text-[#1c442c]">•</span>
+                        <span className="text-line">•</span>
                         <span>อายุ {tree.ageYears} ปี</span>
                       </div>
                     </div>
@@ -735,14 +735,14 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
                   <div className="flex flex-col items-end shrink-0 text-right pl-2">
                     <div className="flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 text-[#E5A93C] fill-[#E5A93C]" />
+                      <Star className="w-3.5 h-3.5 text-gold fill-gold" />
                       <span className="font-extrabold text-xs sm:text-sm text-white tabular-nums">
                         {tree.rating.toFixed(1)}
                       </span>
-                      <span className="text-[10px] text-[#83A893]">/10</span>
+                      <span className="text-[10px] text-fg-2">/10</span>
                     </div>
 
-                    <div className="text-[10px] text-[#83A893] mt-0.5 tabular-nums">
+                    <div className="text-[10px] text-fg-2 mt-0.5 tabular-nums">
                       {tree.diariesCount} บันทึก • {tree.yieldFruitCount} ลูก
                     </div>
                   </div>
@@ -755,15 +755,15 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
       {/* Tab: Certifications with Inspection Button */}
       {activeTab === 'certs' && (
-        <div className="bg-[#0e2619] rounded-3xl border border-[#1c442c] p-5 shadow-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-[#1c442c] pb-3">
+        <div className="bg-surface rounded-3xl border border-line p-5 shadow-2xl space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-3">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-[#4ADE80]" />
+              <ShieldCheck className="w-5 h-5 text-leaf" />
               <h3 className="font-bold text-sm text-white">
                 ใบรับรองมาตรฐานทางการเกษตร (Official Certificates)
               </h3>
             </div>
-            <span className="text-[10px] font-bold bg-[#143523] text-[#4ADE80] border border-[#235b3a] px-2.5 py-1 rounded-full">
+            <span className="text-[10px] font-bold bg-surface-2 text-leaf border border-[#235b3a] px-2.5 py-1 rounded-full">
               ✓ ผ่านการตรวจสอบ ({currentFarm.certificationDetails?.length || 1} รายการ)
             </span>
           </div>
@@ -777,12 +777,12 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 return (
                   <div
                     key={cert.id || idx}
-                    className="p-4 rounded-2xl border border-[#1c442c] bg-[#122b1c] space-y-2.5 flex flex-col justify-between"
+                    className="p-4 rounded-2xl border border-line bg-[#122b1c] space-y-2.5 flex flex-col justify-between"
                   >
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-xs text-[#E5A93C] font-mono">{cert.shortCode}</span>
+                          <span className="font-bold text-xs text-gold font-mono">{cert.shortCode}</span>
                           <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${
                             isPdf
                               ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
@@ -791,15 +791,15 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                             {isPdf ? 'PDF' : 'PNG/รูป'}
                           </span>
                         </div>
-                        <span className="text-[10px] font-bold bg-[#E5A93C]/20 text-[#F5D280] px-2 py-0.5 rounded-full border border-[#E5A93C]/40">
+                        <span className="text-[10px] font-bold bg-gold/20 text-gold-soft px-2 py-0.5 rounded-full border border-gold/40">
                           ตรวจสอบแล้ว
                         </span>
                       </div>
                       <div className="text-xs text-white font-bold">{cert.nameTh || cert.name}</div>
-                      <div className="text-[11px] text-[#83A893] font-mono">
-                        เลขที่: <span className="text-[#F5D280] font-bold">{cert.certNumber}</span>
+                      <div className="text-[11px] text-fg-2 font-mono">
+                        เลขที่: <span className="text-gold-soft font-bold">{cert.certNumber}</span>
                       </div>
-                      <div className="text-[10px] text-[#83A893]">
+                      <div className="text-[10px] text-fg-2">
                         ออกโดย: {cert.issuedBy} (ใช้ได้ถึง {cert.validUntil})
                       </div>
                     </div>
@@ -816,12 +816,12 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                           fileName: cert.fileName || `${cert.shortCode}_Certificate.${isPdf ? 'pdf' : 'png'}`,
                         })
                       }
-                      className="w-full py-2 bg-[#04140b] hover:bg-[#143523] border border-[#1c442c] hover:border-[#E5A93C] rounded-xl text-xs font-bold text-[#F5D280] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                      className="w-full py-2 bg-well hover:bg-surface-2 border border-line hover:border-gold rounded-xl text-xs font-bold text-gold-soft flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
                     >
                       {isPdf ? (
                         <FileText className="w-3.5 h-3.5 text-rose-400" />
                       ) : (
-                        <Eye className="w-3.5 h-3.5 text-[#E5A93C]" />
+                        <Eye className="w-3.5 h-3.5 text-gold" />
                       )}
                       <span>{isPdf ? 'เปิดดูเอกสารใบรับรอง (PDF)' : 'ดูภาพถ่ายใบรับรองฉบับจริง'}</span>
                     </button>
@@ -829,9 +829,9 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 );
               })
             ) : (
-              <div className="p-4 rounded-2xl border border-[#1c442c] bg-[#122b1c] space-y-3 col-span-2">
-                <div className="flex items-center gap-2 text-xs text-[#F5D280] font-semibold">
-                  <CheckCircle2 className="w-4 h-4 text-[#4ADE80]" />
+              <div className="p-4 rounded-2xl border border-line bg-[#122b1c] space-y-3 col-span-2">
+                <div className="flex items-center gap-2 text-xs text-gold-soft font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-leaf" />
                   <span>ได้รับการรับรองมาตรฐาน GAP กรมวิชาการเกษตร (ตรวจสอบแล้ว)</span>
                 </div>
                 <button
@@ -846,9 +846,9 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                       fileName: 'GAP_Certificate.png',
                     })
                   }
-                  className="py-2 px-4 bg-[#04140b] hover:bg-[#143523] border border-[#1c442c] hover:border-[#E5A93C] rounded-xl text-xs font-bold text-[#F5D280] inline-flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="py-2 px-4 bg-well hover:bg-surface-2 border border-line hover:border-gold rounded-xl text-xs font-bold text-gold-soft inline-flex items-center gap-1.5 transition-all cursor-pointer"
                 >
-                  <Eye className="w-3.5 h-3.5 text-[#E5A93C]" />
+                  <Eye className="w-3.5 h-3.5 text-gold" />
                   <span>ดูภาพถ่ายใบรับรองฉบับจริง</span>
                 </button>
               </div>
@@ -859,12 +859,12 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
       {/* Tab: About Farm Story */}
       {activeTab === 'about' && (
-        <div className="bg-[#0e2619] rounded-3xl border border-[#1c442c] p-5 shadow-2xl space-y-3">
+        <div className="bg-surface rounded-3xl border border-line p-5 shadow-2xl space-y-3">
           <h3 className="font-bold text-sm text-white flex items-center gap-2">
             <span>📖</span>
             <span>ประวัติความเป็นมาและเรื่องราวของฟาร์ม</span>
           </h3>
-          <p className="text-xs text-[#83A893] leading-relaxed whitespace-pre-line">
+          <p className="text-xs text-fg-2 leading-relaxed whitespace-pre-line">
             {currentFarm.aboutStory || currentFarm.highlight || 'ฟาร์มทุเรียนคุณภาพ มุ่งเน้นการผลิตทุเรียนคุณภาพสูงด้วยระบบเกษตรแม่นยำ พร้อมระบบติดตามตรวจสอบย้อนกลับด้วยเทคโนโลยี NFC'}
           </p>
         </div>
@@ -877,22 +877,22 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
           onClick={() => setSelectedCertDoc(null)}
         >
           <div
-            className="bg-[#07190f] text-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#1c442c] relative flex flex-col max-h-[90vh]"
+            className="bg-canvas text-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-line relative flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-[#1c442c] bg-gradient-to-r from-[#0e2619] to-[#07190f] flex items-center justify-between">
+            <div className="p-4 border-b border-line bg-gradient-to-r from-surface to-canvas flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-[#E5A93C]" />
+                <Award className="w-5 h-5 text-gold" />
                 <div>
                   <h3 className="font-bold text-sm text-white">{selectedCertDoc.name}</h3>
-                  <p className="text-[11px] text-[#83A893] font-mono">
+                  <p className="text-[11px] text-fg-2 font-mono">
                     เลขที่: {selectedCertDoc.certNumber}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedCertDoc(null)}
-                className="p-1.5 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-full border border-[#1c442c] cursor-pointer"
+                className="p-1.5 text-fg-2 hover:text-white hover:bg-surface-2 rounded-full border border-line cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -904,7 +904,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               selectedCertDoc.photoUrl.toLowerCase().endsWith('.pdf') ? (
                 <div className="space-y-3">
                   {/* PDF Document Preview Card */}
-                  <div className="p-6 sm:p-8 bg-gradient-to-b from-[#0e2619] to-[#04140b] rounded-2xl border border-rose-500/30 text-center space-y-4 shadow-inner">
+                  <div className="p-6 sm:p-8 bg-gradient-to-b from-surface to-well rounded-2xl border border-rose-500/30 text-center space-y-4 shadow-inner">
                     <div className="w-16 h-16 rounded-2xl bg-rose-950/70 border border-rose-500/40 flex items-center justify-center text-rose-400 mx-auto shadow-md">
                       <FileText className="w-8 h-8" />
                     </div>
@@ -916,7 +916,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                       <h4 className="text-base font-bold text-white pt-1">
                         {selectedCertDoc.fileName || `${selectedCertDoc.shortCode}_Certificate.pdf`}
                       </h4>
-                      <p className="text-xs text-[#83A893]">
+                      <p className="text-xs text-fg-2">
                         เอกสารตรวจสอบความถูกต้องฉบับจริง ออกโดย {selectedCertDoc.issuedBy}
                       </p>
                     </div>
@@ -935,7 +935,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl overflow-hidden border border-[#1c442c] bg-black">
+                <div className="rounded-2xl overflow-hidden border border-line bg-black">
                   <img
                     src={selectedCertDoc.photoUrl}
                     alt="Official Certificate Document"
@@ -944,18 +944,18 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 </div>
               )}
 
-              <div className="p-3 bg-[#0e2619] rounded-2xl border border-[#1c442c] text-xs space-y-1 text-[#83A893]">
+              <div className="p-3 bg-surface rounded-2xl border border-line text-xs space-y-1 text-fg-2">
                 <div className="flex justify-between">
                   <span>หน่วยงานผู้ออก:</span>
                   <span className="font-semibold text-white">{selectedCertDoc.issuedBy}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>สถานะการรับรอง:</span>
-                  <span className="text-[#4ADE80] font-bold">✓ ผ่านการรับรองถูกต้อง</span>
+                  <span className="text-leaf font-bold">✓ ผ่านการรับรองถูกต้อง</span>
                 </div>
                 <div className="flex justify-between">
                   <span>หมดอายุ:</span>
-                  <span className="font-mono text-[#F5D280]">{selectedCertDoc.validUntil}</span>
+                  <span className="font-mono text-gold-soft">{selectedCertDoc.validUntil}</span>
                 </div>
               </div>
             </div>
@@ -970,22 +970,22 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
           onClick={() => setIsPhotoManagerOpen(false)}
         >
           <div
-            className="bg-[#07190f] text-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#1c442c] relative flex flex-col max-h-[90vh]"
+            className="bg-canvas text-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-line relative flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-[#1c442c] bg-gradient-to-r from-[#0e2619] to-[#07190f] flex items-center justify-between">
+            <div className="p-4 border-b border-line bg-gradient-to-r from-surface to-canvas flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-[#E5A93C]" />
+                <Camera className="w-5 h-5 text-gold" />
                 <div>
                   <h3 className="font-bold text-sm text-white">จัดการรูปภาพบรรยากาศสวน</h3>
-                  <p className="text-[11px] text-[#83A893]">
+                  <p className="text-[11px] text-fg-2">
                     เพิ่มหรือแก้ไขภาพถ่ายแปลงสวน ต้นทุเรียน และบรรยากาศธรรมชาติ
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsPhotoManagerOpen(false)}
-                className="p-1.5 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-full border border-[#1c442c] cursor-pointer"
+                className="p-1.5 text-fg-2 hover:text-white hover:bg-surface-2 rounded-full border border-line cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -993,12 +993,12 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
             <div className="p-4 overflow-y-auto flex-1 space-y-4 text-xs">
               {/* Local File Upload Button (PNG / JPG / WebP) */}
-              <div className="p-3.5 bg-[#04140b] rounded-2xl border border-dashed border-[#1c442c] hover:border-[#E5A93C] flex items-center justify-between gap-2">
+              <div className="p-3.5 bg-well rounded-2xl border border-dashed border-line hover:border-gold flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-bold text-white text-xs">อัปโหลดไฟล์รูปภาพ PNG / JPG</div>
-                  <div className="text-[10px] text-[#83A893]">เลือกไฟล์ภาพจากอุปกรณ์ของคุณโดยตรง</div>
+                  <div className="text-[10px] text-fg-2">เลือกไฟล์ภาพจากอุปกรณ์ของคุณโดยตรง</div>
                 </div>
-                <label className="px-3 py-1.5 bg-[#143523] hover:bg-[#1f4e34] border border-[#225739] text-[#F5D280] hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0">
+                <label className="px-3 py-1.5 bg-surface-2 hover:bg-[#1f4e34] border border-[#225739] text-gold-soft hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0">
                   <Upload className="w-3.5 h-3.5" />
                   <span>เลือกรูป</span>
                   <input
@@ -1029,7 +1029,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 {photoList.map((url, idx) => (
                   <div
                     key={idx}
-                    className="relative group rounded-xl overflow-hidden aspect-16/10 bg-[#04140b] border border-[#1c442c]"
+                    className="relative group rounded-xl overflow-hidden aspect-16/10 bg-well border border-line"
                   >
                     <img src={url} alt={`Atmosphere ${idx + 1}`} className="w-full h-full object-cover" />
                     <button
@@ -1043,7 +1043,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
-                    <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-[#F5D280] px-1 py-0.5 text-center truncate">
+                    <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-gold-soft px-1 py-0.5 text-center truncate">
                       รูปที่ {idx + 1}
                     </div>
                   </div>
@@ -1052,7 +1052,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
               {/* Quick sample photo selector */}
               <div className="space-y-1.5">
-                <span className="text-[11px] text-[#83A893] block font-medium">
+                <span className="text-[11px] text-fg-2 block font-medium">
                   หรือเลือกภาพบรรยากาศสวนตัวอย่าง:
                 </span>
                 <div className="grid grid-cols-5 gap-1.5">
@@ -1072,13 +1072,13 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                         }}
                         className={`relative rounded-xl overflow-hidden aspect-square cursor-pointer transition-all border ${
                           isSelected
-                            ? 'ring-2 ring-[#E5A93C] border-[#E5A93C] scale-102'
-                            : 'border-[#1c442c] opacity-60 hover:opacity-100'
+                            ? 'ring-2 ring-gold border-gold scale-102'
+                            : 'border-line opacity-60 hover:opacity-100'
                         }`}
                       >
                         <img src={sampleUrl} alt={`Sample ${sIdx}`} className="w-full h-full object-cover" />
                         {isSelected && (
-                          <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-[#E5A93C] text-[#1c1202] rounded-full flex items-center justify-center font-bold text-[8px]">
+                          <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-gold text-gold-ink rounded-full flex items-center justify-center font-bold text-[8px]">
                             ✓
                           </div>
                         )}
@@ -1089,10 +1089,10 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               </div>
             </div>
 
-            <div className="p-4 border-t border-[#1c442c] flex justify-end gap-2 shrink-0">
+            <div className="p-4 border-t border-line flex justify-end gap-2 shrink-0">
               <button
                 onClick={() => setIsPhotoManagerOpen(false)}
-                className="px-4 py-2 bg-[#04140b] hover:bg-[#143523] text-white rounded-xl text-xs font-bold border border-[#1c442c] cursor-pointer"
+                className="px-4 py-2 bg-well hover:bg-surface-2 text-white rounded-xl text-xs font-bold border border-line cursor-pointer"
               >
                 ยกเลิก
               </button>
@@ -1113,7 +1113,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                     console.error(e);
                   }
                 }}
-                className="px-4 py-2 bg-[#E5A93C] hover:bg-[#f0b548] text-[#1c1202] font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
+                className="px-4 py-2 bg-gold hover:bg-[#f0b548] text-gold-ink font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
               >
                 <Check className="w-4 h-4" />
                 <span>บันทึกการเปลี่ยนแปลง</span>
@@ -1130,22 +1130,22 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
           onClick={() => setIsSmartTechModalOpen(false)}
         >
           <div
-            className="bg-[#07190f] text-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#1c442c] relative flex flex-col max-h-[90vh]"
+            className="bg-canvas text-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-line relative flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-[#1c442c] bg-gradient-to-r from-[#0e2619] to-[#07190f] flex items-center justify-between">
+            <div className="p-4 border-b border-line bg-gradient-to-r from-surface to-canvas flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-[#E5A93C]" />
+                <Cpu className="w-5 h-5 text-gold" />
                 <div>
                   <h3 className="font-bold text-sm text-white">ตั้งค่าระบบ SmartFarm</h3>
-                  <p className="text-[11px] text-[#83A893]">
+                  <p className="text-[11px] text-fg-2">
                     เปิด-ปิด หรือเลือกเทคโนโลยีอัจฉริยะที่มีการติดตั้งจริงในสวน
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsSmartTechModalOpen(false)}
-                className="p-1.5 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-full border border-[#1c442c] cursor-pointer"
+                className="p-1.5 text-fg-2 hover:text-white hover:bg-surface-2 rounded-full border border-line cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1153,12 +1153,12 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
             <div className="p-4 overflow-y-auto flex-1 space-y-4 text-xs">
               {/* Main Toggle */}
-              <div className="p-4 bg-[#0e2619] rounded-2xl border border-[#1c442c] flex items-center justify-between">
+              <div className="p-4 bg-surface rounded-2xl border border-line flex items-center justify-between">
                 <div>
                   <div className="font-bold text-sm text-white">
                     เปิดใช้งานแท็บ SmartFarm บนหน้าสวน
                   </div>
-                  <p className="text-[11px] text-[#83A893] mt-0.5">
+                  <p className="text-[11px] text-fg-2 mt-0.5">
                     {tempHasSmartFarm
                       ? 'เปิดใช้งาน (จะแสดงรายการเทคโนโลยีที่เลือกด้านล่าง)'
                       : 'ปิด (แสดงเป็นวิถีเกษตรประณีตธรรมชาติ)'}
@@ -1169,7 +1169,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                   type="button"
                   onClick={() => setTempHasSmartFarm(!tempHasSmartFarm)}
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                    tempHasSmartFarm ? 'bg-[#4ADE80]' : 'bg-[#1c442c]'
+                    tempHasSmartFarm ? 'bg-leaf' : 'bg-line'
                   }`}
                 >
                   <span
@@ -1183,7 +1183,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               {/* Technologies Checklist */}
               {tempHasSmartFarm && (
                 <div className="space-y-2">
-                  <span className="text-xs font-bold text-[#F5D280] block">
+                  <span className="text-xs font-bold text-gold-soft block">
                     เลือกเทคโนโลยีที่มีการใช้งานในสวน:
                   </span>
                   <div className="space-y-2">
@@ -1199,22 +1199,22 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                         }
                         className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           item.active
-                            ? 'bg-[#143523] border-[#4ADE80]/50'
-                            : 'bg-[#04140b] border-[#1c442c] opacity-60'
+                            ? 'bg-surface-2 border-leaf/50'
+                            : 'bg-well border-line opacity-60'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 pr-2">
                           <span className="text-xl shrink-0">{item.iconEmoji}</span>
                           <div className="min-w-0">
                             <div className="font-bold text-xs text-white truncate">{item.name}</div>
-                            <div className="text-[11px] text-[#83A893] truncate">{item.subtext}</div>
+                            <div className="text-[11px] text-fg-2 truncate">{item.subtext}</div>
                           </div>
                         </div>
                         <input
                           type="checkbox"
                           checked={item.active}
                           onChange={() => {}}
-                          className="w-4 h-4 rounded-sm text-[#4ADE80] focus:ring-0 cursor-pointer accent-[#4ADE80]"
+                          className="w-4 h-4 rounded-sm text-leaf focus:ring-0 cursor-pointer accent-leaf"
                         />
                       </div>
                     ))}
@@ -1223,16 +1223,16 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               )}
             </div>
 
-            <div className="p-4 border-t border-[#1c442c] flex justify-end gap-2 shrink-0">
+            <div className="p-4 border-t border-line flex justify-end gap-2 shrink-0">
               <button
                 onClick={() => setIsSmartTechModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-[#83A893] hover:text-white rounded-xl cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-fg-2 hover:text-white rounded-xl cursor-pointer"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={() => handleSaveSmartTech()}
-                className="px-5 py-2 bg-[#E5A93C] hover:bg-[#f0b548] text-[#1c1202] font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md cursor-pointer transition-transform active:scale-95"
+                className="px-5 py-2 bg-gold hover:bg-[#f0b548] text-gold-ink font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md cursor-pointer transition-transform active:scale-95"
               >
                 <Check className="w-3.5 h-3.5" />
                 <span>บันทึกการตั้งค่า</span>

@@ -170,12 +170,12 @@ function MainAppContent() {
   // ระหว่างถาม server ว่ามี session อยู่ไหม
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#07190f] flex flex-col items-center justify-center text-[#83A893]">
-        <div className="w-12 h-12 rounded-2xl bg-[#0e2619] border border-[#1c442c] flex items-center justify-center text-[#E5A93C] mb-4 shadow-xl">
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center text-fg-2">
+        <div className="w-12 h-12 rounded-2xl bg-surface border border-line flex items-center justify-center text-gold mb-4 shadow-xl">
           <Trees className="w-6 h-6" />
         </div>
-        <Loader2 className="w-6 h-6 text-[#E5A93C] animate-spin mb-2" />
-        <span className="text-xs font-semibold tracking-wider text-[#83A893]">
+        <Loader2 className="w-6 h-6 text-gold animate-spin mb-2" />
+        <span className="text-xs font-semibold tracking-wider text-fg-2">
           กำลังเตรียมระบบความปลอดภัยและการยืนยันตัวตน...
         </span>
       </div>
@@ -190,13 +190,13 @@ function MainAppContent() {
    */
   if (connectionError && !currentUser) {
     return (
-      <div className="min-h-screen bg-[#07190f] flex flex-col items-center justify-center text-[#83A893] px-6 text-center">
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center text-fg-2 px-6 text-center">
         <div className="w-12 h-12 rounded-2xl bg-rose-950/60 border border-rose-800 flex items-center justify-center text-rose-400 mb-4 shadow-xl">
           <AlertCircle className="w-6 h-6" />
         </div>
         <h1 className="text-sm font-bold text-white mb-1.5">ติดต่อเซิร์ฟเวอร์ไม่ได้</h1>
-        <p className="text-xs text-[#83A893] max-w-xs leading-relaxed mb-1">{connectionError}</p>
-        <p className="text-[11px] text-[#5d7c67] max-w-xs leading-relaxed mb-4">
+        <p className="text-xs text-fg-2 max-w-xs leading-relaxed mb-1">{connectionError}</p>
+        <p className="text-[11px] text-fg-4 max-w-xs leading-relaxed mb-4">
           ตรวจว่าฐานข้อมูลทำงานอยู่ (docker compose up -d) แล้วสั่ง npm run dev อีกครั้ง
         </p>
         <button
@@ -206,7 +206,7 @@ function MainAppContent() {
             retryConnection();
             loadFarms();
           }}
-          className="px-4 py-2 bg-[#E5A93C] hover:bg-[#d4992e] text-[#241603] text-xs font-bold rounded-xl cursor-pointer shadow-md"
+          className="px-4 py-2 bg-gold hover:bg-gold-hi text-gold-ink-2 text-xs font-bold rounded-xl cursor-pointer shadow-md"
         >
           ลองเชื่อมต่อใหม่
         </button>
@@ -220,7 +220,7 @@ function MainAppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#07190f] flex flex-col font-sans text-white">
+    <div className="min-h-screen bg-canvas flex flex-col font-sans text-white">
       {/* Top Navigation */}
       <Navbar
         activeTab={activeTab}
@@ -249,11 +249,11 @@ function MainAppContent() {
 
       {/* Guest Mode Banner (if exploring without login) */}
       {!currentUser && isGuestPreview && (
-        <div className="bg-[#0e2619] border-b border-[#1c442c] px-3 py-1.5 text-center text-xs font-semibold text-[#83A893] flex items-center justify-center gap-2">
+        <div className="bg-surface border-b border-line px-3 py-1.5 text-center text-xs font-semibold text-fg-2 flex items-center justify-center gap-2">
           <span>โหมดเข้าชมชั่วคราว (Guest Preview)</span>
           <button
             onClick={() => setIsGuestPreview(false)}
-            className="underline text-[#E5A93C] font-bold hover:text-[#f5d280] cursor-pointer ml-1"
+            className="underline text-gold font-bold hover:text-gold-soft cursor-pointer ml-1"
           >
             เข้าสู่ระบบ
           </button>

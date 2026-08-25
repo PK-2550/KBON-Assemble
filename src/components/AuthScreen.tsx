@@ -109,31 +109,31 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
   };
 
   return (
-    <div className="h-[100dvh] min-h-[100dvh] max-h-[100dvh] w-full bg-[#04140b] flex flex-col items-center justify-between p-3 sm:p-4 text-white font-sans overflow-hidden select-none relative">
+    <div className="h-[100dvh] min-h-[100dvh] max-h-[100dvh] w-full bg-well flex flex-col items-center justify-between p-3 sm:p-4 text-white font-sans overflow-hidden select-none relative">
       {/* Background Subtle Gold/Green Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#E5A93C]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gold/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-48 h-48 bg-[#0e311f]/40 rounded-full blur-2xl pointer-events-none" />
 
       {/* Top Brand Header */}
       <div className="w-full max-w-xs sm:max-w-sm pt-1 text-center relative z-10">
-        <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#092215] border border-[#1e5236] text-[#E5A93C] mb-1 shadow-lg">
+        <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-panel border border-[#1e5236] text-gold mb-1 shadow-lg">
           <Trees className="w-5 h-5" />
         </div>
         <div className="flex items-center justify-center gap-1">
-          <span className="font-mono text-[#E5A93C] text-[9px] font-bold tracking-widest uppercase bg-[#092215] px-2.5 py-0.5 rounded-full border border-[#18422b]">
+          <span className="font-mono text-gold text-[9px] font-bold tracking-widest uppercase bg-panel px-2.5 py-0.5 rounded-full border border-line-soft">
             DURITRACK PRO
           </span>
         </div>
         <h1 className="text-sm sm:text-base font-bold text-white tracking-tight mt-1 leading-snug">
           ระบบตรวจสอบย้อนกลับทุเรียนไทย
         </h1>
-        <p className="text-[10px] text-[#8DA796] mt-0.5">
+        <p className="text-[10px] text-fg-3 mt-0.5">
           พาสปอร์ตต้นไม้และยืนยันผลผลิตผ่าน NFC
         </p>
       </div>
 
       {/* Main Glass / Luxury Dark Card */}
-      <div className="w-full max-w-xs sm:max-w-sm relative z-10 bg-[#092215]/95 border border-[#18422b] backdrop-blur-md rounded-2xl p-3.5 shadow-2xl text-white">
+      <div className="w-full max-w-xs sm:max-w-sm relative z-10 bg-panel/95 border border-line-soft backdrop-blur-md rounded-2xl p-3.5 shadow-2xl text-white">
         {/* Google Sign-In -- ปิดไว้ก่อน ยังไม่ได้ทำ OAuth ในระบบใหม่
             เก็บปุ่มไว้เพราะจะกลับมาต่อทีหลัง (users.provider และ password_hash
             ที่เป็น NULL ได้ รองรับไว้ในตารางแล้ว) */}
@@ -141,7 +141,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
           type="button"
           disabled
           title="ยังไม่เปิดใช้งานในระบบใหม่"
-          className="w-full py-2 px-3 bg-[#04140b] border border-[#18422b] text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 opacity-40 cursor-not-allowed"
+          className="w-full py-2 px-3 bg-well border border-line-soft text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 opacity-40 cursor-not-allowed"
         >
           {/* Google Vector Icon */}
           <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
@@ -168,15 +168,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
         {/* Divider */}
         <div className="relative my-1.5">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[#18422b]" />
+            <div className="w-full border-t border-line-soft" />
           </div>
-          <div className="relative flex justify-center text-[9px] uppercase tracking-wider text-[#8DA796] font-semibold">
-            <span className="bg-[#092215] px-2">หรือใช้ชื่อผู้ใช้งาน</span>
+          <div className="relative flex justify-center text-[9px] uppercase tracking-wider text-fg-3 font-semibold">
+            <span className="bg-panel px-2">หรือใช้ชื่อผู้ใช้งาน</span>
           </div>
         </div>
 
         {/* Mode Switcher: Sign In vs Register */}
-        <div className="grid grid-cols-2 p-0.5 bg-[#04140b] rounded-lg mb-2 text-[10px] font-bold border border-[#18422b]">
+        <div className="grid grid-cols-2 p-0.5 bg-well rounded-lg mb-2 text-[10px] font-bold border border-line-soft">
           <button
             type="button"
             onClick={() => {
@@ -186,8 +186,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
             }}
             className={`py-1 rounded-md transition-all cursor-pointer ${
               !isRegisterMode
-                ? 'bg-[#E5A93C] text-[#241603] shadow-xs'
-                : 'text-[#8DA796] hover:text-white'
+                ? 'bg-gold text-gold-ink-2 shadow-xs'
+                : 'text-fg-3 hover:text-white'
             }`}
           >
             เข้าสู่ระบบ (Login)
@@ -201,8 +201,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
             }}
             className={`py-1 rounded-md transition-all cursor-pointer ${
               isRegisterMode
-                ? 'bg-[#E5A93C] text-[#241603] shadow-xs'
-                : 'text-[#8DA796] hover:text-white'
+                ? 'bg-gold text-gold-ink-2 shadow-xs'
+                : 'text-fg-3 hover:text-white'
             }`}
           >
             สมัครสมาชิก (Register)
@@ -228,41 +228,41 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
         <form onSubmit={handleSubmit} className="space-y-1.5">
           {/* Username Field */}
           <div>
-            <label className="block text-[10px] font-bold text-[#8DA796] mb-0.5">
+            <label className="block text-[10px] font-bold text-fg-3 mb-0.5">
               ชื่อผู้ใช้งาน (Username)
             </label>
             <div className="relative">
-              <User className="w-3.5 h-3.5 text-[#5d7c67] absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <User className="w-3.5 h-3.5 text-fg-4 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="เช่น somchai"
-                className="w-full pl-8 pr-2.5 py-1.5 bg-[#04140b] border border-[#18422b] rounded-lg text-xs text-white placeholder-[#5d7c67] focus:border-[#E5A93C] focus:bg-[#04140b] outline-hidden transition-all"
+                className="w-full pl-8 pr-2.5 py-1.5 bg-well border border-line-soft rounded-lg text-xs text-white placeholder-fg-4 focus:border-gold focus:bg-well outline-hidden transition-all"
               />
             </div>
           </div>
 
           {/* Password Field */}
           <div>
-            <label className="block text-[10px] font-bold text-[#8DA796] mb-0.5">
+            <label className="block text-[10px] font-bold text-fg-3 mb-0.5">
               รหัสผ่าน (Password)
             </label>
             <div className="relative">
-              <Lock className="w-3.5 h-3.5 text-[#5d7c67] absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <Lock className="w-3.5 h-3.5 text-fg-4 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-8 pr-8 py-1.5 bg-[#04140b] border border-[#18422b] rounded-lg text-xs text-white placeholder-[#5d7c67] focus:border-[#E5A93C] focus:bg-[#04140b] outline-hidden transition-all"
+                className="w-full pl-8 pr-8 py-1.5 bg-well border border-line-soft rounded-lg text-xs text-white placeholder-fg-4 focus:border-gold focus:bg-well outline-hidden transition-all"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#5d7c67] hover:text-white cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-fg-4 hover:text-white cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               </button>
@@ -272,17 +272,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
             {isRegisterMode && password.length > 0 && (
               <div className="mt-1 space-y-0.5 animate-in fade-in">
                 <div className="flex items-center justify-between text-[9px]">
-                  <span className="text-[#8DA796]">ระดับความปลอดภัย:</span>
+                  <span className="text-fg-3">ระดับความปลอดภัย:</span>
                   <span className={`font-bold ${getStrengthColor(passwordSecurity.score).split(' ')[1]}`}>
                     {getStrengthLabel(passwordSecurity.score)}
                   </span>
                 </div>
                 {/* Progress bar */}
-                <div className="w-full bg-[#04140b] h-1 rounded-full overflow-hidden flex gap-1 border border-[#18422b]">
+                <div className="w-full bg-well h-1 rounded-full overflow-hidden flex gap-1 border border-line-soft">
                   <div className={`h-full flex-1 rounded-full ${passwordSecurity.score >= 1 ? 'bg-red-500' : 'bg-[#0e311f]'}`} />
                   <div className={`h-full flex-1 rounded-full ${passwordSecurity.score >= 2 ? 'bg-amber-500' : 'bg-[#0e311f]'}`} />
                   <div className={`h-full flex-1 rounded-full ${passwordSecurity.score >= 3 ? 'bg-blue-500' : 'bg-[#0e311f]'}`} />
-                  <div className={`h-full flex-1 rounded-full ${passwordSecurity.score >= 4 ? 'bg-[#E5A93C]' : 'bg-[#0e311f]'}`} />
+                  <div className={`h-full flex-1 rounded-full ${passwordSecurity.score >= 4 ? 'bg-gold' : 'bg-[#0e311f]'}`} />
                 </div>
               </div>
             )}
@@ -291,18 +291,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
           {/* Confirm Password (Only in Register Mode) */}
           {isRegisterMode && (
             <div>
-              <label className="block text-[10px] font-bold text-[#8DA796] mb-0.5">
+              <label className="block text-[10px] font-bold text-fg-3 mb-0.5">
                 ยืนยันรหัสผ่าน
               </label>
               <div className="relative">
-                <KeyRound className="w-3.5 h-3.5 text-[#5d7c67] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <KeyRound className="w-3.5 h-3.5 text-fg-4 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-8 pr-2.5 py-1.5 bg-[#04140b] border border-[#18422b] rounded-lg text-xs text-white placeholder-[#5d7c67] focus:border-[#E5A93C] focus:bg-[#04140b] outline-hidden transition-all"
+                  className="w-full pl-8 pr-2.5 py-1.5 bg-well border border-line-soft rounded-lg text-xs text-white placeholder-fg-4 focus:border-gold focus:bg-well outline-hidden transition-all"
                 />
               </div>
               {confirmPassword && password !== confirmPassword && (
@@ -318,9 +318,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
                 type="checkbox"
                 checked={agreedTerms}
                 onChange={(e) => setAgreedTerms(e.target.checked)}
-                className="rounded-sm border-[#18422b] bg-[#04140b] text-[#E5A93C] focus:ring-[#E5A93C] mt-0.5"
+                className="rounded-sm border-line-soft bg-well text-gold focus:ring-gold mt-0.5"
               />
-              <span className="text-[9px] text-[#8DA796] leading-tight">
+              <span className="text-[9px] text-fg-3 leading-tight">
                 ยอมรับข้อกำหนดและความเป็นส่วนตัว DuriTrack
               </span>
             </label>
@@ -330,10 +330,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-2 bg-[#E5A93C] hover:bg-[#d4992e] active:scale-[0.99] text-[#241603] font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer disabled:opacity-50 mt-1"
+            className="w-full py-2 bg-gold hover:bg-gold-hi active:scale-[0.99] text-gold-ink-2 font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer disabled:opacity-50 mt-1"
           >
             {isSubmitting ? (
-              <div className="w-3 h-3 border-2 border-[#241603]/40 border-t-[#241603] rounded-full animate-spin" />
+              <div className="w-3 h-3 border-2 border-gold-ink-2/40 border-t-[#241603] rounded-full animate-spin" />
             ) : (
               <>
                 <span>{isRegisterMode ? 'ยืนยันสร้างบัญชี' : 'เข้าสู่ระบบ'}</span>
@@ -350,14 +350,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
           <button
             type="button"
             onClick={() => onGuestAccess()}
-            className="text-[#8DA796] hover:text-[#E5A93C] text-[10px] font-semibold underline underline-offset-2 transition-colors cursor-pointer"
+            className="text-fg-3 hover:text-gold text-[10px] font-semibold underline underline-offset-2 transition-colors cursor-pointer"
           >
             เข้าชมตัวอย่างระบบชั่วคราว (Guest Preview)
           </button>
         )}
 
-        <div className="flex items-center justify-center gap-1 text-[#5d7c67] text-[9px]">
-          <ShieldCheck className="w-3 h-3 text-[#E5A93C]" />
+        <div className="flex items-center justify-center gap-1 text-fg-4 text-[9px]">
+          <ShieldCheck className="w-3 h-3 text-gold" />
           <span>เข้ารหัสรหัสผ่านด้วย bcrypt · PostgreSQL</span>
         </div>
       </div>

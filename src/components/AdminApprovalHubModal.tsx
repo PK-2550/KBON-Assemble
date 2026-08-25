@@ -298,13 +298,13 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
       onClick={() => onClose()}
     >
       <div
-        className="bg-[#07190f] text-white rounded-3xl max-w-5xl w-full h-[90vh] flex flex-col shadow-2xl border border-[#1c442c] relative overflow-hidden"
+        className="bg-canvas text-white rounded-3xl max-w-5xl w-full h-[90vh] flex flex-col shadow-2xl border border-line relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="px-4 py-3.5 sm:px-6 sm:py-4 border-b border-[#1c442c] bg-[#0a2014] flex items-center justify-between shrink-0">
+        <div className="px-4 py-3.5 sm:px-6 sm:py-4 border-b border-line bg-[#0a2014] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#E5A93C] to-[#ab761b] text-[#1c1202] flex items-center justify-center font-black shadow-md shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gold to-[#ab761b] text-gold-ink flex items-center justify-center font-black shadow-md shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
@@ -312,11 +312,11 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                 <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   ระบบอนุมัติคำขอ & ตรวจรับรองมาตรฐานฟาร์ม (Admin Approval Hub)
                 </h2>
-                <span className="text-[10px] font-black bg-[#E5A93C]/20 text-[#F5D280] border border-[#E5A93C]/40 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-black bg-gold/20 text-gold-soft border border-gold/40 px-2 py-0.5 rounded-full">
                   Admin Central
                 </span>
               </div>
-              <p className="text-xs text-[#83A893]">
+              <p className="text-xs text-fg-2">
                 ตรวจสอบยืนยันตัวตนเจ้าของสวน พร้อมตรวจรับรองมาตรฐานแปลง GAP/GI เพื่ออนุมัติสิทธิ์ Manager และเปิดหน้าฟาร์ม
               </p>
             </div>
@@ -326,7 +326,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
             <button
               onClick={() => handleSeedSamples()}
               disabled={isSeeding}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#143523] hover:bg-[#1e4c33] text-[#4ADE80] border border-[#235b3a] rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-surface-2 hover:bg-[#1e4c33] text-leaf border border-[#235b3a] rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-50"
               title="เพิ่มข้อมูลตัวอย่างคำขอสำหรับทดสอบระบบ"
             >
               {isSeeding ? (
@@ -339,7 +339,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
 
             <button
               onClick={() => onClose()}
-              className="p-2 text-[#83A893] hover:text-white hover:bg-[#143523] rounded-full transition-colors border border-[#1c442c] cursor-pointer"
+              className="p-2 text-fg-2 hover:text-white hover:bg-surface-2 rounded-full transition-colors border border-line cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -348,21 +348,21 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
 
         {/* Success Alert Toast */}
         {successToast && (
-          <div className="bg-[#143523] border-b border-[#4ADE80]/50 px-4 py-2 text-xs font-bold text-[#4ADE80] flex items-center justify-center gap-2 animate-in slide-in-from-top">
+          <div className="bg-surface-2 border-b border-leaf/50 px-4 py-2 text-xs font-bold text-leaf flex items-center justify-center gap-2 animate-in slide-in-from-top">
             <CheckCircle2 className="w-4 h-4" />
             <span>{successToast}</span>
           </div>
         )}
 
         {/* Filter Bar */}
-        <div className="px-4 sm:px-6 py-2.5 bg-[#05140c] border-b border-[#1c442c] flex items-center justify-between gap-2 shrink-0">
+        <div className="px-4 sm:px-6 py-2.5 bg-[#05140c] border-b border-line flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             <button
               onClick={() => handleFilterChange('pending')}
               className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
                 activeFilter === 'pending'
-                  ? 'bg-gradient-to-r from-[#E5A93C] to-[#c28723] text-[#1c1202] font-black shadow-xs'
-                  : 'bg-[#0e2619] text-[#83A893] hover:text-white border border-[#1c442c]'
+                  ? 'bg-gradient-to-r from-gold to-[#c28723] text-gold-ink font-black shadow-xs'
+                  : 'bg-surface text-fg-2 hover:text-white border border-line'
               }`}
             >
               <span>รอการตรวจสอบ ({pendingCount})</span>
@@ -375,8 +375,8 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
               onClick={() => handleFilterChange('approved')}
               className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer text-xs font-bold ${
                 activeFilter === 'approved'
-                  ? 'bg-[#4ADE80] text-[#07190f] font-black shadow-xs'
-                  : 'bg-[#0e2619] text-[#83A893] hover:text-white border border-[#1c442c]'
+                  ? 'bg-leaf text-canvas font-black shadow-xs'
+                  : 'bg-surface text-fg-2 hover:text-white border border-line'
               }`}
             >
               อนุมัติแล้ว ({approvedCount})
@@ -387,7 +387,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
               className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer text-xs font-bold ${
                 activeFilter === 'rejected'
                   ? 'bg-rose-600 text-white font-black shadow-xs'
-                  : 'bg-[#0e2619] text-[#83A893] hover:text-white border border-[#1c442c]'
+                  : 'bg-surface text-fg-2 hover:text-white border border-line'
               }`}
             >
               ส่งกลับแก้ไข / ปฏิเสธ ({rejectedCount})
@@ -397,8 +397,8 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
               onClick={() => handleFilterChange('all')}
               className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer text-xs font-bold ${
                 activeFilter === 'all'
-                  ? 'bg-[#1e4c33] text-white font-black shadow-xs border border-[#4ADE80]'
-                  : 'bg-[#0e2619] text-[#83A893] hover:text-white border border-[#1c442c]'
+                  ? 'bg-[#1e4c33] text-white font-black shadow-xs border border-leaf'
+                  : 'bg-surface text-fg-2 hover:text-white border border-line'
               }`}
             >
               ทั้งหมด ({allCount})
@@ -409,18 +409,18 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
         {/* Main Body: 2-Column Split (List & Details) */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Left Column: Request List Cards */}
-          <div className="w-full md:w-5/12 border-b md:border-b-0 md:border-r border-[#1c442c] overflow-y-auto p-3 space-y-2.5 bg-[#05140c]">
+          <div className="w-full md:w-5/12 border-b md:border-b-0 md:border-r border-line overflow-y-auto p-3 space-y-2.5 bg-[#05140c]">
             {filteredRequests.length === 0 ? (
-              <div className="py-12 text-center text-xs text-[#83A893] space-y-3 px-4">
-                <FileCheck className="w-10 h-10 mx-auto text-[#1c442c]" />
+              <div className="py-12 text-center text-xs text-fg-2 space-y-3 px-4">
+                <FileCheck className="w-10 h-10 mx-auto text-line" />
                 <p className="font-semibold text-white">ไม่มีคำขอในหมวดนี้</p>
-                <p className="text-[11px] text-[#83A893]">
+                <p className="text-[11px] text-fg-2">
                   เมื่อมีเกษตรกรยื่นเรื่องขอสิทธิ์หรือลงทะเบียนฟาร์ม รายการจะปรากฏที่นี่
                 </p>
                 <button
                   onClick={() => handleSeedSamples()}
                   disabled={isSeeding}
-                  className="mt-2 px-4 py-2 bg-gradient-to-r from-[#E5A93C] to-[#c28723] hover:from-[#f0b548] hover:to-[#d4992e] text-[#1c1202] font-black text-xs rounded-xl shadow-md inline-flex items-center gap-1.5 cursor-pointer"
+                  className="mt-2 px-4 py-2 bg-gradient-to-r from-gold to-[#c28723] hover:from-[#f0b548] hover:to-gold-hi text-gold-ink font-black text-xs rounded-xl shadow-md inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>สร้างคำขอตัวอย่างเพื่อทดสอบ</span>
@@ -440,8 +440,8 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                     }}
                     className={`p-3 rounded-2xl border transition-all cursor-pointer text-left space-y-1.5 ${
                       isSelected
-                        ? 'bg-[#0e2e1e] border-[#E5A93C] shadow-md ring-1 ring-[#E5A93C]/40'
-                        : 'bg-[#092215] border-[#1c442c] hover:border-[#2a613f]'
+                        ? 'bg-[#0e2e1e] border-gold shadow-md ring-1 ring-gold/40'
+                        : 'bg-panel border-line hover:border-[#2a613f]'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-1">
@@ -480,12 +480,12 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px] text-[#83A893]">
+                    <div className="flex items-center gap-2 text-[11px] text-fg-2">
                       <span className="text-white font-medium">{req.farmerFullName || req.userDisplayName}</span>
                       <span>•</span>
                       <span>{req.province}</span>
                       <span>•</span>
-                      <span className="font-mono text-[#4ADE80]">{req.gapCertNumber || 'GAP'}</span>
+                      <span className="font-mono text-leaf">{req.gapCertNumber || 'GAP'}</span>
                     </div>
 
                     {req.adminNotes && (
@@ -494,7 +494,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                       </div>
                     )}
 
-                    <div className="text-[10px] text-[#83A893] flex items-center justify-between pt-1 border-t border-[#1c442c]/60">
+                    <div className="text-[10px] text-fg-2 flex items-center justify-between pt-1 border-t border-line/60">
                       <span className="truncate">พื้นที่: <strong className="text-white">{req.areaRai} ไร่</strong> (~{req.totalTreesEstimate} ต้น)</span>
                       <span className="shrink-0">{new Date(req.createdAt).toLocaleDateString('th-TH')}</span>
                     </div>
@@ -505,13 +505,13 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
           </div>
 
           {/* Right Column: Detailed Request Inspection Card */}
-          <div className="w-full md:w-7/12 overflow-y-auto p-4 sm:p-6 bg-[#07190f] flex flex-col justify-between space-y-4">
+          <div className="w-full md:w-7/12 overflow-y-auto p-4 sm:p-6 bg-canvas flex flex-col justify-between space-y-4">
             {selectedRequest ? (
               <div className="space-y-4 text-xs sm:text-sm">
                 {/* Header Status Banner */}
-                <div className="bg-gradient-to-r from-[#0e2619] via-[#07190f] to-[#0e2619] p-3.5 rounded-2xl border border-[#1c442c] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="bg-gradient-to-r from-surface via-canvas to-surface p-3.5 rounded-2xl border border-line flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#E5A93C] to-[#ab761b] text-[#1c1202] flex items-center justify-center font-black text-sm shrink-0 shadow-md">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gold to-[#ab761b] text-gold-ink flex items-center justify-center font-black text-sm shrink-0 shadow-md">
                       <Sprout className="w-5 h-5" />
                     </div>
                     <div>
@@ -519,61 +519,61 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                         <span className="font-bold text-sm text-white">
                           {selectedRequest.farmName}
                         </span>
-                        <span className="text-[10px] font-black bg-[#E5A93C]/20 text-[#F5D280] border border-[#E5A93C]/40 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-black bg-gold/20 text-gold-soft border border-gold/40 px-2 py-0.5 rounded-full">
                           {selectedRequest.requestType === 'update_farm' ? 'Update Farm' : 'New Farm & Manager'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-[#83A893]">
+                      <p className="text-[11px] text-fg-2">
                         ผู้ยื่น: <strong className="text-white">{selectedRequest.userDisplayName}</strong> ({selectedRequest.userEmailOrUsername})
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[11px] text-[#83A893]">
+                    <span className="text-[11px] text-fg-2">
                       ยื่นเมื่อ: {new Date(selectedRequest.createdAt).toLocaleDateString('th-TH')}
                     </span>
                   </div>
                 </div>
 
                 {/* Section 1: Farmer Identity Verification */}
-                <div className="p-3.5 bg-[#04140b] rounded-2xl border border-[#1c442c] space-y-2.5">
-                  <div className="flex items-center justify-between text-xs font-bold text-[#E5A93C]">
+                <div className="p-3.5 bg-well rounded-2xl border border-line space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-gold">
                     <div className="flex items-center gap-1.5">
                       <User className="w-4 h-4" />
                       <span>1. ข้อมูลยืนยันตัวตนเจ้าของสวน (Farmer Identity)</span>
                     </div>
-                    <span className="text-[10px] font-mono bg-[#143523] text-[#4ADE80] px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-mono bg-surface-2 text-leaf px-2 py-0.5 rounded-full">
                       ยืนยันตัวตนแล้ว
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-[#092215] p-3 rounded-xl border border-[#1c442c]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-panel p-3 rounded-xl border border-line">
                     <div>
-                      <span className="text-[#83A893]">ชื่อ-นามสกุลจริง:</span>
+                      <span className="text-fg-2">ชื่อ-นามสกุลจริง:</span>
                       <p className="font-bold text-white mt-0.5">{selectedRequest.farmerFullName || selectedRequest.userDisplayName}</p>
                     </div>
                     <div>
-                      <span className="text-[#83A893]">เลขประจำตัวประชาชน (13 หลัก):</span>
-                      <p className="font-mono font-bold text-[#F5D280] mt-0.5">
+                      <span className="text-fg-2">เลขประจำตัวประชาชน (13 หลัก):</span>
+                      <p className="font-mono font-bold text-gold-soft mt-0.5">
                         {selectedRequest.farmerIdCardNumber || '-'}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[#83A893]">เบอร์โทรศัพท์ติดต่อ:</span>
+                      <span className="text-fg-2">เบอร์โทรศัพท์ติดต่อ:</span>
                       <p className="font-bold text-white mt-0.5">{selectedRequest.contact?.phoneNumber || '-'}</p>
                     </div>
                     <div>
-                      <span className="text-[#83A893]">LINE ID:</span>
+                      <span className="text-fg-2">LINE ID:</span>
                       <p className="font-bold text-white mt-0.5">{selectedRequest.contact?.lineId || '-'}</p>
                     </div>
                   </div>
 
                   {/* ID Card Document View Button */}
                   {selectedRequest.farmerIdCardPhoto && (
-                    <div className="flex items-center justify-between p-2.5 bg-[#092215] rounded-xl border border-[#1c442c]">
+                    <div className="flex items-center justify-between p-2.5 bg-panel rounded-xl border border-line">
                       <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-[#E5A93C]" />
+                        <FileText className="w-4 h-4 text-gold" />
                         <span className="text-xs text-white font-medium">เอกสารสำเนาบัตรประชาชนเจ้าของสวน</span>
                       </div>
                       <button
@@ -585,7 +585,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                             fileType: selectedRequest.farmerIdCardFileType || 'image',
                           })
                         }
-                        className="px-3 py-1.5 bg-[#143523] hover:bg-[#1f4c33] text-[#4ADE80] border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                        className="px-3 py-1.5 bg-surface-2 hover:bg-[#1f4c33] text-leaf border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>เปิดดูเอกสารบัตร</span>
@@ -595,44 +595,44 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                 </div>
 
                 {/* Section 2: Farm Location & GPS Details */}
-                <div className="p-3.5 bg-[#04140b] rounded-2xl border border-[#1c442c] space-y-2.5">
-                  <div className="flex items-center justify-between text-xs font-bold text-[#E5A93C]">
+                <div className="p-3.5 bg-well rounded-2xl border border-line space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-gold">
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-4 h-4" />
                       <span>2. ข้อมูลแปลงสวน & แผนที่พิกัด GPS</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-[#092215] p-3 rounded-xl border border-[#1c442c]">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-panel p-3 rounded-xl border border-line">
                     <div>
-                      <span className="text-[#83A893]">จังหวัด:</span>
+                      <span className="text-fg-2">จังหวัด:</span>
                       <p className="font-bold text-white mt-0.5">{selectedRequest.province}</p>
                     </div>
                     <div>
-                      <span className="text-[#83A893]">อำเภอ:</span>
+                      <span className="text-fg-2">อำเภอ:</span>
                       <p className="font-bold text-white mt-0.5">{selectedRequest.district}</p>
                     </div>
                     <div>
-                      <span className="text-[#83A893]">ขนาดพื้นที่:</span>
+                      <span className="text-fg-2">ขนาดพื้นที่:</span>
                       <p className="font-bold text-white mt-0.5">{selectedRequest.areaRai} ไร่</p>
                     </div>
                     <div>
-                      <span className="text-[#83A893]">จำนวนต้นโดยประมาณ:</span>
+                      <span className="text-fg-2">จำนวนต้นโดยประมาณ:</span>
                       <p className="font-bold text-white mt-0.5">{selectedRequest.totalTreesEstimate} ต้น</p>
                     </div>
                   </div>
 
                   {selectedRequest.locationAddress && (
-                    <div className="text-xs bg-[#092215] p-2.5 rounded-xl border border-[#1c442c] text-[#83A893]">
+                    <div className="text-xs bg-panel p-2.5 rounded-xl border border-line text-fg-2">
                       ที่ตั้งแปลง: <span className="text-white font-medium">{selectedRequest.locationAddress}</span>
                     </div>
                   )}
 
                   {selectedRequest.coordinates && (
-                    <div className="flex items-center justify-between p-2.5 bg-[#092215] rounded-xl border border-[#1c442c]">
+                    <div className="flex items-center justify-between p-2.5 bg-panel rounded-xl border border-line">
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-[#83A893]">พิกัด GPS แปลงจริง:</span>
-                        <span className="font-mono text-[#4ADE80] font-bold">
+                        <span className="text-fg-2">พิกัด GPS แปลงจริง:</span>
+                        <span className="font-mono text-leaf font-bold">
                           {selectedRequest.coordinates.lat.toFixed(4)}, {selectedRequest.coordinates.lng.toFixed(4)}
                         </span>
                       </div>
@@ -640,7 +640,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                         href={selectedRequest.googleMapsUrl || `https://maps.google.com/?q=${selectedRequest.coordinates.lat},${selectedRequest.coordinates.lng}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-3 py-1.5 bg-[#143523] hover:bg-[#1f4c33] text-[#4ADE80] border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
+                        className="px-3 py-1.5 bg-surface-2 hover:bg-[#1f4c33] text-leaf border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span>เปิด Google Maps</span>
@@ -650,25 +650,25 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                 </div>
 
                 {/* Section 3: Standard Certifications (GAP / GI / Organic) */}
-                <div className="p-3.5 bg-[#04140b] rounded-2xl border border-[#1c442c] space-y-2.5">
-                  <div className="flex items-center justify-between text-xs font-bold text-[#E5A93C]">
+                <div className="p-3.5 bg-well rounded-2xl border border-line space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-gold">
                     <div className="flex items-center gap-1.5">
                       <Award className="w-4 h-4" />
                       <span>3. การรับรองมาตรฐานทางการเกษตร (GAP / GI / Organic)</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-[#092215] p-3 rounded-xl border border-[#1c442c]">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-panel p-3 rounded-xl border border-line">
                     <div>
-                      <span className="text-[#83A893]">เลขที่ใบรับรอง GAP:</span>
-                      <p className="font-mono font-bold text-[#4ADE80] mt-0.5">{selectedRequest.gapCertNumber || '-'}</p>
+                      <span className="text-fg-2">เลขที่ใบรับรอง GAP:</span>
+                      <p className="font-mono font-bold text-leaf mt-0.5">{selectedRequest.gapCertNumber || '-'}</p>
                     </div>
                     <div>
-                      <span className="text-[#83A893]">หน่วยงานผู้ออกใบรับรอง:</span>
+                      <span className="text-fg-2">หน่วยงานผู้ออกใบรับรอง:</span>
                       <p className="font-bold text-white mt-0.5">{selectedRequest.certIssuedBy || '-'}</p>
                     </div>
                     <div>
-                      <span className="text-[#83A893]">ใช้ได้ถึงปี:</span>
+                      <span className="text-fg-2">ใช้ได้ถึงปี:</span>
                       <p className="font-bold text-white mt-0.5">{selectedRequest.certValidUntil || '-'}</p>
                     </div>
                   </div>
@@ -676,15 +676,15 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                   {/* Certificate Documents List */}
                   {selectedRequest.certificationList && selectedRequest.certificationList.length > 0 && (
                     <div className="space-y-1.5">
-                      <span className="text-[11px] text-[#83A893]">เอกสารใบรับรองมาตรฐานที่แนบมา:</span>
+                      <span className="text-[11px] text-fg-2">เอกสารใบรับรองมาตรฐานที่แนบมา:</span>
                       {selectedRequest.certificationList.map((cert, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 bg-[#092215] rounded-xl border border-[#1c442c]">
+                        <div key={idx} className="flex items-center justify-between p-2 bg-panel rounded-xl border border-line">
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-[#143523] text-[#4ADE80] font-black text-[10px]">
+                            <span className="px-2 py-0.5 rounded-md bg-surface-2 text-leaf font-black text-[10px]">
                               {cert.shortCode}
                             </span>
                             <span className="text-xs text-white">{cert.name}</span>
-                            <span className="text-xs font-mono text-[#83A893]">({cert.certNumber})</span>
+                            <span className="text-xs font-mono text-fg-2">({cert.certNumber})</span>
                           </div>
                           {cert.documentPhoto && (
                             <button
@@ -697,7 +697,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                                   fileName: cert.fileName,
                                 })
                               }
-                              className="px-2.5 py-1 bg-[#143523] hover:bg-[#1f4c33] text-[#4ADE80] border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                              className="px-2.5 py-1 bg-surface-2 hover:bg-[#1f4c33] text-leaf border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
                             >
                               <Eye className="w-3 h-3" />
                               <span>เปิดดู</span>
@@ -710,8 +710,8 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                 </div>
 
                 {/* Section 4: Atmosphere, Story & Tech */}
-                <div className="p-3.5 bg-[#04140b] rounded-2xl border border-[#1c442c] space-y-2.5">
-                  <div className="flex items-center justify-between text-xs font-bold text-[#E5A93C]">
+                <div className="p-3.5 bg-well rounded-2xl border border-line space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-gold">
                     <div className="flex items-center gap-1.5">
                       <TreePine className="w-4 h-4" />
                       <span>4. เรื่องราวสวน, พันธุ์ทุเรียน & ภาพบรรยากาศ</span>
@@ -721,7 +721,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                   {selectedRequest.topVarieties && selectedRequest.topVarieties.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {selectedRequest.topVarieties.map((v, i) => (
-                        <span key={i} className="px-2 py-0.5 rounded-lg bg-[#143523] text-[#F5D280] text-xs font-medium border border-[#235b3a]">
+                        <span key={i} className="px-2 py-0.5 rounded-lg bg-surface-2 text-gold-soft text-xs font-medium border border-[#235b3a]">
                           🍈 {v}
                         </span>
                       ))}
@@ -729,7 +729,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                   )}
 
                   {selectedRequest.aboutStory && (
-                    <div className="text-xs text-[#83A893] bg-[#092215] p-3 rounded-xl border border-[#1c442c] leading-relaxed">
+                    <div className="text-xs text-fg-2 bg-panel p-3 rounded-xl border border-line leading-relaxed">
                       "{selectedRequest.aboutStory}"
                     </div>
                   )}
@@ -741,7 +741,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                           key={i}
                           src={photo}
                           alt="Atmosphere"
-                          className="h-20 w-full object-cover rounded-xl border border-[#1c442c]"
+                          className="h-20 w-full object-cover rounded-xl border border-line"
                           referrerPolicy="no-referrer"
                         />
                       ))}
@@ -757,7 +757,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                         <AlertTriangle className="w-3.5 h-3.5 text-sky-400" />
                         <span>ระบุสิ่งที่ต้องการให้เกษตรกรแก้ไขเพิ่มเติม:</span>
                       </label>
-                      <span className="text-[10px] text-[#83A893]">คลิกข้อความด่วนหรือพิมพ์เอง</span>
+                      <span className="text-[10px] text-fg-2">คลิกข้อความด่วนหรือพิมพ์เอง</span>
                     </div>
 
                     <div className="flex flex-wrap gap-1.5">
@@ -788,7 +788,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => setIsRevisionBoxOpen(false)}
-                        className="px-3 py-1.5 text-xs text-[#83A893] hover:text-white rounded-lg cursor-pointer"
+                        className="px-3 py-1.5 text-xs text-fg-2 hover:text-white rounded-lg cursor-pointer"
                       >
                         ยกเลิก
                       </button>
@@ -812,7 +812,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                         <XCircle className="w-3.5 h-3.5 text-rose-400" />
                         <span>เหตุผลในการปฏิเสธคำขอ:</span>
                       </label>
-                      <span className="text-[10px] text-[#83A893]">คลิกเหตุผลด่วนหรือพิมพ์เอง</span>
+                      <span className="text-[10px] text-fg-2">คลิกเหตุผลด่วนหรือพิมพ์เอง</span>
                     </div>
 
                     <div className="flex flex-wrap gap-1.5">
@@ -843,7 +843,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => setIsRejectBoxOpen(false)}
-                        className="px-3 py-1.5 text-xs text-[#83A893] hover:text-white rounded-lg cursor-pointer"
+                        className="px-3 py-1.5 text-xs text-fg-2 hover:text-white rounded-lg cursor-pointer"
                       >
                         ยกเลิก
                       </button>
@@ -860,17 +860,17 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                 )}
 
                 {/* Action Buttons Bar */}
-                <div className="pt-3 border-t border-[#1c442c] flex flex-wrap items-center justify-between gap-2.5">
+                <div className="pt-3 border-t border-line flex flex-wrap items-center justify-between gap-2.5">
                   {/* Left Side: Reset to Pending if rejected or needs_revision */}
                   <div>
                     {(selectedRequest.status === 'rejected' || selectedRequest.status === 'needs_revision') && (
                       <button
                         onClick={() => handleResetToPending()}
                         disabled={Boolean(processingId)}
-                        className="px-3 py-2 bg-[#0e2619] hover:bg-[#143523] border border-[#1c442c] text-[#83A893] hover:text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                        className="px-3 py-2 bg-surface hover:bg-surface-2 border border-line text-fg-2 hover:text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
                         title="เปลี่ยนสถานะกลับเป็นรอการตรวจสอบเพื่อให้พิจารณาใหม่"
                       >
-                        <RotateCcw className="w-3.5 h-3.5 text-[#F5D280]" />
+                        <RotateCcw className="w-3.5 h-3.5 text-gold-soft" />
                         <span>ดึงกลับมาเป็นรอตรวจ</span>
                       </button>
                     )}
@@ -898,7 +898,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                         setIsRejectBoxOpen(false);
                       }}
                       disabled={Boolean(processingId)}
-                      className="px-3.5 py-2.5 bg-[#0e2619] hover:bg-[#143523] border border-[#1c442c] text-sky-300 hover:text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                      className="px-3.5 py-2.5 bg-surface hover:bg-surface-2 border border-line text-sky-300 hover:text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
                     >
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                       <span>ขอให้แก้ไข / ส่งกลับ</span>
@@ -908,7 +908,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                     <button
                       onClick={() => handleApprove(selectedRequest)}
                       disabled={Boolean(processingId) || selectedRequest.status === 'approved'}
-                      className="px-5 py-2.5 bg-gradient-to-r from-[#E5A93C] to-[#c28723] hover:from-[#f0b548] hover:to-[#d4992e] text-[#1c1202] font-black text-xs sm:text-sm rounded-xl shadow-lg transition-transform active:scale-95 cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                      className="px-5 py-2.5 bg-gradient-to-r from-gold to-[#c28723] hover:from-[#f0b548] hover:to-gold-hi text-gold-ink font-black text-xs sm:text-sm rounded-xl shadow-lg transition-transform active:scale-95 cursor-pointer flex items-center gap-2 disabled:opacity-50"
                     >
                       {processingId === selectedRequest.id ? (
                         <>
@@ -931,8 +931,8 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-[#83A893] space-y-2">
-                <FileCheck className="w-10 h-10 text-[#1c442c]" />
+              <div className="h-full flex flex-col items-center justify-center text-fg-2 space-y-2">
+                <FileCheck className="w-10 h-10 text-line" />
                 <p className="text-xs">กรุณาเลือกรายการคำขอทางด้านซ้ายเพื่อดูรายละเอียด</p>
               </div>
             )}
