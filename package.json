@@ -16,7 +16,8 @@
     "make:admin": "tsx scripts/make-admin.ts",
     "smoke:api": "tsx scripts/smoke-api.ts",
     "export:farm-requests": "tsx scripts/export-farm-requests.ts",
-    "smoke:farm-requests": "tsx scripts/smoke-farm-requests.ts"
+    "smoke:farm-requests": "tsx scripts/smoke-farm-requests.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
