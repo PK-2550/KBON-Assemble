@@ -255,7 +255,9 @@ async function main() {
   await db.query('DELETE FROM farm_requests WHERE id = $1', [reqId]);
   await db.query("DELETE FROM users WHERE username_lower LIKE 'smokefarmer_%' OR username_lower LIKE 'smokeother_%' OR username_lower LIKE 'smokeadmin_%'");
   const leftover = await db.query(
-    "SELECT (SELECT count(*) FROM farm_requests)::int AS r, (SELECT count(*) FROM users WHERE username_lower LIKE 'smoke%')::int AS u"
+    // เช็คเฉพาะของที่การทดสอบสร้างเอง ไม่ใช่ทั้งตาราง
+    // เพราะฐานข้อมูลอาจมีคำขอจริงของผู้ใช้อยู่ด้วย
+    "SELECT (SELECT count(*) FROM farm_requests WHERE id = $1)::int AS r, (SELECT count(*) FROM users WHERE username_lower LIKE 'smoke%')::int AS u", [reqId]
   );
   ok('ข้อมูลทดสอบถูกลบหมด', leftover.rows[0].r === 0 && leftover.rows[0].u === 0);
 
