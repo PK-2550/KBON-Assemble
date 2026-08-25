@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Smartphone,
   CheckCircle2,
@@ -16,17 +16,36 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { IndividualTree, DurianFarm, NfcScannedFruit } from '../types';
-import { INITIAL_DURIAN_FARMS } from '../data/farms';
 
 interface NfcScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetTree?: IndividualTree | null;
   targetFarm?: DurianFarm | null;
+  /** ฟาร์มทั้งหมดที่โหลดมาแล้ว ใช้สร้างแท็กทดสอบจากต้นไม้ที่มีอยู่จริง */
+  farms?: DurianFarm[];
   onFruitVerified: (fruit: NfcScannedFruit) => void;
 }
 
-export const DEMO_NFC_PRESETS = [
+export interface DemoNfcPreset {
+  tagId: string;
+  treeCode: string;
+  treeName: string;
+  farmName: string;
+  variety: string;
+  weightKg: number;
+  harvestDate: string;
+  sweetnessBrix: number;
+  location: string;
+  certified: string;
+}
+
+/**
+ * แท็กสำรอง ใช้เฉพาะตอนที่ยังโหลดฟาร์มจาก API ไม่สำเร็จ
+ * รหัสในนี้เป็นข้อมูลสมมติ จึงจะหาต้นไม่เจอและขึ้นข้อความแจ้งเตือน
+ * ปกติแล้วปุ่มทดสอบจะสร้างจากต้นไม้จริงที่โหลดมา (ดู buildDemoPresets)
+ */
+const FALLBACK_NFC_PRESETS: DemoNfcPreset[] = [
   {
     tagId: 'NFC Tag: #VK-MT01-F042',
     treeCode: 'VK-MT-001',
@@ -77,13 +96,53 @@ export const DEMO_NFC_PRESETS = [
   },
 ];
 
+/**
+ * สร้างแท็กทดสอบจากต้นไม้ที่มีอยู่จริงในระบบ
+ * เลือกฟาร์มละหนึ่งต้น เพื่อให้ปุ่มแต่ละปุ่มพาไปคนละสวน
+ */
+function buildDemoPresets(farms: DurianFarm[]): DemoNfcPreset[] {
+  const presets: DemoNfcPreset[] = [];
+
+  for (const farm of farms) {
+    const tree = farm.individualTrees?.find((t) => t.code);
+    if (!tree) continue;
+
+    presets.push({
+      tagId: `NFC Tag: #${tree.code}-F001`,
+      treeCode: tree.code,
+      treeName: tree.name,
+      farmName: farm.name,
+      variety: tree.variety,
+      // น้ำหนักต่อลูกเฉลี่ยของต้นนี้ ไม่ได้สุ่มขึ้นมา
+      weightKg:
+        tree.yieldFruitCount > 0
+          ? Number((tree.yieldWeightKg / tree.yieldFruitCount).toFixed(1))
+          : 0,
+      harvestDate: tree.expectedHarvest ?? '-',
+      sweetnessBrix: tree.sweetnessBrix ?? 0,
+      location: [farm.district, farm.province].filter(Boolean).join(' '),
+      certified: farm.certifications?.join(' · ') ?? '-',
+    });
+
+    if (presets.length >= 4) break;
+  }
+
+  return presets;
+}
+
 export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
   isOpen,
   onClose,
   targetTree,
   targetFarm,
+  farms,
   onFruitVerified,
 }) => {
+  const demoPresets = useMemo(() => {
+    const built = buildDemoPresets(farms ?? []);
+    return built.length > 0 ? built : FALLBACK_NFC_PRESETS;
+  }, [farms]);
+
   const [scanState, setScanState] = useState<'ready' | 'scanning' | 'success' | 'error'>('ready');
   const [progress, setProgress] = useState(0);
   const [verifiedFruit, setVerifiedFruit] = useState<NfcScannedFruit | null>(null);
@@ -125,7 +184,7 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleStartScan = (presetFruit?: typeof DEMO_NFC_PRESETS[0]) => {
+  const handleStartScan = (presetFruit?: DemoNfcPreset) => {
     setScanState('scanning');
     setProgress(0);
 
@@ -165,25 +224,27 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
             verified: true,
           };
           setVerifiedFruit(fruitData);
-        } else {
-          // Generate valid fruit data for this tree/farm
-          const treeCode = targetTree?.code || 'VK-MT-001';
-          const fruitNum = Math.floor(Math.random() * 75 + 1).toString().padStart(3, '0');
-          const fruitTag = `NFC Tag: #${treeCode.split('-')[0]}-F${fruitNum}`;
-          const weight = Number((3.2 + Math.random() * 1.4).toFixed(1));
-
+        } else if (targetTree) {
+          // แตะจากหน้าต้นไม้ ใช้ข้อมูลจริงของต้นนั้น ไม่สุ่มขึ้นมาใหม่
           const fruitData: NfcScannedFruit = {
-            tagId: fruitTag,
-            treeCode: targetTree?.code || treeCode,
-            treeName: targetTree?.name || 'หมอนทองภูเขาไฟ ต้นแม่พันธุ์ A1',
-            farmName: targetFarm?.name || 'สวนทุเรียนภูเขาไฟ ลุงดำ',
-            variety: targetTree?.variety || 'หมอนทองภูเขาไฟ',
-            weightKg: weight,
-            harvestDate: '18 ส.ค. 2026',
-            sweetnessBrix: targetTree?.sweetnessBrix || 34.5,
+            tagId: `NFC Tag: #${targetTree.code}`,
+            treeCode: targetTree.code,
+            treeName: targetTree.name,
+            farmName: targetFarm?.name ?? '-',
+            variety: targetTree.variety,
+            weightKg:
+              targetTree.yieldFruitCount > 0
+                ? Number((targetTree.yieldWeightKg / targetTree.yieldFruitCount).toFixed(1))
+                : 0,
+            harvestDate: targetTree.expectedHarvest ?? '-',
+            sweetnessBrix: targetTree.sweetnessBrix ?? 0,
             verified: true,
           };
           setVerifiedFruit(fruitData);
+        } else {
+          // ยังไม่รู้ว่าแตะต้นไหน และยังอ่านค่าจากแท็กจริงไม่ได้ จึงไม่มีข้อมูลจะแสดง
+          setScanState('error');
+          return;
         }
 
         setScanState('success');
@@ -282,7 +343,7 @@ export const NfcScannerModal: React.FC<NfcScannerModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 gap-2">
-                  {DEMO_NFC_PRESETS.map((preset, idx) => (
+                  {demoPresets.map((preset, idx) => (
                     <button
                       key={idx}
                       onClick={() => handleStartScan(preset)}

@@ -153,18 +153,34 @@ function MainAppContent() {
     }
   };
 
+  /**
+   * เปิดพาสปอร์ตของต้นไม้ที่เพิ่งสแกนแท็ก NFC มา
+   *
+   * ค้นด้วยรหัสต้นข้ามทุกฟาร์ม เพราะรหัสต้นเป็น unique ทั้งระบบ
+   * ไม่ต้องเดาว่าอยู่ฟาร์มไหนจากชื่อ
+   *
+   * ถ้าหารหัสนั้นไม่เจอ ต้องบอกว่าไม่เจอ ห้ามเปิดต้นอื่นแทน
+   * ของเดิมถ้าหาไม่เจอจะตกไปใช้ฟาร์มแรกและต้นแรกในรายการ ผู้ใช้ที่สแกน
+   * แท็กหนึ่งจึงเห็นข้อมูลของอีกต้นโดยไม่รู้ตัว ซึ่งขัดกับหน้าที่ของระบบ
+   * ตรวจสอบย้อนกลับโดยตรง การแสดงต้นผิดแย่กว่าการบอกว่าหาไม่เจอ
+   */
   const handleGlobalFruitScanned = (scannedFruit: NfcScannedFruit) => {
-    // Find matching farm and tree
-    let matchedFarm = farms.find((f) => (f.name && f.name.includes(scannedFruit.farmName)) || f.id === 'farm-01' || f.id === 'farm-1') || farms[0];
-    let matchedTree = matchedFarm?.individualTrees?.find((t) => t.code === scannedFruit.treeCode) || matchedFarm?.individualTrees?.[0];
-
-    if (matchedFarm && matchedTree) {
-      setSelectedFarm(matchedFarm);
-      setActiveScannedTree({ tree: matchedTree, farm: matchedFarm });
-    } else if (matchedFarm) {
-      setSelectedFarm(matchedFarm);
-    }
     setActiveTab('farms');
+
+    for (const farm of farms) {
+      const tree = farm.individualTrees?.find((t) => t.code === scannedFruit.treeCode);
+      if (tree) {
+        setFarmsError(null);
+        setSelectedFarm(farm);
+        setActiveScannedTree({ tree, farm });
+        return;
+      }
+    }
+
+    setActiveScannedTree(null);
+    setFarmsError(
+      `ไม่พบต้นไม้รหัส ${scannedFruit.treeCode} ในระบบ — แท็กนี้อาจยังไม่ได้ขึ้นทะเบียน`
+    );
   };
 
   // ระหว่างถาม server ว่ามี session อยู่ไหม
@@ -429,6 +445,7 @@ function MainAppContent() {
         onClose={() => setIsGlobalNfcScannerOpen(false)}
         targetTree={null}
         targetFarm={selectedFarm}
+        farms={farms}
         onFruitVerified={handleGlobalFruitScanned}
       />
 

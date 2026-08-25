@@ -72,38 +72,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       .sort((a, b) => b.harvested - a.harvested);
   }, [farms]);
 
-  // Variety distribution estimate based on top varieties
+  /**
+   * สัดส่วนผลผลิตแยกตามสายพันธุ์ นับจากต้นไม้ที่ขึ้นทะเบียนจริง
+   *
+   * ของเดิมกระจายยอดผลผลิตของฟาร์มด้วยอัตราส่วนตายตัว
+   * (หมอนทอง 65% ก้านยาว 15% ชะนี 10% พวงมณี 5%) ตามรายชื่อสายพันธุ์เด่นของฟาร์ม
+   * ตัวเลขที่ได้จึงเป็นการเดาล้วน ๆ ไม่ได้มาจากข้อมูลจริง
+   * ทั้งที่ระบบเก็บสายพันธุ์และผลผลิตของต้นไม้ไว้เป็นรายต้นอยู่แล้ว
+   *
+   * แสดงเฉพาะ 5 สายพันธุ์ที่ผลผลิตสูงสุด ที่เหลือรวมเป็น "อื่น ๆ"
+   */
   const varietyStats = React.useMemo(() => {
-    const counts: Record<string, number> = {
-      'หมอนทอง (Monthong)': 0,
-      'ก้านยาว (Kan Yao)': 0,
-      'ชะนี (Chanee)': 0,
-      'พวงมณี (Puang Manee)': 0,
-      'นกกระจิบ / สายพันธุ์อื่นๆ': 0,
-    };
+    const counts = new Map<string, number>();
 
-    farms.forEach((f) => {
-      const farmHarvest = f.harvestedFruits || 0;
-      if (f.topVarieties?.some((v) => v.includes('หมอนทอง'))) {
-        counts['หมอนทอง (Monthong)'] += Math.round(farmHarvest * 0.65);
+    for (const farm of farms) {
+      for (const tree of farm.individualTrees ?? []) {
+        const variety = tree.variety?.trim();
+        if (!variety) continue;
+        counts.set(variety, (counts.get(variety) ?? 0) + (tree.yieldFruitCount || 0));
       }
-      if (f.topVarieties?.some((v) => v.includes('ก้านยาว'))) {
-        counts['ก้านยาว (Kan Yao)'] += Math.round(farmHarvest * 0.15);
-      }
-      if (f.topVarieties?.some((v) => v.includes('ชะนี'))) {
-        counts['ชะนี (Chanee)'] += Math.round(farmHarvest * 0.1);
-      }
-      if (f.topVarieties?.some((v) => v.includes('พวงมณี'))) {
-        counts['พวงมณี (Puang Manee)'] += Math.round(farmHarvest * 0.05);
-      }
-      counts['นกกระจิบ / สายพันธุ์อื่นๆ'] += Math.round(farmHarvest * 0.05);
-    });
+    }
 
-    const totalEstimated = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
-    return Object.entries(counts).map(([name, val]) => ({
+    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const top = sorted.slice(0, 5);
+    const restTotal = sorted.slice(5).reduce((sum, [, v]) => sum + v, 0);
+    if (restTotal > 0) top.push(['สายพันธุ์อื่น ๆ', restTotal]);
+
+    const total = sorted.reduce((sum, [, v]) => sum + v, 0) || 1;
+    return top.map(([name, val]) => ({
       name,
       val,
-      percentage: ((val / totalEstimated) * 100).toFixed(1),
+      percentage: ((val / total) * 100).toFixed(1),
     }));
   }, [farms]);
 
@@ -129,8 +128,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {totalHarvested.toLocaleString()}{' '}
             <span className="text-sm font-medium text-fg-3">ลูก</span>
           </div>
-          <div className="text-xs text-gold font-semibold mt-2 flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" /> +12.4% เทียบกับฤดูกาลก่อน
+          {/* ของเดิมเขียน "+12.4% เทียบกับฤดูกาลก่อน" ตายตัวไว้ตรงนี้
+              ระบบไม่ได้เก็บข้อมูลย้อนหลังรายฤดูกาลเลย ตัวเลขนั้นจึงไม่มีอะไรรองรับ
+              และแสดงเป็นข้อเท็จจริงให้คนอ่านเข้าใจผิด
+              เปลี่ยนเป็นบอกจำนวนฟาร์มที่นับรวมมา ซึ่งเป็นค่าที่คำนวณจากข้อมูลจริง */}
+          <div className="text-xs text-fg-2 mt-2 flex items-center gap-1">
+            <TrendingUp className="w-3.5 h-3.5" />
+            รวมจาก {farms.length} ฟาร์มในระบบ
           </div>
         </div>
 
@@ -193,7 +197,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <BarChart3 className="w-5 h-5 text-gold" />
               สัดส่วนผลผลิตแยกตามสายพันธุ์
             </h3>
-            <span className="text-xs text-fg-3">โดยประมาณ</span>
+            <span className="text-xs text-fg-3">นับจากต้นที่ขึ้นทะเบียน</span>
           </div>
 
           <div className="space-y-3.5">
