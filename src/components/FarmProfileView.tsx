@@ -39,11 +39,14 @@ interface FarmProfileViewProps {
   onSelectVariety?: (variety: FruitTreeVariety) => void;
 }
 
-/** ตัวเลขหนึ่งตัวในแถบสถิติ -- ค่าอยู่บน ป้ายกำกับอยู่ล่าง */
+/**
+ * ตัวเลขหนึ่งตัวในแถบสถิติ -- ค่าอยู่บน ป้ายกำกับอยู่ล่าง
+ * ตั้งขนาดใหญ่โดยตั้งใจ ตัวเลขคือสิ่งที่คนมาดูหน้าฟาร์มอยากรู้ก่อน
+ */
 const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div>
-    <div className="text-base font-bold text-fg tabular-nums leading-tight">{value}</div>
-    <div className="text-[11px] text-fg-2">{label}</div>
+  <div className="min-w-0">
+    <div className="text-xl sm:text-2xl font-black text-fg tabular-nums leading-none">{value}</div>
+    <div className="text-[11px] sm:text-xs text-fg-2 mt-1.5 truncate">{label}</div>
   </div>
 );
 
@@ -334,80 +337,94 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
         </div>
 
         {/* Farm Identity Header & Rating Card */}
-        <div className="p-4 sm:p-6 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            {/* Left: Square Logo & Farm Name */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-surface-2 border border-line-strong flex items-center justify-center text-gold font-black text-lg sm:text-xl shrink-0 shadow-inner font-serif">
-                {farmInitials}
-              </div>
-
-              <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">
-                  {currentFarm.name}
-                </h1>
-                <div className="flex items-center gap-1 text-xs text-fg-2 mt-0.5">
-                  <MapPin className="w-3.5 h-3.5 shrink-0 text-gold" />
-                  <span className="truncate">
-                    {currentFarm.district || 'อ.เมือง'} • {currentFarm.province}
-                  </span>
-                </div>
-              </div>
+        <div className="p-4 sm:p-6 space-y-5">
+          {/* ตัวตนของฟาร์ม -- ชื่ออยู่ใต้โลโก้ ไม่ใช่ข้าง ๆ
+              ทำให้ชื่อได้ความกว้างเต็มแถวและตั้งขนาดใหญ่ได้โดยไม่ถูกตัด
+              ต้นแบบก็วางแบบนี้ คือโลโก้เป็นก้อนใหญ่แล้วชื่อตัวหนาใหญ่ตามลงมา */}
+          <div className="flex items-start gap-3.5">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-surface-2 border border-line-strong flex items-center justify-center text-gold font-black text-2xl sm:text-3xl shrink-0 font-serif">
+              {farmInitials}
             </div>
 
-            {/* คะแนนรีวิว -- ตัวเลขเดียวที่ยังใช้สีทอง */}
-            <div className="shrink-0 text-right">
-              <div className="flex items-center justify-end gap-1">
-                <Star className="w-4 h-4 text-gold fill-gold" />
-                <span className="text-xl font-black text-gold tabular-nums leading-none">
+            <div className="min-w-0 flex-1 pt-0.5">
+              <h1 className="text-2xl sm:text-3xl font-black text-fg tracking-tight leading-tight">
+                {currentFarm.name}
+              </h1>
+              <div className="flex items-center gap-1 text-xs sm:text-sm text-fg-2 mt-1.5">
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">
+                  {currentFarm.district ? `${currentFarm.district} · ` : ''}
+                  {currentFarm.province}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ตัวเลขชูโรง -- อันดับกับคะแนน วางคู่กันและตั้งขนาดใหญ่
+              เหมือนที่ต้นแบบชู #1 กับ 8.9 ให้เห็นก่อนอย่างอื่น
+              ของเดิมสองค่านี้ถูกยัดรวมไปกับสถิติอื่นในขนาด 16px จนจมหาย */}
+          <div className="flex items-stretch rounded-2xl border border-line overflow-hidden">
+            <div className="flex-1 py-3.5 text-center">
+              <div className="text-3xl sm:text-4xl font-black text-fg tabular-nums leading-none">
+                #{currentFarm.rank}
+              </div>
+              <div className="text-[11px] sm:text-xs text-fg-2 mt-1.5">อันดับทำเนียบ</div>
+            </div>
+
+            <div className="w-px bg-line" />
+
+            <div className="flex-1 py-3.5 text-center">
+              <div className="flex items-center justify-center gap-1.5">
+                <Star className="w-6 h-6 sm:w-7 sm:h-7 text-gold fill-gold" />
+                <span className="text-3xl sm:text-4xl font-black text-gold tabular-nums leading-none">
                   {currentFarm.rating.toFixed(1)}
                 </span>
               </div>
-              <div className="text-[11px] text-fg-2 mt-1 tabular-nums">
+              <div className="text-[11px] sm:text-xs text-fg-2 mt-1.5 tabular-nums">
                 {currentFarm.reviewCount.toLocaleString()} รีวิว
               </div>
             </div>
           </div>
 
-          {/* แถบสถิติแบบแถวเดียว แทนตาราง 6 ช่องที่มีอีโมจิของเดิม
-              แสดงเฉพาะค่าที่มีข้อมูลจริง ของเดิมเติมค่าปลอมให้เมื่อไม่มีข้อมูล
-              (พื้นที่ 48 ไร่ เก็บ 3 รอบต่อปี น้ำหนักคำนวณจากผลคูณ 3.5)
-              ซึ่งแสดงเลขที่แต่งขึ้นราวกับเป็นข้อเท็จจริงของฟาร์มนั้น */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 border-y border-line">
-            <Stat label="อันดับ" value={`#${currentFarm.rank}`} />
-            <Stat label="ต้นทุเรียน" value={currentFarm.totalTrees.toLocaleString()} />
-            <Stat label="ผลผลิต" value={currentFarm.harvestedFruits.toLocaleString()} />
-            <Stat
-              label="สายพันธุ์"
-              value={String(currentFarm.varietiesCount || currentFarm.topVarieties?.length || 0)}
-            />
-            {currentFarm.areaRai ? <Stat label="ไร่" value={String(currentFarm.areaRai)} /> : null}
-            {currentFarm.establishedYear ? (
-              <Stat label="ก่อตั้ง" value={String(currentFarm.establishedYear)} />
-            ) : null}
-          </div>
-
           {/* ปุ่มหลัก -- ตำแหน่งเดียวกับ Buy Now / Message ของต้นแบบ
               โทรหาฟาร์มเป็นสิ่งที่ผู้ซื้อทำจริงมากที่สุด จึงให้เป็นปุ่มเด่นสุดของหน้า */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {currentFarm.contact?.phoneNumber ? (
               <a
                 href={`tel:${currentFarm.contact.phoneNumber.replace(/[^0-9+]/g, '')}`}
                 onClick={(e) => e.stopPropagation()}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gold hover:bg-gold-hi text-gold-ink text-sm font-bold rounded-xl transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-gold hover:bg-gold-hi text-gold-ink text-base font-bold rounded-2xl transition-colors"
               >
-                <Phone className="w-4 h-4" />
+                <Phone className="w-5 h-5" />
                 <span>ติดต่อฟาร์ม</span>
               </a>
             ) : null}
 
             <button
               onClick={handleShare}
-              className="shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg text-sm font-bold rounded-xl transition-colors cursor-pointer"
+              className="shrink-0 flex items-center justify-center gap-2 px-5 py-3.5 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg text-base font-bold rounded-2xl transition-colors cursor-pointer"
             >
-              <Share2 className="w-4 h-4" />
+              <Share2 className="w-5 h-5" />
               <span className="hidden sm:inline">แชร์</span>
             </button>
+          </div>
+
+          {/* สถิติรอง -- วางไว้ใต้ปุ่มตามลำดับของต้นแบบ
+              แสดงเฉพาะค่าที่มีข้อมูลจริง ของเดิมเติมค่าปลอมเมื่อไม่มีข้อมูล
+              (พื้นที่ 48 ไร่ เก็บ 3 รอบต่อปี น้ำหนักคำนวณจากผลคูณ 3.5)
+              ซึ่งแสดงเลขที่แต่งขึ้นราวกับเป็นข้อเท็จจริงของฟาร์มนั้น */}
+          <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+            <Stat label="ต้นทุเรียน" value={currentFarm.totalTrees.toLocaleString()} />
+            <Stat label="ผลผลิตสะสม" value={currentFarm.harvestedFruits.toLocaleString()} />
+            <Stat
+              label="สายพันธุ์"
+              value={String(currentFarm.varietiesCount || currentFarm.topVarieties?.length || 0)}
+            />
+            {currentFarm.areaRai ? <Stat label="พื้นที่ (ไร่)" value={String(currentFarm.areaRai)} /> : null}
+            {currentFarm.establishedYear ? (
+              <Stat label="ก่อตั้งเมื่อ" value={String(currentFarm.establishedYear)} />
+            ) : null}
+            <Stat label="ต้นที่ขึ้นทะเบียน" value={String(allTrees.length)} />
           </div>
 
           {/* เรื่องราวของฟาร์ม -- ย้ายขึ้นมาไว้ใต้สถิติตามผังต้นแบบ
