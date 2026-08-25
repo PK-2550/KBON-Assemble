@@ -729,7 +729,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                   <option value="az" className="bg-surface text-white">ชื่อต้น (ก-ฮ) 🌳</option>
                   <option value="code" className="bg-surface text-white">รหัสต้น (Tree Code) 🏷️</option>
                   <option value="yield" className="bg-surface text-white">ผลผลิตต่อต้น 📈</option>
-                  <option value="diaries" className="bg-surface text-white">บันทึกดูแล (Diaries) 📖</option>
+                  <option value="diaries" className="bg-surface text-white">ประวัติการดูแล 📖</option>
                 </select>
               </div>
             </div>

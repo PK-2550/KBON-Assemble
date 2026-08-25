@@ -74,7 +74,7 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, onBa
 
   const tabs = [
     { id: 'passport' as const, icon: ShieldCheck, label: 'ข้อมูลต้น' },
-    { id: 'diaries' as const, icon: Sprout, label: 'บันทึกแปลง' },
+    { id: 'diaries' as const, icon: Sprout, label: 'ประวัติการดูแล' },
     { id: 'reviews' as const, icon: MessageSquare, label: `รีวิว (${reviewsList.length})` },
   ];
 
@@ -195,7 +195,7 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, onBa
         </div>
       )}
 
-      {/* บันทึกแปลง */}
+      {/* ประวัติการดูแล */}
       {activeTab === 'diaries' && (
         <div className="bg-surface rounded-2xl border border-line divide-y divide-line">
           <div className="flex items-start gap-3 p-4">
