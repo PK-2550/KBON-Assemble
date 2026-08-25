@@ -1,7 +1,6 @@
 import React from 'react';
-import { Star, Trees, Sprout, ShieldCheck, MapPin, ChevronRight } from 'lucide-react';
+import { Star, MapPin } from 'lucide-react';
 import { DurianFarm } from '../types';
-import { FarmLogo } from './FarmLogo';
 
 interface FarmCardProps {
   farm: DurianFarm;
@@ -9,108 +8,81 @@ interface FarmCardProps {
   onSelectFarm: (farm: DurianFarm) => void;
 }
 
+const FALLBACK_PHOTO =
+  'https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=800&auto=format&fit=crop&q=80';
+
+/**
+ * มุมมองการ์ดของฟาร์ม -- ข้อมูลชุดเดียวกับ FarmRow แต่มีรูปนำ
+ *
+ * จัดใหม่จากของเดิม 3 เรื่อง
+ *   1. เอากล่องซ้อนกล่องออก ของเดิมมีกล่องพื้นเข้ม 3 ใบซ้อนอยู่ในการ์ดอีกที
+ *      (จุดเด่น + จำนวนต้น + ผลผลิต) ทำให้ขอบเยอะจนลายตา
+ *   2. เอาปุ่ม "เข้าชมแปลงต้นไม้" ออก ทั้งการ์ดกดได้อยู่แล้ว ปุ่มซ้ำหน้าที่เดิม
+ *   3. ป้าย GI แสดงเฉพาะฟาร์มที่มีใบรับรองจริง ของเดิมเขียนตายตัวจึงขึ้นทุกใบ
+ */
 export const FarmCard: React.FC<FarmCardProps> = ({ farm, displayRank, onSelectFarm }) => {
-  const currentRank = displayRank ?? farm.rank;
-  const coverPhoto = farm.photos && farm.photos.length > 0
-    ? farm.photos[0]
-    : 'https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=800&auto=format&fit=crop&q=80';
+  const rank = displayRank ?? farm.rank;
+  const cover = farm.photos?.[0] ?? FALLBACK_PHOTO;
+  const hasGi = farm.certifications?.some((c) => c.includes('GI'));
 
   return (
-    <div
+    <article
       id={`farm-card-${farm.id}`}
       onClick={() => onSelectFarm(farm)}
-      className="bg-panel/90 rounded-2xl overflow-hidden border border-line-soft shadow-xl flex flex-col justify-between hover:shadow-2xl hover:border-gold/50 transition-all duration-200 group cursor-pointer"
+      className="bg-surface rounded-2xl overflow-hidden border border-line hover:border-line-strong transition-colors cursor-pointer group"
     >
-      {/* Mobile-First Image Header with Badges */}
-      <div className="relative h-32 sm:h-36 w-full bg-well overflow-hidden">
+      <div className="relative h-32 sm:h-36 bg-well overflow-hidden">
         <img
-          src={coverPhoto}
+          src={cover}
           alt={farm.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-80"
+          loading="lazy"
           referrerPolicy="no-referrer"
+          className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-well via-well/40 to-transparent" />
+        {/* ไล่เฉดจากล่างขึ้นบน ให้ตัวเลขอ่านออกไม่ว่ารูปจะสว่างแค่ไหน */}
+        <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/50 to-transparent" />
 
-        {/* Top Badges */}
-        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
-          <span className="bg-black/70 backdrop-blur-md text-gold-soft text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-gold/40 font-mono">
-            อันดับ #{currentRank}
-          </span>
-          <div className="flex items-center gap-1 bg-gold text-gold-ink-2 font-black text-xs px-2 py-0.5 rounded-full shadow-md">
-            <span>★</span>
-            <span>{farm.rating.toFixed(1)}</span>
-          </div>
-        </div>
+        <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-canvas/80 text-fg text-xs font-bold tabular-nums">
+          {rank}
+        </span>
 
-        {/* Bottom Farm Name on Image */}
-        <div className="absolute bottom-2.5 left-3 right-3 flex items-end justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-gold uppercase tracking-wider flex items-center gap-1">
-              <MapPin className="w-3 h-3 text-gold" />
-              <span>{farm.province}</span>
-            </span>
-            <h2 className="text-base sm:text-lg font-black text-white leading-tight drop-shadow-md">
-              {farm.name}
-            </h2>
-          </div>
+        <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-md bg-canvas/80">
+          <Star className="w-3 h-3 text-gold fill-gold" />
+          <span className="text-fg text-xs font-bold tabular-nums">{farm.rating.toFixed(1)}</span>
         </div>
       </div>
 
-      {/* Card Content Body */}
-      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
-        {/* Highlight Quote */}
-        {farm.highlight && (
-          <p className="text-[11px] sm:text-xs text-fg-3 line-clamp-2 leading-relaxed bg-well p-2.5 rounded-xl border border-line-soft">
-            {farm.highlight}
-          </p>
-        )}
-
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="bg-well p-2.5 rounded-xl border border-line-soft">
-            <span className="text-[10px] text-fg-3 font-medium flex items-center gap-1">
-              <Trees className="w-3 h-3 text-gold" />
-              <span>จำนวนต้น</span>
+      <div className="p-3.5 space-y-2">
+        <div className="flex items-start gap-1.5">
+          <h2 className="flex-1 min-w-0 text-sm font-bold text-fg leading-snug line-clamp-2 group-hover:text-gold-soft transition-colors">
+            {farm.name}
+          </h2>
+          {hasGi && (
+            <span className="shrink-0 mt-0.5 px-1.5 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded">
+              GI
             </span>
-            <div className="text-sm font-bold text-white mt-0.5 font-mono">
-              {farm.totalTrees.toLocaleString()} <span className="text-[10px] font-normal text-fg-3">ต้น</span>
-            </div>
-          </div>
-
-          <div className="bg-[#0e311f] p-2.5 rounded-xl border border-[#1e5236]">
-            <span className="text-[10px] text-[#34D399] font-medium flex items-center gap-1">
-              <Sprout className="w-3 h-3 text-[#34D399]" />
-              <span>ผลผลิตที่เก็บ</span>
-            </span>
-            <div className="text-sm font-extrabold text-[#34D399] mt-0.5 font-mono">
-              {farm.harvestedFruits.toLocaleString()} <span className="text-[10px] font-normal text-fg-3">ลูก</span>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Varieties & Certifications */}
-        <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#143d27]">
-          <span className="text-fg-3 truncate max-w-[170px]">
-            พันธุ์: <strong className="text-white font-semibold">{farm.topVarieties.slice(0, 2).join(', ')}</strong>
-          </span>
-          <span className="text-gold-soft font-bold flex items-center gap-0.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-gold" />
-            <span>GI แท้</span>
-          </span>
+        <div className="flex items-center gap-1 text-xs text-fg-2">
+          <MapPin className="w-3 h-3 text-fg-4 shrink-0" />
+          <span className="truncate">{farm.province}</span>
         </div>
 
-        {/* Action Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectFarm(farm);
-          }}
-          className="w-full py-2.5 bg-gradient-to-r from-gold to-gold-hi hover:from-gold-hi hover:to-[#c28824] text-gold-ink-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer active:scale-98"
-        >
-          <span>เข้าชมแปลงต้นไม้ ({farm.totalTrees} ต้น)</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
+        {/* สถิติเรียงเป็นบรรทัดเดียว แทนการใส่กล่องแยกใบละตัวเลข */}
+        <div className="flex items-center gap-3 text-xs text-fg-2 pt-1.5 border-t border-line tabular-nums">
+          <span>
+            <strong className="text-fg font-semibold">
+              {farm.harvestedFruits.toLocaleString()}
+            </strong>{' '}
+            ผลผลิต
+          </span>
+          <span className="text-line-strong">·</span>
+          <span>
+            <strong className="text-fg font-semibold">{farm.totalTrees.toLocaleString()}</strong> ต้น
+          </span>
+        </div>
       </div>
-    </div>
+    </article>
   );
 };

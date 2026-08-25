@@ -9,71 +9,84 @@ interface FarmRowProps {
   onSelectFarm: (farm: DurianFarm) => void;
 }
 
+/**
+ * แถวหนึ่งรายการในตารางจัดอันดับฟาร์ม
+ *
+ * โครงเดียวกับตาราง Breeders Rating: อันดับ | โลโก้ | ชื่อ + ที่ตั้ง | คะแนน + ผลผลิต
+ *
+ * สีทองสงวนไว้ให้คะแนนรีวิวเท่านั้น ของเดิมใช้ทองกับอันดับ ดาว คะแนน ป้าย GI
+ * และชื่อตอน hover พร้อมกัน พอทุกอย่างเป็นทองก็ไม่มีอะไรเด่นจริง
+ */
 export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFarm }) => {
-  const currentRank = displayRank ?? farm.rank;
+  const rank = displayRank ?? farm.rank;
+  const isTop3 = rank <= 3;
+  const varieties = farm.varietiesCount || farm.topVarieties?.length || 0;
+  const hasGi = farm.certifications?.some((c) => c.includes('GI'));
 
   return (
     <div
       onClick={() => onSelectFarm(farm)}
       id={`farm-item-${farm.id}`}
-      className="group flex items-center justify-between py-3.5 px-3.5 sm:px-5 hover:bg-surface-2 cursor-pointer transition-colors border-b border-line last:border-b-0"
+      className="group flex items-center gap-2.5 sm:gap-4 py-3 px-3 sm:px-4 min-h-[84px] sm:min-h-0 hover:bg-surface-2 cursor-pointer transition-colors"
     >
-      {/* Left side: Rank Number + Logo + Name & Subtitle */}
-      <div className="flex items-center gap-3 min-w-0 pr-2">
-        {/* Rank Number (1, 2, 3...) */}
-        <span className={`w-5 sm:w-6 text-center text-xs sm:text-sm font-bold shrink-0 tabular-nums ${
-          currentRank <= 3 ? 'text-gold' : 'text-fg-2'
-        }`}>
-          {currentRank <= 3 ? `👑 ${currentRank}` : currentRank}
-        </span>
+      {/* อันดับ -- ตัวเลขเปล่า ๆ ไม่ใส่มงกุฎ ให้เป็นหลักยึดสายตาเงียบ ๆ
+          กว้างคงที่เพื่อให้ทุกแถวเรียงตรงกันแม้เลขจะขึ้นเป็นสองหลัก */}
+      <span
+        className={`w-6 shrink-0 text-center text-sm tabular-nums ${
+          isTop3 ? 'font-bold text-fg' : 'font-medium text-fg-4'
+        }`}
+      >
+        {rank}
+      </span>
 
-        {/* Square Farm Logo */}
-        <div className="shrink-0">
-          <FarmLogo
-            name={farm.name}
-            rank={farm.rank}
-            bgColor={farm.logoBgColor}
-            textColor={farm.logoTextColor}
-          />
+      <FarmLogo
+        name={farm.name}
+        rank={rank}
+        bgColor={farm.logoBgColor}
+        textColor={farm.logoTextColor}
+      />
+
+      {/* ชื่อและที่ตั้ง -- min-w-0 จำเป็น ไม่งั้น truncate ไม่ทำงานใน flex */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start sm:items-center gap-1.5">
+          {/* บนมือถือปล่อยให้ขึ้นได้ 2 บรรทัด เพราะชื่อฟาร์มไทยยาวกว่าที่จอกว้าง 375px
+              จะใส่ในบรรทัดเดียวไหว ถ้าตัดบรรทัดเดียวจะเหลือแค่ราว 100px
+              ซึ่งกินความหมายไปมาก ส่วนบนจอกว้างตัดบรรทัดเดียวพอ
+              แถวถูกตรึงความสูงขั้นต่ำไว้แล้ว ทุกแถวจึงยังสูงเท่ากัน */}
+          <h3 className="font-bold text-sm text-fg line-clamp-2 sm:truncate group-hover:text-gold-soft transition-colors">
+            {farm.name}
+          </h3>
+          {hasGi && (
+            <span className="shrink-0 px-1.5 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded">
+              GI
+            </span>
+          )}
         </div>
 
-        {/* Farm Name & Subtitle (สายพันธุ์ / จังหวัด) */}
-        <div className="min-w-0 flex flex-col">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-gold tracking-tight truncate max-w-[140px] sm:max-w-[240px] transition-colors">
-              {farm.name}
-            </h3>
-            {farm.certifications?.includes('GI') && (
-              <span className="inline-flex items-center px-1.5 py-0.2 text-[9px] font-bold bg-gold/20 text-gold-soft border border-gold/40 rounded-sm">
-                GI
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-fg-2 mt-0.5">
-            <span className="inline-block">🇹🇭</span>
-            <span className="font-medium text-[#c8dcd0]">
-              {farm.varietiesCount || farm.topVarieties?.length || 4} สายพันธุ์
-            </span>
-            <span className="text-line">•</span>
-            <span className="text-fg-2 truncate">{farm.province}</span>
-          </div>
+        {/* จังหวัดมาก่อนเพราะเป็นสิ่งที่คนกวาดตาหาเป็นอันดับแรก
+            ของเดิมเอาธงชาติกับจำนวนสายพันธุ์ขึ้นก่อน แล้วดันจังหวัดไปท้ายสุดและจางสุด
+            ธงชาติถูกตัดออกเพราะทุกฟาร์มอยู่ไทยหมด จึงไม่ได้บอกอะไร */}
+        <div className="flex items-center gap-1.5 text-xs text-fg-2 mt-0.5 truncate">
+          <span className="text-fg-3">{farm.province}</span>
+          {varieties > 0 && (
+            <>
+              <span className="text-line-strong">·</span>
+              <span>{varieties} สายพันธุ์</span>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Right side: Star Rating (8.8 /10) + Harvests Count (2,873 ผลผลิต) */}
-      <div className="flex flex-col items-end shrink-0 text-right pl-2 min-w-[80px] sm:min-w-[100px]">
-        {/* Rating ★ 9.8 /10 */}
-        <div className="flex items-center gap-1">
-          <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold fill-gold" />
-          <span className="font-extrabold text-white text-xs sm:text-sm tabular-nums">
-            {farm.rating.toFixed(1)}{' '}
-            <span className="text-fg-2 font-normal text-[10px] sm:text-xs">/10</span>
+      {/* คะแนนและผลผลิต -- ชิดขวา กว้างคงที่ให้ตัวเลขเรียงเป็นคอลัมน์เดียวกัน */}
+      <div className="shrink-0 text-right w-[86px] sm:w-[100px]">
+        <div className="flex items-center justify-end gap-1">
+          <Star className="w-3.5 h-3.5 text-gold fill-gold" />
+          <span className="font-bold text-sm text-fg tabular-nums">
+            {farm.rating.toFixed(1)}
+            <span className="text-fg-4 font-normal text-xs">/10</span>
           </span>
         </div>
-
-        {/* Harvest count */}
-        <div className="text-[10px] sm:text-[11px] text-fg-2 font-normal tabular-nums mt-0.5">
+        <div className="text-[11px] text-fg-2 tabular-nums mt-0.5">
           {farm.harvestedFruits.toLocaleString()} ผลผลิต
         </div>
       </div>
