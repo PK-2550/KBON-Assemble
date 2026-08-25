@@ -6,6 +6,7 @@ import {
   Award,
   CheckCircle2,
   Share2,
+  Phone,
   ShieldCheck,
   Search,
   Cpu,
@@ -38,6 +39,14 @@ interface FarmProfileViewProps {
   onSelectVariety?: (variety: FruitTreeVariety) => void;
 }
 
+/** ตัวเลขหนึ่งตัวในแถบสถิติ -- ค่าอยู่บน ป้ายกำกับอยู่ล่าง */
+const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div>
+    <div className="text-base font-bold text-fg tabular-nums leading-tight">{value}</div>
+    <div className="text-[11px] text-fg-2">{label}</div>
+  </div>
+);
+
 const SAMPLE_GARDEN_PHOTOS = [
   'https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=800&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=800&auto=format&fit=crop&q=80',
@@ -67,6 +76,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
   const [treeSearch, setTreeSearch] = useState('');
   const [sortBy, setSortBy] = useState<'rating' | 'az' | 'yield' | 'diaries' | 'code'>('rating');
   const [activeTab, setActiveTab] = useState<'trees' | 'smartfarm' | 'certs' | 'about'>('trees');
+  const [storyExpanded, setStoryExpanded] = useState(false);
   const [selectedTree, setSelectedTree] = useState<IndividualTree | null>(null);
 
   // Modals
@@ -177,6 +187,26 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
     .map((w) => w.charAt(0))
     .join('')
     .toUpperCase() || 'TC';
+
+  /**
+   * แชร์หน้าฟาร์ม -- ใช้ share sheet ของเครื่องถ้ามี ไม่มีก็คัดลอกลิงก์แทน
+   * เบราว์เซอร์บนเดสก์ท็อปส่วนใหญ่ยังไม่รองรับ navigator.share
+   */
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = currentFarm.name;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setUpdateSuccessToast('คัดลอกลิงก์หน้าฟาร์มแล้ว');
+      setTimeout(() => setUpdateSuccessToast(''), 2500);
+    } catch {
+      // ผู้ใช้กดยกเลิก share sheet เอง ไม่ต้องแจ้งอะไร
+    }
+  };
 
   // Save Photos to Firestore
   const handleSavePhotos = async () => {
@@ -325,28 +355,97 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               </div>
             </div>
 
-            {/* Right: Rating Box */}
-            <div className="shrink-0 bg-surface-2 border border-line-strong rounded-2xl px-3.5 py-2 text-center shadow-xs">
-              <div className="text-lg font-black text-gold tabular-nums leading-none">
-                {currentFarm.rating.toFixed(1)}
+            {/* คะแนนรีวิว -- ตัวเลขเดียวที่ยังใช้สีทอง */}
+            <div className="shrink-0 text-right">
+              <div className="flex items-center justify-end gap-1">
+                <Star className="w-4 h-4 text-gold fill-gold" />
+                <span className="text-xl font-black text-gold tabular-nums leading-none">
+                  {currentFarm.rating.toFixed(1)}
+                </span>
               </div>
-              <div className="flex items-center justify-center gap-0.5 text-gold text-[10px] my-1">
-                {'★'.repeat(5)}
-              </div>
-              <div className="text-[10px] text-fg-2 font-medium">
-                {currentFarm.reviewCount || 7} รีวิว
+              <div className="text-[11px] text-fg-2 mt-1 tabular-nums">
+                {currentFarm.reviewCount.toLocaleString()} รีวิว
               </div>
             </div>
           </div>
 
-          {/* Social / Contact Action Buttons */}
+          {/* แถบสถิติแบบแถวเดียว แทนตาราง 6 ช่องที่มีอีโมจิของเดิม
+              แสดงเฉพาะค่าที่มีข้อมูลจริง ของเดิมเติมค่าปลอมให้เมื่อไม่มีข้อมูล
+              (พื้นที่ 48 ไร่ เก็บ 3 รอบต่อปี น้ำหนักคำนวณจากผลคูณ 3.5)
+              ซึ่งแสดงเลขที่แต่งขึ้นราวกับเป็นข้อเท็จจริงของฟาร์มนั้น */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 border-y border-line">
+            <Stat label="อันดับ" value={`#${currentFarm.rank}`} />
+            <Stat label="ต้นทุเรียน" value={currentFarm.totalTrees.toLocaleString()} />
+            <Stat label="ผลผลิต" value={currentFarm.harvestedFruits.toLocaleString()} />
+            <Stat
+              label="สายพันธุ์"
+              value={String(currentFarm.varietiesCount || currentFarm.topVarieties?.length || 0)}
+            />
+            {currentFarm.areaRai ? <Stat label="ไร่" value={String(currentFarm.areaRai)} /> : null}
+            {currentFarm.establishedYear ? (
+              <Stat label="ก่อตั้ง" value={String(currentFarm.establishedYear)} />
+            ) : null}
+          </div>
+
+          {/* ปุ่มหลัก -- ตำแหน่งเดียวกับ Buy Now / Message ของต้นแบบ
+              โทรหาฟาร์มเป็นสิ่งที่ผู้ซื้อทำจริงมากที่สุด จึงให้เป็นปุ่มเด่นสุดของหน้า */}
+          <div className="flex items-center gap-2">
+            {currentFarm.contact?.phoneNumber ? (
+              <a
+                href={`tel:${currentFarm.contact.phoneNumber.replace(/[^0-9+]/g, '')}`}
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gold hover:bg-gold-hi text-gold-ink text-sm font-bold rounded-xl transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                <span>ติดต่อฟาร์ม</span>
+              </a>
+            ) : null}
+
+            <button
+              onClick={handleShare}
+              className="shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg text-sm font-bold rounded-xl transition-colors cursor-pointer"
+            >
+              <Share2 className="w-4 h-4" />
+              <span className="hidden sm:inline">แชร์</span>
+            </button>
+          </div>
+
+          {/* เรื่องราวของฟาร์ม -- ย้ายขึ้นมาไว้ใต้สถิติตามผังต้นแบบ
+              ของเดิมซ่อนอยู่ในแท็บ "ประวัติฟาร์ม" ซึ่งคนส่วนใหญ่ไม่ได้กดเข้าไปดู */}
+          {(currentFarm.highlight || currentFarm.aboutStory) && (
+            <div className="space-y-1.5">
+              {currentFarm.highlight && (
+                <p className="text-sm text-fg font-medium leading-relaxed">{currentFarm.highlight}</p>
+              )}
+              {currentFarm.aboutStory && (
+                <>
+                  <p
+                    className={`text-xs text-fg-2 leading-relaxed ${
+                      storyExpanded ? '' : 'line-clamp-3'
+                    }`}
+                  >
+                    {currentFarm.aboutStory}
+                  </p>
+                  <button
+                    onClick={() => setStoryExpanded((v) => !v)}
+                    className="text-xs font-bold text-gold-soft hover:text-gold cursor-pointer"
+                  >
+                    {storyExpanded ? 'ย่อลง' : 'อ่านเพิ่มเติม'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ช่องทางติดต่อ -- ย้ายลงมาไว้ใต้เรื่องราวตามผังต้นแบบ
+              ของเดิมอยู่เหนือสถิติ ซึ่งดันเนื้อหาหลักของฟาร์มให้ลงไปอยู่ล่าง */}
           <div className="grid grid-cols-3 gap-2 text-xs font-bold">
             <a
               href={currentFarm.contact?.facebook || 'https://facebook.com'}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-[#0c2238] border border-blue-800/60 hover:bg-[#122e4d] text-blue-300 rounded-xl transition-all text-center"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg rounded-xl transition-colors"
             >
               <span className="font-extrabold">f</span>
               <span className="truncate">Facebook</span>
@@ -357,7 +456,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-[#261322] border border-pink-900/60 hover:bg-[#341a2e] text-pink-300 rounded-xl transition-all text-center"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg rounded-xl transition-colors"
             >
               <span>📷</span>
               <span className="truncate">Instagram</span>
@@ -368,7 +467,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-[#122b1c] border border-[#234d34] hover:bg-[#183a26] text-leaf rounded-xl transition-all text-center"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg rounded-xl transition-colors"
             >
               <span>💬</span>
               <span className="truncate">LINE OA</span>
@@ -413,56 +512,6 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
             </div>
           )}
 
-          {/* Key Stats Grid */}
-          <div className="grid grid-cols-3 gap-2.5 pt-1">
-            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
-              <span className="text-base mb-1">🌳</span>
-              <div className="text-base sm:text-lg font-black text-white tabular-nums">
-                {currentFarm.totalTrees.toLocaleString()}
-              </div>
-              <div className="text-[11px] text-fg-2 font-medium">ต้นทุเรียน</div>
-            </div>
-
-            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
-              <span className="text-base mb-1">📐</span>
-              <div className="text-base sm:text-lg font-black text-white tabular-nums">
-                {currentFarm.areaRai || 48}
-              </div>
-              <div className="text-[11px] text-fg-2 font-medium">ไร่</div>
-            </div>
-
-            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
-              <span className="text-base mb-1">🔬</span>
-              <div className="text-base sm:text-lg font-black text-white tabular-nums">
-                {currentFarm.varietiesCount || currentFarm.topVarieties?.length || 6}
-              </div>
-              <div className="text-[11px] text-fg-2 font-medium">สายพันธุ์</div>
-            </div>
-
-            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
-              <span className="text-base mb-1">🪚</span>
-              <div className="text-base sm:text-lg font-black text-white tabular-nums">
-                {currentFarm.harvestRounds || 3}
-              </div>
-              <div className="text-[11px] text-fg-2 font-medium">เก็บ/ปี</div>
-            </div>
-
-            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
-              <span className="text-base mb-1">⚖️</span>
-              <div className="text-base sm:text-lg font-black text-white tabular-nums">
-                {currentFarm.harvestedFruits ? (currentFarm.harvestedFruits * 3.5).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '2,840'}
-              </div>
-              <div className="text-[11px] text-fg-2 font-medium">กก./ปี</div>
-            </div>
-
-            <div className="bg-[#122b1c] border border-line rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs">
-              <span className="text-base mb-1">⭐</span>
-              <div className="text-base sm:text-lg font-black text-gold tabular-nums">
-                {currentFarm.rating.toFixed(1)}/5
-              </div>
-              <div className="text-[11px] text-fg-2 font-medium">คะแนนรีวิว</div>
-            </div>
-          </div>
 
           {/* SmartFarm Innovation Section (Optional & Toggleable by Farm Manager) */}
           {showSmartFarmCard ? (
@@ -695,57 +744,42 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 ไม่พบรายชื่อต้นไม้ตามเงื่อนไขที่ค้นหา
               </div>
             ) : (
+              /* แถวต้นไม้แบบตาราง เทียบเท่าตาราง Strains ของต้นแบบ
+                 เอารูปภาพประกอบขนาด 48px ออก เพราะเป็นรูปทุเรียนรูปเดียวกันทุกต้น
+                 จึงไม่ได้แยกแยะอะไร มีแต่กินพื้นที่และทำให้ไล่สายตาตามคอลัมน์ยาก */
               filteredAndSortedTrees.map((tree) => (
                 <div
                   key={tree.id}
                   onClick={() => setSelectedTree(tree)}
-                  className="group flex items-center justify-between p-3.5 sm:p-4 hover:bg-surface-2 transition-colors cursor-pointer"
+                  className="group flex items-center gap-3 py-2.5 px-3 sm:px-4 hover:bg-surface-2 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-canvas shrink-0 border border-line">
-                      <img
-                        src="https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=200&auto=format&fit=crop&q=80"
-                        alt={tree.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-surface/90 text-[8px] font-bold text-gold text-center py-0.2 uppercase border-t border-line">
-                        {tree.propagationCode || 'AUTO'}
-                      </div>
+                  {/* รหัสต้น -- ตัวยึดสายตาหลัก เป็นรหัสเดียวกับที่พิมพ์บนแท็ก NFC */}
+                  <span className="font-mono text-xs font-bold text-fg-3 shrink-0 w-[74px] sm:w-[86px]">
+                    {tree.code}
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-xs sm:text-sm text-fg truncate group-hover:text-gold-soft transition-colors">
+                      {tree.name}
                     </div>
-
-                    <div className="min-w-0 flex flex-col">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-xs sm:text-sm text-white group-hover:text-gold truncate transition-colors">
-                          {tree.name}
-                        </span>
-                        <span className="font-mono text-[10px] font-semibold text-gold-soft bg-gold/20 px-1.5 py-0.2 rounded-sm border border-gold/40">
-                          {tree.code}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-[11px] text-fg-2 mt-0.5">
-                        <span className="text-[#c8dcd0] font-medium">{tree.variety}</span>
-                        <span className="text-line">•</span>
-                        <span>โซน: {tree.zone}</span>
-                        <span className="text-line">•</span>
-                        <span>อายุ {tree.ageYears} ปี</span>
-                      </div>
+                    <div className="text-[11px] text-fg-2 truncate mt-0.5">
+                      {tree.variety}
+                      <span className="hidden sm:inline"> · อายุ {tree.ageYears} ปี</span>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end shrink-0 text-right pl-2">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 text-gold fill-gold" />
-                      <span className="font-extrabold text-xs sm:text-sm text-white tabular-nums">
-                        {tree.rating.toFixed(1)}
-                      </span>
-                      <span className="text-[10px] text-fg-2">/10</span>
-                    </div>
+                  {/* ผลผลิตต่อต้น */}
+                  <span className="hidden sm:block shrink-0 w-16 text-right text-xs text-fg-2 tabular-nums">
+                    {tree.yieldFruitCount} ลูก
+                  </span>
 
-                    <div className="text-[10px] text-fg-2 mt-0.5 tabular-nums">
-                      {tree.diariesCount} บันทึก • {tree.yieldFruitCount} ลูก
-                    </div>
-                  </div>
+                  {/* คะแนนรีวิว */}
+                  <span className="shrink-0 w-14 sm:w-16 flex items-center justify-end gap-1">
+                    <Star className="w-3 h-3 text-gold fill-gold" />
+                    <span className="font-bold text-xs text-fg tabular-nums">
+                      {tree.rating.toFixed(1)}
+                    </span>
+                  </span>
                 </div>
               ))
             )}
