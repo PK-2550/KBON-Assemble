@@ -8,6 +8,7 @@ import { authRouter } from './routes/auth.js';
 import { farmsRouter } from './routes/farms.js';
 import { treesRouter } from './routes/trees.js';
 import { farmRequestsRouter } from './routes/farmRequests.js';
+import { careLogsRouter } from './routes/careLogs.js';
 
 const PORT = Number(process.env.API_PORT ?? 3001);
 
@@ -24,6 +25,8 @@ app.use('/api/auth', authRouter);
 app.use('/api/farms', farmsRouter);
 app.use('/api/trees', treesRouter);
 app.use('/api/farm-requests', farmRequestsRouter);
+// careLogs ลงทะเบียนที่ราก /api เพราะมีทั้งเส้นทางใต้ /trees และ /care-logs
+app.use('/api', careLogsRouter);
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'ไม่พบ endpoint ที่เรียก' }));
 

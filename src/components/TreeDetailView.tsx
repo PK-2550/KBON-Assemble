@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { IndividualTree, DurianFarm, TreeReview, UserRole } from '../types';
 import { fetchTreeReviews } from '../services/farmService';
+import { CareLogTimeline } from './CareLogTimeline';
 
 interface TreeDetailViewProps {
   tree: IndividualTree;
@@ -195,51 +196,8 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, onBa
         </div>
       )}
 
-      {/* ประวัติการดูแล */}
-      {activeTab === 'diaries' && (
-        <div className="bg-surface rounded-2xl border border-line divide-y divide-line">
-          <div className="flex items-start gap-3 p-4">
-            <Sparkles className="w-4 h-4 text-fg-3 shrink-0 mt-0.5" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-bold text-xs sm:text-sm text-fg">
-                  ให้ปุ๋ยอินทรีย์มูลค้างคาว + ฮิวมัส
-                </span>
-                <span className="text-[11px] text-fg-2 shrink-0 tabular-nums">
-                  {tree.lastFertilized || '—'}
-                </span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-fg-2 mt-1 leading-relaxed">
-                บำรุงระบบรากและเสริมความสมบูรณ์ของใบสะสมอาหาร
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 p-4">
-            <Droplets className="w-4 h-4 text-fg-3 shrink-0 mt-0.5" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-bold text-xs sm:text-sm text-fg">
-                  ระบบรดน้ำมินิสปริงเกลอร์อัตโนมัติ
-                </span>
-                <span className="text-[11px] text-fg-2 shrink-0 tabular-nums">
-                  {tree.lastWatered || '—'}
-                </span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-fg-2 mt-1 leading-relaxed">
-                ควบคุมความชื้นในดินตามรอบของระบบเซ็นเซอร์
-              </p>
-            </div>
-          </div>
-
-          {/* บอกตรง ๆ ว่าสองรายการข้างบนเป็นตัวอย่าง ไม่ใช่บันทึกจริงของต้นนี้
-              ระบบบันทึกจริงยังไม่มี จะทำในส่วนที่ 4 */}
-          <div className="px-4 py-3 text-[11px] text-fg-4 leading-relaxed">
-            รายการข้างต้นเป็นตัวอย่างการแสดงผล ยังไม่ใช่บันทึกจริงของต้นนี้
-            ระบบบันทึกประวัติการดูแลอยู่ระหว่างพัฒนา
-          </div>
-        </div>
-      )}
+      {/* ประวัติการดูแล -- ข้อมูลจริงจากระบบของสวน ไม่ใช่ตัวอย่างอีกแล้ว */}
+      {activeTab === 'diaries' && <CareLogTimeline treeCode={tree.code} />}
 
       {/* รีวิว */}
       {activeTab === 'reviews' && (
