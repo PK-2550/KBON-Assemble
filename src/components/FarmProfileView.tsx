@@ -26,7 +26,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { DurianFarm, IndividualTree, FruitTreeVariety, UserRole, SmartTechItem, CertificationDetail } from '../types';
-import { TreeDetailModal } from './TreeDetailModal';
+import { TreeDetailView } from './TreeDetailView';
 import { FarmRegistrationModal } from './FarmRegistrationModal';
 import { saveFarm } from '../services/farmService';
 import { useAuth } from '../context/AuthContext';
@@ -246,6 +246,21 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
   // Active Smart Technologies (if enabled)
   const activeSmartTech = currentFarm.smartTechnologies?.filter((t) => t.active) || [];
   const showSmartFarmCard = currentFarm.hasSmartFarm !== false && activeSmartTech.length > 0;
+
+  /**
+   * เลือกต้นไม้แล้วให้แทนที่หน้าฟาร์มทั้งหน้า ไม่ใช่เปิดหน้าต่างซ้อน
+   * เป็นรูปแบบเดียวกับที่หน้าฟาร์มแทนที่หน้ารายชื่อฟาร์ม จึงย้อนกลับได้เป็นชั้น ๆ
+   */
+  if (selectedTree) {
+    return (
+      <TreeDetailView
+        tree={selectedTree}
+        farm={currentFarm}
+        currentRole={currentRole}
+        onBack={() => setSelectedTree(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
@@ -1305,16 +1320,6 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
             </div>
           </div>
         </div>
-      )}
-
-      {/* Tree Detail Modal */}
-      {selectedTree && (
-        <TreeDetailModal
-          tree={selectedTree}
-          farm={currentFarm}
-          currentRole={currentRole}
-          onClose={() => setSelectedTree(null)}
-        />
       )}
 
       {/* Farm Update Request Modal for Manager */}

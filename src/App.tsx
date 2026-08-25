@@ -20,7 +20,7 @@ import { FarmProfileView } from './components/FarmProfileView';
 import { DashboardView } from './components/DashboardView';
 import { AddFarmModal } from './components/AddFarmModal';
 import { NfcScannerModal } from './components/NfcScannerModal';
-import { TreeDetailModal } from './components/TreeDetailModal';
+import { TreeDetailView } from './components/TreeDetailView';
 import { FarmRegistrationModal } from './components/FarmRegistrationModal';
 import { AdminApprovalHubModal } from './components/AdminApprovalHubModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -279,7 +279,16 @@ function MainAppContent() {
       {/* Main Content Area - Mobile-First centered container */}
       <main className="flex-1 px-3.5 py-3 max-w-md md:max-w-xl w-full mx-auto flex flex-col gap-3 pb-24">
         {/* If a Farm is selected, show the comprehensive FarmProfileView */}
-        {selectedFarm ? (
+        {/* ต้นไม้ที่เพิ่งสแกน NFC มา -- แสดงเป็นหน้าเต็มแทนเนื้อหาหลัก
+            ของเดิมเปิดเป็นหน้าต่างซ้อนทับหน้าที่อยู่เบื้องหลัง */}
+        {activeScannedTree ? (
+          <TreeDetailView
+            tree={activeScannedTree.tree}
+            farm={activeScannedTree.farm}
+            currentRole={roleMode}
+            onBack={() => setActiveScannedTree(null)}
+          />
+        ) : selectedFarm ? (
           <FarmProfileView
             farm={selectedFarm}
             currentRole={roleMode}
@@ -423,15 +432,6 @@ function MainAppContent() {
         onFruitVerified={handleGlobalFruitScanned}
       />
 
-      {/* Scanned Tree Passport Modal */}
-      {activeScannedTree && (
-        <TreeDetailModal
-          tree={activeScannedTree.tree}
-          farm={activeScannedTree.farm}
-          currentRole={roleMode}
-          onClose={() => setActiveScannedTree(null)}
-        />
-      )}
     </div>
   );
 }
