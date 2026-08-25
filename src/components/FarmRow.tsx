@@ -27,7 +27,7 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
     <div
       onClick={() => onSelectFarm(farm)}
       id={`farm-item-${farm.id}`}
-      className="group flex items-center gap-2.5 sm:gap-4 py-3 px-3 sm:px-4 min-h-[84px] sm:min-h-0 hover:bg-surface-2 cursor-pointer transition-colors"
+      className="group flex items-center gap-2 sm:gap-4 py-3 px-2.5 sm:px-4 hover:bg-surface-2 cursor-pointer transition-colors"
     >
       {/* อันดับ -- ตัวเลขเปล่า ๆ ไม่ใส่มงกุฎ ให้เป็นหลักยึดสายตาเงียบ ๆ
           กว้างคงที่เพื่อให้ทุกแถวเรียงตรงกันแม้เลขจะขึ้นเป็นสองหลัก */}
@@ -48,16 +48,14 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
 
       {/* ชื่อและที่ตั้ง -- min-w-0 จำเป็น ไม่งั้น truncate ไม่ทำงานใน flex */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-start sm:items-center gap-1.5">
-          {/* บนมือถือปล่อยให้ขึ้นได้ 2 บรรทัด เพราะชื่อฟาร์มไทยยาวกว่าที่จอกว้าง 375px
-              จะใส่ในบรรทัดเดียวไหว ถ้าตัดบรรทัดเดียวจะเหลือแค่ราว 100px
-              ซึ่งกินความหมายไปมาก ส่วนบนจอกว้างตัดบรรทัดเดียวพอ
-              แถวถูกตรึงความสูงขั้นต่ำไว้แล้ว ทุกแถวจึงยังสูงเท่ากัน */}
-          <h3 className="font-bold text-sm text-fg line-clamp-2 sm:truncate group-hover:text-gold-soft transition-colors">
+        <div className="flex items-center gap-1.5">
+          <h3 className="font-bold text-sm text-fg truncate group-hover:text-gold-soft transition-colors">
             {farm.name}
           </h3>
+          {/* บนมือถือป้าย GI ย้ายไปบรรทัดรอง เพราะวางไว้ตรงนี้กินที่ชื่อไปราว 30px
+              ซึ่งมากพอที่จะทำให้ชื่อไทยส่วนใหญ่ถูกตัด */}
           {hasGi && (
-            <span className="shrink-0 px-1.5 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded">
+            <span className="hidden sm:inline shrink-0 px-1.5 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded">
               GI
             </span>
           )}
@@ -67,26 +65,43 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
             ของเดิมเอาธงชาติกับจำนวนสายพันธุ์ขึ้นก่อน แล้วดันจังหวัดไปท้ายสุดและจางสุด
             ธงชาติถูกตัดออกเพราะทุกฟาร์มอยู่ไทยหมด จึงไม่ได้บอกอะไร */}
         <div className="flex items-center gap-1.5 text-xs text-fg-2 mt-0.5 truncate">
+          {hasGi && (
+            <span className="sm:hidden shrink-0 px-1 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded">
+              GI
+            </span>
+          )}
           <span className="text-fg-3">{farm.province}</span>
+
+          {/* บนมือถือเอายอดผลผลิตมาต่อท้ายจังหวัดแทนจำนวนสายพันธุ์
+              เพื่อคืนพื้นที่คอลัมน์ขวาให้ชื่อฟาร์ม ดูเหตุผลที่คอลัมน์ขวา */}
+          <span className="sm:hidden text-line-strong">·</span>
+          <span className="sm:hidden tabular-nums">
+            {farm.harvestedFruits.toLocaleString()} ผลผลิต
+          </span>
+
           {varieties > 0 && (
             <>
-              <span className="text-line-strong">·</span>
-              <span>{varieties} สายพันธุ์</span>
+              <span className="hidden sm:inline text-line-strong">·</span>
+              <span className="hidden sm:inline">{varieties} สายพันธุ์</span>
             </>
           )}
         </div>
       </div>
 
-      {/* คะแนนและผลผลิต -- ชิดขวา กว้างคงที่ให้ตัวเลขเรียงเป็นคอลัมน์เดียวกัน */}
-      <div className="shrink-0 text-right w-[86px] sm:w-[100px]">
+      {/* คอลัมน์ขวา -- กว้างคงที่ให้ตัวเลขของทุกแถวเรียงตรงกัน
+          บนมือถือเหลือแค่คะแนน ไม่มียอดผลผลิตและไม่มี /10
+          เพราะจอ 375px มีที่ให้เนื้อหาแค่ 346px ถ้าคอลัมน์นี้กิน 86px
+          ชื่อฟาร์มจะเหลือ 142px ซึ่งสั้นกว่าชื่อไทยเกือบทุกชื่อ (150-210px)
+          พอลดเหลือ 48px ชื่อได้ 182px จึงพอในบรรทัดเดียวเกือบทั้งหมด */}
+      <div className="shrink-0 text-right w-12 sm:w-[100px]">
         <div className="flex items-center justify-end gap-1">
           <Star className="w-3.5 h-3.5 text-gold fill-gold" />
           <span className="font-bold text-sm text-fg tabular-nums">
             {farm.rating.toFixed(1)}
-            <span className="text-fg-4 font-normal text-xs">/10</span>
+            <span className="hidden sm:inline text-fg-4 font-normal text-xs">/10</span>
           </span>
         </div>
-        <div className="text-[11px] text-fg-2 tabular-nums mt-0.5">
+        <div className="hidden sm:block text-[11px] text-fg-2 tabular-nums mt-0.5">
           {farm.harvestedFruits.toLocaleString()} ผลผลิต
         </div>
       </div>
