@@ -74,12 +74,12 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 }) => {
   const { currentUser } = useAuth();
   const [currentFarm, setCurrentFarm] = useState<DurianFarm>(initialFarm);
-  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'auto' | 'photo' | 'companion'>('all');
   const [treeSearch, setTreeSearch] = useState('');
   const [sortBy, setSortBy] = useState<'rating' | 'az' | 'yield' | 'diaries' | 'code'>('rating');
   const [activeTab, setActiveTab] = useState<'trees' | 'smartfarm' | 'certs' | 'about'>('trees');
   const [storyExpanded, setStoryExpanded] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [selectedTree, setSelectedTree] = useState<IndividualTree | null>(null);
 
   // Modals
@@ -251,103 +251,69 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Main Container */}
       <div className="bg-surface text-fg rounded-3xl overflow-hidden shadow-xl border border-line">
-        {/* Top Hero Photo Gallery (Pure Garden Atmosphere Photos) */}
-        <div className="relative aspect-4/3 sm:aspect-16/9 bg-canvas overflow-hidden">
+        {/* แบนเนอร์พื้นหลัง -- รูปบรรยากาศสวนใบแรก ใช้เป็นพื้นหลังเฉย ๆ
+            หรี่แสงลงมากเพื่อให้เป็นฉากหลัง ไม่แย่งความสนใจจากเนื้อหา
+            ต้นแบบก็ใช้แบนเนอร์กว้างเต็มด้านบนแบบนี้ */}
+        <div className="relative h-28 sm:h-40 bg-canvas overflow-hidden">
           <img
-            src={displayPhotos[activePhotoIndex] || displayPhotos[0]}
-            alt={currentFarm.name}
-            className="w-full h-full object-cover transition-all duration-300"
+            src={displayPhotos[0]}
+            alt=""
+            aria-hidden="true"
+            className="w-full h-full object-cover opacity-35"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-black/50 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent pointer-events-none" />
 
-          {/* Top Bar: Back Button & Photo Controls */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
             <button
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-full text-xs font-bold text-gold-soft hover:text-white border border-gold/40 transition-all cursor-pointer shadow-sm active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-canvas/70 hover:bg-canvas backdrop-blur-md rounded-full text-xs font-bold text-fg border border-line transition-colors cursor-pointer"
             >
-              <ArrowLeft className="w-3.5 h-3.5 text-gold" />
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>กลับ</span>
             </button>
 
-            <div className="flex items-center gap-2">
-              {isOwnerOrAdmin && (
-                <button
-                  onClick={() => {
-                    setPhotoList(displayPhotos);
-                    setIsPhotoManagerOpen(true);
-                  }}
-                  className="px-3 py-1.5 bg-gold hover:bg-[#f0b548] text-gold-ink text-xs font-black rounded-full flex items-center gap-1.5 shadow-md cursor-pointer transition-transform active:scale-95"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>จัดการรูปบรรยากาศ</span>
-                </button>
-              )}
-
-              <div className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-full text-[11px] font-bold text-white border border-white/10 font-mono tracking-wider">
-                {activePhotoIndex + 1}/{displayPhotos.length}
-              </div>
-            </div>
-          </div>
-
-          {/* Carousel Dot Indicators */}
-          <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5 z-10">
-            {displayPhotos.map((_, idx) => (
+            {isOwnerOrAdmin && (
               <button
-                key={idx}
-                onClick={() => setActivePhotoIndex(idx)}
-                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  activePhotoIndex === idx
-                    ? 'w-6 bg-gold'
-                    : 'w-1.5 bg-white/40 hover:bg-white/70'
-                }`}
-                aria-label={`รูปบรรยากาศสวนที่ ${idx + 1}`}
-              />
-            ))}
+                onClick={() => {
+                  setPhotoList(displayPhotos);
+                  setIsPhotoManagerOpen(true);
+                }}
+                className="px-3 py-1.5 bg-gold hover:bg-gold-hi text-gold-ink text-xs font-bold rounded-full flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">จัดการรูป</span>
+              </button>
+            )}
           </div>
-        </div>
-
-        {/* Thumbnail Preview Strip */}
-        <div className="px-4 pt-3 pb-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {displayPhotos.map((img, idx) => (
-            <button
-              key={idx}
-              onClick={() => setActivePhotoIndex(idx)}
-              className={`relative shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden transition-all duration-150 cursor-pointer ${
-                activePhotoIndex === idx
-                  ? 'ring-2 ring-gold ring-offset-2 ring-offset-[#0e2619] scale-102'
-                  : 'opacity-60 hover:opacity-100'
-              }`}
-            >
-              <img src={img} alt={`thumb-${idx}`} className="w-full h-full object-cover" />
-            </button>
-          ))}
-          {isOwnerOrAdmin && (
-            <button
-              onClick={() => {
-                setPhotoList(displayPhotos);
-                setIsPhotoManagerOpen(true);
-              }}
-              className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-dashed border-line hover:border-gold flex flex-col items-center justify-center text-fg-2 hover:text-gold text-[10px] font-bold cursor-pointer transition-colors"
-            >
-              <Plus className="w-4 h-4 mb-0.5" />
-              <span>เพิ่มรูป</span>
-            </button>
-          )}
         </div>
 
         {/* Farm Identity Header & Rating Card */}
         <div className="p-4 sm:p-6 space-y-5">
-          {/* ตัวตนของฟาร์ม -- ชื่ออยู่ใต้โลโก้ ไม่ใช่ข้าง ๆ
-              ทำให้ชื่อได้ความกว้างเต็มแถวและตั้งขนาดใหญ่ได้โดยไม่ถูกตัด
-              ต้นแบบก็วางแบบนี้ คือโลโก้เป็นก้อนใหญ่แล้วชื่อตัวหนาใหญ่ตามลงมา */}
-          <div className="flex items-start gap-3.5">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-surface-2 border border-line-strong flex items-center justify-center text-gold font-black text-2xl sm:text-3xl shrink-0 font-serif">
-              {farmInitials}
-            </div>
+          {/* การ์ดรูปแนวตั้ง + ตัวตนของฟาร์ม วางคู่กันแบบต้นแบบ
+              รูปเป็นการ์ดใบเดียวมีป้ายนับ กดแล้วเปิดดูรูปที่เหลือด้วยการเลื่อนลง
+              ของเดิมเป็นแกลเลอรีเต็มความกว้างพร้อมแถบรูปย่อ ซึ่งกินพื้นที่บนสุด
+              ของหน้าไปมากทั้งที่รูปบรรยากาศไม่ใช่ข้อมูลที่คนมาหา */}
+          <div className="flex items-start gap-3.5 sm:gap-5 -mt-12 sm:-mt-16 relative z-10">
+            <button
+              onClick={() => setGalleryOpen(true)}
+              className="relative shrink-0 w-[38%] max-w-[170px] aspect-3/4 rounded-2xl overflow-hidden border border-line bg-canvas cursor-pointer group"
+            >
+              <img
+                src={displayPhotos[0]}
+                alt={`บรรยากาศ${currentFarm.name}`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-canvas/85 text-fg text-[11px] font-bold tabular-nums">
+                1/{displayPhotos.length}
+              </span>
+            </button>
 
-            <div className="min-w-0 flex-1 pt-0.5">
-              <h1 className="text-2xl sm:text-3xl font-black text-fg tracking-tight leading-tight">
+            <div className="min-w-0 flex-1 pt-12 sm:pt-16">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-surface-2 border border-line-strong flex items-center justify-center text-gold font-black text-xl sm:text-2xl font-serif mb-2.5">
+                {farmInitials}
+              </div>
+
+              <h1 className="text-xl sm:text-3xl font-black text-fg tracking-tight leading-tight">
                 {currentFarm.name}
               </h1>
               <div className="flex items-center gap-1 text-xs sm:text-sm text-fg-2 mt-1.5">
@@ -1010,6 +976,54 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* หน้าต่างดูรูปบรรยากาศสวน -- เรียงรูปต่อกันในแนวตั้งแล้วเลื่อนดู
+          แบบเดียวกับต้นแบบ ไม่ใช่แบบกดลูกศรทีละรูป
+          เลื่อนนิ้วบนมือถือทำได้เป็นธรรมชาติกว่าการเล็งปุ่มลูกศรเล็ก ๆ */}
+      {galleryOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-canvas/95 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setGalleryOpen(false)}
+        >
+          <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-canvas/90 backdrop-blur-md border-b border-line">
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-fg truncate">{currentFarm.name}</div>
+              <div className="text-[11px] text-fg-2">
+                บรรยากาศสวน {displayPhotos.length} รูป
+              </div>
+            </div>
+            <button
+              onClick={() => setGalleryOpen(false)}
+              className="shrink-0 p-2 rounded-xl text-fg-2 hover:text-fg hover:bg-surface transition-colors cursor-pointer"
+              aria-label="ปิด"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div
+            className="h-[calc(100vh-64px)] overflow-y-auto px-4 py-4 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {displayPhotos.map((img, idx) => (
+              <figure key={idx} className="rounded-2xl overflow-hidden border border-line bg-surface">
+                {/* ไม่ใช้ loading="lazy" เพราะ native lazy loading ไม่เริ่มโหลดรูปที่อยู่
+                    ในกล่องซึ่งเลื่อนเองแบบนี้ ทำให้รูปที่สองเป็นต้นไปค้างเป็นช่องว่างตลอด
+                    แกลเลอรีนี้มีรูปไม่มากและถูกสร้างเฉพาะตอนกดเปิด จึงโหลดทั้งหมดไปเลย
+                    min-h ไว้กันหน้ากระตุกระหว่างรูปกำลังโหลด */}
+                <img
+                  src={img}
+                  alt={`บรรยากาศ${currentFarm.name} รูปที่ ${idx + 1}`}
+                  className="w-full object-contain min-h-[220px] max-h-[75vh] bg-canvas"
+                />
+                <figcaption className="px-3 py-2 text-[11px] text-fg-2 tabular-nums">
+                  {idx + 1} / {displayPhotos.length}
+                </figcaption>
+              </figure>
+            ))}
           </div>
         </div>
       )}
