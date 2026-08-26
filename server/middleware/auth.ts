@@ -10,6 +10,14 @@ if (!process.env.JWT_SECRET) {
 }
 const JWT_SECRET = process.env.JWT_SECRET;
 
+/**
+ * ส่ง cookie เฉพาะบน https หรือไม่
+ * บน localhost ที่เป็น http ต้องปิด ไม่อย่างนั้นจะล็อกอินไม่ติด
+ */
+const COOKIE_SECURE =
+  process.env.COOKIE_SECURE === 'true' ||
+  (process.env.COOKIE_SECURE !== 'false' && process.env.NODE_ENV === 'production');
+
 export interface TokenPayload {
   uid: string;
   username: string;
@@ -25,8 +33,14 @@ declare global {
   }
 }
 
+/** ระบุอัลกอริทึมชัดเจนทั้งตอนเซ็นและตอนตรวจ ไม่พึ่งค่าปริยายของไลบรารี */
+const JWT_ALGORITHM = 'HS256' as const;
+
 export function signToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_TTL });
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: TOKEN_TTL,
+    algorithm: JWT_ALGORITHM,
+  });
 }
 
 /**
@@ -41,8 +55,9 @@ export function setAuthCookie(res: Response, token: string) {
     httpOnly: true,
     sameSite: 'lax',
     // localhost ใช้ http ธรรมดา จึงยังเปิด secure ไม่ได้
-    // ตอนขึ้น production ที่เป็น https ต้องเปลี่ยนเป็น true
-    secure: false,
+    // ผูกกับ NODE_ENV แทนการแก้โค้ดมือ เพราะการแก้มือคือสิ่งที่ลืมได้
+    // ตั้ง COOKIE_SECURE=true ได้ถ้าต้องการบังคับแยกจาก NODE_ENV
+    secure: COOKIE_SECURE,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   });
@@ -57,7 +72,9 @@ export function readUser(req: Request, _res: Response, next: NextFunction) {
   const token = req.cookies?.[COOKIE_NAME];
   if (token) {
     try {
-      req.user = jwt.verify(token, JWT_SECRET) as TokenPayload;
+      req.user = jwt.verify(token, JWT_SECRET, {
+        algorithms: [JWT_ALGORITHM],
+      }) as TokenPayload;
     } catch {
       // token หมดอายุหรือถูกแก้ -- ถือว่าไม่ได้ล็อกอิน
     }

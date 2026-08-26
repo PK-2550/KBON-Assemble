@@ -5,6 +5,7 @@ import { pool } from '../db.js';
 import {
   signToken, setAuthCookie, clearAuthCookie, requireAuth, type TokenPayload,
 } from '../middleware/auth.js';
+import { loginLimiter, registerLimiter } from '../middleware/rateLimit.js';
 
 export const authRouter = Router();
 
@@ -60,7 +61,7 @@ function validateCredentials(username: unknown, password: unknown): string | nul
  * ไม่ล็อกอินให้อัตโนมัติ เพื่อคงพฤติกรรมเดิมของแอป (commit aec4eff)
  * ผู้ใช้ต้องกรอกรหัสผ่านอีกครั้งที่หน้า login
  */
-authRouter.post('/register', asyncHandler(async (req, res) => {
+authRouter.post('/register', registerLimiter, asyncHandler(async (req, res) => {
   const { username, password } = req.body ?? {};
   const invalid = validateCredentials(username, password);
   if (invalid) return res.status(400).json({ error: invalid });
@@ -89,7 +90,7 @@ authRouter.post('/register', asyncHandler(async (req, res) => {
   res.status(201).json({ profile: toProfile(rows[0]) });
 }));
 
-authRouter.post('/login', asyncHandler(async (req, res) => {
+authRouter.post('/login', loginLimiter, asyncHandler(async (req, res) => {
   const { username, password } = req.body ?? {};
   if (typeof username !== 'string' || typeof password !== 'string' || !username || !password) {
     return res.status(400).json({ error: 'กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน' });
@@ -114,9 +115,13 @@ authRouter.post('/login', asyncHandler(async (req, res) => {
   }
 
   if (!user.password_hash) {
-    return res.status(409).json({
-      error: 'บัญชีนี้ยังไม่ได้ตั้งรหัสผ่านในระบบใหม่ กรุณาสมัครใหม่อีกครั้ง',
-    });
+    // บัญชีที่เข้าด้วย provider อื่น ยังไม่มีรหัสรหัสผ่าน
+    //
+    // ตอบข้อความเดียวกับกรณีกรอกผิด พร้อมหน่วงเวลาทิ้งเท่ากัน
+    // ถ้าตอบ 409 แยกออกมา คนนอกจะรู้ทันทีว่า username นี้มีอยู่จริง
+    // ซึ่งลบล้างการกันเดา username ที่ทำไว้ข้างบนทั้งหมด
+    await bcrypt.hash(password, BCRYPT_ROUNDS);
+    return res.status(401).json({ error: invalidMessage });
   }
 
   const ok = await bcrypt.compare(password, user.password_hash);

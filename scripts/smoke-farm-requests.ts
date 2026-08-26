@@ -251,13 +251,64 @@ async function main() {
     Number((await db.query('SELECT count(*)::int AS n FROM farms WHERE id=$1', [newFarmId])).rows[0].n) === 0);
 
   // ---------------------------------------------------------------
+  // กันการเขียนทับคำขอของคนอื่นด้วยการเดา id
+  //
+  // ON CONFLICT (id) DO UPDATE ตัดสินจาก primary key อย่างเดียว
+  // การกรอง user_id ใน SELECT ข้างบนจึงไม่พอ ต้องกันที่ตัว upsert ด้วย
+  // ถ้าหลุด ผู้โจมตีจะได้เลขบัตรประชาชนและภาพถ่ายบัตรคืนมาจาก RETURNING *
+  console.log('\n--- 7. คนอื่นเขียนทับคำขอไม่ได้ ---');
+  const idorId = `req_${STAMP}_idor`;
+  const ID_CARD = '1234567890123';
+  const ID_PHOTO = 'data:image/png;base64,SMOKEIDCARDPHOTO';
+
+  const victimReq = await farmer.call('/farm-requests', {
+    method: 'POST',
+    body: JSON.stringify({
+      id: idorId,
+      farmName: THAI_FARM,
+      province: 'จันทบุรี',
+      farmerFullName: 'เจ้าของตัวจริง',
+      farmerIdCardNumber: ID_CARD,
+      farmerIdCardPhoto: ID_PHOTO,
+    }),
+  });
+  ok('เจ้าของสร้างคำขอที่มีข้อมูลบัตรประชาชนได้', victimReq.status === 201);
+
+  const hijack = await other.call('/farm-requests', {
+    method: 'POST',
+    body: JSON.stringify({ id: idorId, farmName: 'ยึดแล้ว', province: 'ระยอง' }),
+  });
+  ok('คนอื่นเขียนทับคำขอไม่ได้', hijack.status === 404, `(ได้ ${hijack.status})`);
+
+  const leaked = JSON.stringify(hijack.body ?? {});
+  ok('คำตอบไม่รั่วเลขบัตรประชาชน', !leaked.includes(ID_CARD));
+  ok('คำตอบไม่รั่วภาพถ่ายบัตร', !leaked.includes(ID_PHOTO));
+
+  const untouched = await db.query(
+    'SELECT farm_name, province, farmer_id_card_number FROM farm_requests WHERE id = $1',
+    [idorId]
+  );
+  ok('ข้อมูลในฐานข้อมูลไม่ถูกเขียนทับ',
+    untouched.rows[0]?.farm_name === THAI_FARM &&
+    untouched.rows[0]?.province === 'จันทบุรี' &&
+    untouched.rows[0]?.farmer_id_card_number === ID_CARD);
+
+  const ownEdit = await farmer.call('/farm-requests', {
+    method: 'POST',
+    body: JSON.stringify({ id: idorId, farmName: THAI_FARM, province: 'จันทบุรี', updateNotes: 'แก้ไขเอง' }),
+  });
+  ok('เจ้าของยังส่งแก้ไขของตัวเองได้', ownEdit.status === 201, `(ได้ ${ownEdit.status})`);
+  ok('ข้อมูลเดิมที่ไม่ได้ส่งมายังคงอยู่',
+    ownEdit.body?.request?.farmerIdCardNumber === ID_CARD);
+
+  // ---------------------------------------------------------------
   console.log('\n--- ล้างข้อมูลทดสอบ ---');
-  await db.query('DELETE FROM farm_requests WHERE id = $1', [reqId]);
+  await db.query('DELETE FROM farm_requests WHERE id = ANY($1)', [[reqId, idorId]]);
   await db.query("DELETE FROM users WHERE username_lower LIKE 'smokefarmer_%' OR username_lower LIKE 'smokeother_%' OR username_lower LIKE 'smokeadmin_%'");
   const leftover = await db.query(
     // เช็คเฉพาะของที่การทดสอบสร้างเอง ไม่ใช่ทั้งตาราง
     // เพราะฐานข้อมูลอาจมีคำขอจริงของผู้ใช้อยู่ด้วย
-    "SELECT (SELECT count(*) FROM farm_requests WHERE id = $1)::int AS r, (SELECT count(*) FROM users WHERE username_lower LIKE 'smoke%')::int AS u", [reqId]
+    "SELECT (SELECT count(*) FROM farm_requests WHERE id = ANY($1))::int AS r, (SELECT count(*) FROM users WHERE username_lower LIKE 'smoke%')::int AS u", [[reqId, idorId]]
   );
   ok('ข้อมูลทดสอบถูกลบหมด', leftover.rows[0].r === 0 && leftover.rows[0].u === 0);
 

@@ -4,6 +4,7 @@ import 'dotenv/config';
 
 import { assertDbReady } from './db.js';
 import { readUser } from './middleware/auth.js';
+import { authIpLimiter } from './middleware/rateLimit.js';
 import { authRouter } from './routes/auth.js';
 import { farmsRouter } from './routes/farms.js';
 import { treesRouter } from './routes/trees.js';
@@ -14,6 +15,14 @@ const PORT = Number(process.env.API_PORT ?? 3001);
 
 const app = express();
 
+// ตัวจำกัดอัตรานับตาม req.ip ถ้า API อยู่หลัง proxy ที่เชื่อถือได้
+// ต้องตั้ง TRUST_PROXY เพื่อให้ express อ่าน X-Forwarded-For
+// ไม่เปิดไว้เสมอ เพราะถ้าไม่มี proxy จริง ใครก็ปลอม IP ตัวเองได้ด้วย header นี้
+const TRUST_PROXY = process.env.TRUST_PROXY;
+if (TRUST_PROXY) {
+  app.set('trust proxy', /^\d+$/.test(TRUST_PROXY) ? Number(TRUST_PROXY) : TRUST_PROXY);
+}
+
 // รูปใบรับรองถูกส่งมาเป็น base64 ซึ่งใหญ่กว่า limit ปริยาย 100kb มาก
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
@@ -21,7 +30,7 @@ app.use(readUser);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-app.use('/api/auth', authRouter);
+app.use('/api/auth', authIpLimiter, authRouter);
 app.use('/api/farms', farmsRouter);
 app.use('/api/trees', treesRouter);
 app.use('/api/farm-requests', farmRequestsRouter);

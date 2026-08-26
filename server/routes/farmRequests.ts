@@ -111,12 +111,29 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
         ? 'manager_application'
         : 'farm_verification');
 
-  // ถ้าเป็นการส่งใหม่หลังถูกตีกลับ ให้เก็บหมายเหตุเดิมของแอดมินไว้ดูย้อนหลัง
-  const existing = await pool.query(
-    `SELECT status, admin_notes, agreed_to_criteria, has_smart_farm
-     FROM farm_requests WHERE id = $1 AND user_id = $2`,
-    [id, req.user!.uid]
+  // ต้องดึงโดยไม่กรอง user_id ก่อน เพื่อจะรู้ว่า id นี้มีอยู่แล้วแต่เป็นของคนอื่น
+  //
+  // ก่อนหน้านี้กรอง user_id ตั้งแต่ใน SELECT ทำให้คำขอของคนอื่นหลุดออกไป
+  // เป็น isResubmit = false แล้วไหลต่อไปเข้า ON CONFLICT ซึ่งตัดสินจาก id อย่างเดียว
+  // คนที่รู้ id ของคนอื่นจึงเขียนทับคำขอนั้นได้ และ RETURNING * จะส่ง
+  // เลขบัตรประชาชนกับภาพถ่ายบัตรของเจ้าของตัวจริงกลับไปให้ด้วย
+  const existing = await pool.query<{
+    user_id: string;
+    status: string;
+    admin_notes: string | null;
+    agreed_to_criteria: boolean | null;
+    has_smart_farm: boolean | null;
+  }>(
+    `SELECT user_id, status, admin_notes, agreed_to_criteria, has_smart_farm
+     FROM farm_requests WHERE id = $1`,
+    [id]
   );
+
+  if (existing.rows.length > 0 && existing.rows[0].user_id !== req.user!.uid) {
+    // ตอบ 404 ไม่ใช่ 403 เพื่อไม่ยืนยันว่า id นี้มีอยู่จริง
+    return res.status(404).json({ error: 'ไม่พบคำขอนี้' });
+  }
+
   const isResubmit = existing.rows.length > 0;
   const prev = existing.rows[0];
 
@@ -201,6 +218,7 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
        status='pending', admin_notes=NULL,
        previous_admin_notes=EXCLUDED.previous_admin_notes,
        resubmitted_at=EXCLUDED.resubmitted_at
+     WHERE farm_requests.user_id = EXCLUDED.user_id
      RETURNING *`,
     [
       id,
@@ -237,6 +255,11 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
       isResubmit ? new Date() : null,
     ]
   );
+
+  if (rows.length === 0) {
+    // WHERE บน DO UPDATE กันไว้อีกชั้น เผื่อกรณีมีคนแทรกสร้างแถวนี้คั่นหลังเช็คสิทธิ์
+    return res.status(404).json({ error: 'ไม่พบคำขอนี้' });
+  }
 
   res.status(201).json({ request: toRequest(rows[0]) });
 }));
