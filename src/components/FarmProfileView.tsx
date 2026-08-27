@@ -9,7 +9,6 @@ import {
   Phone,
   Cpu,
   Camera,
-  Trash2,
   X,
   ExternalLink,
   FileText,
@@ -17,7 +16,6 @@ import {
   Check,
   FileEdit,
   Send,
-  Upload,
 } from 'lucide-react';
 import { DurianFarm, IndividualTree, FruitTreeVariety, UserRole, SmartTechItem } from '../types';
 import { TreeDetailView } from './TreeDetailView';
@@ -25,6 +23,7 @@ import { FarmTreesTab, type TreeFilter, type TreeSort } from './FarmTreesTab';
 import { FarmCertificationsTab, type CertDocView } from './FarmCertificationsTab';
 import { FarmAboutTab } from './FarmAboutTab';
 import { FarmPhotoGalleryOverlay } from './FarmPhotoGalleryOverlay';
+import { FarmPhotoManagerModal } from './FarmPhotoManagerModal';
 import { FarmRegistrationModal } from './FarmRegistrationModal';
 import { saveFarm } from '../services/farmService';
 import { useAuth } from '../context/AuthContext';
@@ -96,14 +95,6 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
   // ซึ่ง render อยู่คนละกิ่งกับแท็บใบรับรอง
   const [selectedCertDoc, setSelectedCertDoc] = useState<CertDocView | null>(null);
 
-  // Photo manager form state
-  const [photoList, setPhotoList] = useState<string[]>(
-    currentFarm.atmospherePhotos && currentFarm.atmospherePhotos.length > 0
-      ? currentFarm.atmospherePhotos
-      : currentFarm.photos && currentFarm.photos.length > 0
-      ? currentFarm.photos
-      : SAMPLE_GARDEN_PHOTOS.slice(0, 3)
-  );
 
   // Smart farm form state
   const [tempHasSmartFarm, setTempHasSmartFarm] = useState<boolean>(
@@ -121,6 +112,31 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
     (currentUser && currentFarm.managerId === currentUser.uid);
 
   // Garden Atmosphere photos ONLY (no certificate photos in the gallery)
+  /**
+   * บันทึกรูปบรรยากาศสวน
+   *
+   * คงลำดับเดิมไว้ทุกอย่าง คืออัปเดตหน้าจอก่อนแล้วค่อยรอผลจากเซิร์ฟเวอร์
+   * ถ้าบันทึกไม่สำเร็จ โมดัลจะเปิดค้างไว้และไม่ขึ้นข้อความสำเร็จ
+   *
+   * เป็นพฤติกรรมเดิมก่อนแยกไฟล์ ย้ายมาเฉยๆ ไม่ได้ปรับปรุงระหว่างทาง
+   */
+  const handleSavePhotos = async (photos: string[]) => {
+    try {
+      const updatedFarm: DurianFarm = {
+        ...currentFarm,
+        atmospherePhotos: photos,
+        photos: photos,
+      };
+      setCurrentFarm(updatedFarm);
+      await saveFarm(updatedFarm);
+      setIsPhotoManagerOpen(false);
+      setUpdateSuccessToast('บันทึกรูปภาพบรรยากาศสวนเรียบร้อยแล้ว');
+      setTimeout(() => setUpdateSuccessToast(''), 3500);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const displayPhotos = useMemo(() => {
     if (currentFarm.atmospherePhotos && currentFarm.atmospherePhotos.length > 0) {
       return currentFarm.atmospherePhotos;
@@ -227,10 +243,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
             {isOwnerOrAdmin && (
               <button
-                onClick={() => {
-                  setPhotoList(displayPhotos);
-                  setIsPhotoManagerOpen(true);
-                }}
+                onClick={() => setIsPhotoManagerOpen(true)}
                 className="px-3 py-1.5 bg-gold hover:bg-gold-hi text-gold-ink text-xs font-bold rounded-full flex items-center gap-1.5 cursor-pointer transition-colors"
               >
                 <Camera className="w-3.5 h-3.5" />
@@ -716,162 +729,12 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
       {/* MODAL 2: Photo Manager for Farm Atmosphere Photos (PNG / JPG file upload support) */}
       {isPhotoManagerOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in"
-          onClick={() => setIsPhotoManagerOpen(false)}
-        >
-          <div
-            className="bg-canvas text-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-line relative flex flex-col max-h-[90vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 border-b border-line bg-gradient-to-r from-surface to-canvas flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-gold" />
-                <div>
-                  <h3 className="font-bold text-sm text-white">จัดการรูปภาพบรรยากาศสวน</h3>
-                  <p className="text-[11px] text-fg-2">
-                    เพิ่มหรือแก้ไขภาพถ่ายแปลงสวน ต้นทุเรียน และบรรยากาศธรรมชาติ
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsPhotoManagerOpen(false)}
-                className="p-1.5 text-fg-2 hover:text-white hover:bg-surface-2 rounded-full border border-line cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-4 overflow-y-auto flex-1 space-y-4 text-xs">
-              {/* Local File Upload Button (PNG / JPG / WebP) */}
-              <div className="p-3.5 bg-well rounded-2xl border border-dashed border-line hover:border-gold flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-bold text-white text-xs">อัปโหลดไฟล์รูปภาพ PNG / JPG</div>
-                  <div className="text-[10px] text-fg-2">เลือกไฟล์ภาพจากอุปกรณ์ของคุณโดยตรง</div>
-                </div>
-                <label className="px-3 py-1.5 bg-surface-2 hover:bg-[#1f4e34] border border-[#225739] text-gold-soft hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>เลือกรูป</span>
-                  <input
-                    type="file"
-                    accept="image/png, image/jpeg, image/webp, image/*"
-                    multiple
-                    onChange={(e) => {
-                      const files = e.target.files;
-                      if (!files) return;
-                      Array.from(files).forEach((file: File) => {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          const dataUrl = event.target?.result as string;
-                          if (dataUrl) {
-                            setPhotoList((prev) => [...prev, dataUrl]);
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      });
-                    }}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              {/* Photo list (Responsive 16:10 aspect ratio) */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {photoList.map((url, idx) => (
-                  <div
-                    key={idx}
-                    className="relative group rounded-xl overflow-hidden aspect-16/10 bg-well border border-line"
-                  >
-                    <img src={url} alt={`Atmosphere ${idx + 1}`} className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => {
-                        if (photoList.length > 1) {
-                          setPhotoList(photoList.filter((_, i) => i !== idx));
-                        }
-                      }}
-                      className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-rose-600 text-white rounded-md transition-colors cursor-pointer"
-                      title="ลบรูปนี้"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                    <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-gold-soft px-1 py-0.5 text-center truncate">
-                      รูปที่ {idx + 1}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Quick sample photo selector */}
-              <div className="space-y-1.5">
-                <span className="text-[11px] text-fg-2 block font-medium">
-                  หรือเลือกภาพบรรยากาศสวนตัวอย่าง:
-                </span>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {SAMPLE_GARDEN_PHOTOS.map((sampleUrl, sIdx) => {
-                    const isSelected = photoList.includes(sampleUrl);
-                    return (
-                      <div
-                        key={sIdx}
-                        onClick={() => {
-                          if (isSelected) {
-                            if (photoList.length > 1) {
-                              setPhotoList(photoList.filter((p) => p !== sampleUrl));
-                            }
-                          } else {
-                            setPhotoList([...photoList, sampleUrl]);
-                          }
-                        }}
-                        className={`relative rounded-xl overflow-hidden aspect-square cursor-pointer transition-all border ${
-                          isSelected
-                            ? 'ring-2 ring-gold border-gold scale-102'
-                            : 'border-line opacity-60 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={sampleUrl} alt={`Sample ${sIdx}`} className="w-full h-full object-cover" />
-                        {isSelected && (
-                          <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-gold text-gold-ink rounded-full flex items-center justify-center font-bold text-[8px]">
-                            ✓
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-line flex justify-end gap-2 shrink-0">
-              <button
-                onClick={() => setIsPhotoManagerOpen(false)}
-                className="px-4 py-2 bg-well hover:bg-surface-2 text-white rounded-xl text-xs font-bold border border-line cursor-pointer"
-              >
-                ยกเลิก
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    const updatedFarm: DurianFarm = {
-                      ...currentFarm,
-                      atmospherePhotos: photoList,
-                      photos: photoList,
-                    };
-                    setCurrentFarm(updatedFarm);
-                    await saveFarm(updatedFarm);
-                    setIsPhotoManagerOpen(false);
-                    setUpdateSuccessToast('บันทึกรูปภาพบรรยากาศสวนเรียบร้อยแล้ว');
-                    setTimeout(() => setUpdateSuccessToast(''), 3500);
-                  } catch (e) {
-                    console.error(e);
-                  }
-                }}
-                className="px-4 py-2 bg-gold hover:bg-[#f0b548] text-gold-ink font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
-              >
-                <Check className="w-4 h-4" />
-                <span>บันทึกการเปลี่ยนแปลง</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <FarmPhotoManagerModal
+          photos={displayPhotos}
+          samplePhotos={SAMPLE_GARDEN_PHOTOS}
+          onClose={() => setIsPhotoManagerOpen(false)}
+          onSave={handleSavePhotos}
+        />
       )}
 
       {/* MODAL 3: Smart Farm Configuration Modal */}
