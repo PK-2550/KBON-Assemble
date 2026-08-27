@@ -23,8 +23,30 @@ if (TRUST_PROXY) {
   app.set('trust proxy', /^\d+$/.test(TRUST_PROXY) ? Number(TRUST_PROXY) : TRUST_PROXY);
 }
 
-// รูปใบรับรองถูกส่งมาเป็น base64 ซึ่งใหญ่กว่า limit ปริยาย 100kb มาก
-app.use(express.json({ limit: '10mb' }));
+/**
+ * เพดานขนาด body แยกตามเส้นทาง
+ *
+ * เดิมตั้ง 10mb ไว้ที่เดียวแล้วใช้กับทุก endpoint รวมถึง /api/auth/login
+ * ที่รับแค่ชื่อผู้ใช้กับรหัสผ่าน ใครก็ยิง body ขนาด 10mb ใส่ endpoint ไหนก็ได้
+ * แล้วบังคับให้เซิร์ฟเวอร์อ่านและแปลง JSON ทั้งก้อนก่อนจะรู้ว่าเป็นขยะ
+ *
+ * เส้นทางที่ต้องรับก้อนใหญ่จริงมีไม่กี่เส้น เพราะแนบไฟล์มาเป็น base64
+ *   /api/farm-requests   สำเนาบัตรประชาชนและใบรับรอง ซึ่งแนบเป็น PDF ได้
+ *   /api/farms           ข้อมูลฟาร์มพร้อมรูปบรรยากาศและรูปใบรับรอง
+ *   /api/care-logs       นำเข้าประวัติการดูแลได้ครั้งละไม่เกิน 1000 รายการ
+ *
+ * ไฟล์ PDF ไม่ผ่านการบีบอัดฝั่ง client ต่างจากรูปภาพ จึงยังต้องเผื่อไว้ 10mb
+ * ที่เหลือใช้ 256kb ซึ่งกว้างพอสำหรับข้อความและตัวเลขทุกฟอร์มในระบบ
+ */
+const jsonLarge = express.json({ limit: '10mb' });
+const jsonSmall = express.json({ limit: '256kb' });
+
+// ต้องมาก่อนตัวเล็ก เพราะ body-parser ตัวถัดไปจะข้ามให้เองเมื่อ body ถูกอ่านแล้ว
+app.use('/api/farm-requests', jsonLarge);
+app.use('/api/farms', jsonLarge);
+app.use('/api/care-logs', jsonLarge);
+app.use(jsonSmall);
+
 app.use(cookieParser());
 app.use(readUser);
 
@@ -46,8 +68,22 @@ app.use('/api', (_req, res) => res.status(404).json({ error: 'ไม่พบ en
  * จน request timeout แทนที่จะตอบ error กลับไป
  */
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('เกิดข้อผิดพลาดที่ไม่ได้จัดการ:', err);
   if (res.headersSent) return;
+
+  // body ใหญ่เกินเพดาน body-parser โยน error ที่มี type เป็น entity.too.large
+  // ตอบ 413 พร้อมบอกสาเหตุ ดีกว่าปล่อยให้กลายเป็น 500 ที่ผู้ใช้เดาไม่ถูกว่าทำอะไรผิด
+  if ((err as { type?: string }).type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'ข้อมูลที่ส่งมามีขนาดใหญ่เกินกำหนด กรุณาลดขนาดไฟล์แนบแล้วลองใหม่',
+    });
+  }
+
+  // JSON ที่รูปแบบไม่ถูกต้อง ก็ไม่ใช่ความผิดพลาดของเซิร์ฟเวอร์เช่นกัน
+  if ((err as { type?: string }).type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'รูปแบบข้อมูลที่ส่งมาไม่ถูกต้อง' });
+  }
+
+  console.error('เกิดข้อผิดพลาดที่ไม่ได้จัดการ:', err);
   res.status(500).json({ error: 'เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง' });
 });
 
