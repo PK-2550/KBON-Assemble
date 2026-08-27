@@ -89,6 +89,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
   const [updateSuccessToast, setUpdateSuccessToast] = useState('');
   const [selectedCertDoc, setSelectedCertDoc] = useState<{
     name: string;
+    shortCode: string;
     certNumber: string;
     issuedBy: string;
     validUntil: string;
@@ -840,6 +841,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                       onClick={() =>
                         setSelectedCertDoc({
                           name: cert.nameTh || cert.name,
+                          shortCode: cert.shortCode,
                           certNumber: cert.certNumber,
                           issuedBy: cert.issuedBy,
                           validUntil: cert.validUntil,
@@ -870,6 +872,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
                   onClick={() =>
                     setSelectedCertDoc({
                       name: 'GAP มาตรฐานการปฏิบัติทางการเกษตรที่ดี',
+                      shortCode: 'GAP',
                       certNumber: 'GAP-DOA-TH-2026',
                       issuedBy: 'กรมวิชาการเกษตร',
                       validUntil: '2028',
@@ -1351,7 +1354,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
             smartTechnologies: currentFarm.smartTechnologies || [],
           }}
           onClose={() => setIsUpdateRequestModalOpen(false)}
-          onSuccess={() => {
+          onRequestSubmitted={() => {
             setIsUpdateRequestModalOpen(false);
             setUpdateSuccessToast('ส่งคำขอแก้ไขข้อมูลสวนไปยังแอดมินเรียบร้อยแล้ว! แอดมินจะตรวจสอบและอนุมัติให้โดยเร็ว');
             setTimeout(() => setUpdateSuccessToast(''), 5000);

@@ -45,7 +45,6 @@ function MainAppContent() {
   const [isRegisterFarmModalOpen, setIsRegisterFarmModalOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<FarmRegistrationRequest | null>(null);
   const [isAdminApprovalModalOpen, setIsAdminApprovalModalOpen] = useState(false);
-  const [adminApprovalInitialTab, setAdminApprovalInitialTab] = useState<'manager_application' | 'farm_verification'>('manager_application');
   const [isGlobalNfcScannerOpen, setIsGlobalNfcScannerOpen] = useState(false);
   const [activeScannedTree, setActiveScannedTree] = useState<{ tree: IndividualTree; farm: DurianFarm } | null>(null);
   const [isGuestPreview, setIsGuestPreview] = useState(false);
@@ -248,12 +247,9 @@ function MainAppContent() {
           setEditingRequest(req || null);
           setIsRegisterFarmModalOpen(true);
         }}
-        onOpenAdminApproval={(tab) => {
-          if (tab === 'manager_application' || tab === 'farm_verification') {
-            setAdminApprovalInitialTab(tab);
-          } else {
-            setAdminApprovalInitialTab('manager_application');
-          }
+        onOpenAdminApproval={() => {
+          // Navbar ส่งชื่อแท็บมาด้วย แต่ AdminApprovalHubModal ไม่มีแท็บหลักให้เลือก
+          // มีแค่ตัวกรองสถานะ (รอดำเนินการ/อนุมัติแล้ว/ตีกลับ) จึงไม่มีอะไรให้ส่งต่อ
           setIsAdminApprovalModalOpen(true);
         }}
         farms={farms}
@@ -423,7 +419,6 @@ function MainAppContent() {
         isOpen={isAdminApprovalModalOpen}
         onClose={() => setIsAdminApprovalModalOpen(false)}
         onFarmApproved={handleFarmApprovedByAdmin}
-        initialMasterTab={adminApprovalInitialTab}
       />
 
       {/* Add New Farm Modal (Admin Quick Entry) */}

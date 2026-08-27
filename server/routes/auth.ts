@@ -17,8 +17,9 @@ interface UserRow {
   email: string | null;
   display_name: string | null;
   photo_url: string | null;
-  role: 'user' | 'admin';
+  role: 'user' | 'manager' | 'admin';
   provider: string;
+  managed_farm_id: string | null;
   password_hash: string | null;
   created_at: Date;
   last_login_at: Date | null;
@@ -34,6 +35,7 @@ function toProfile(u: UserRow) {
     photoURL: u.photo_url,
     role: u.role,
     provider: u.provider,
+    managedFarmId: u.managed_farm_id,
     createdAt: u.created_at?.toISOString?.() ?? null,
     lastLoginAt: u.last_login_at?.toISOString?.() ?? null,
   };

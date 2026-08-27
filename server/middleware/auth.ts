@@ -21,7 +21,7 @@ const COOKIE_SECURE =
 export interface TokenPayload {
   uid: string;
   username: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'manager' | 'admin';
 }
 
 declare global {

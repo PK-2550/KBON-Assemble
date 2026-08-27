@@ -29,6 +29,8 @@ export interface AppUserProfile {
   photoURL: string | null;
   role: UserRole;
   provider: string;
+  /** ฟาร์มที่บัญชีนี้ดูแล มีเฉพาะ role manager */
+  managedFarmId?: string | null;
   createdAt?: string | null;
   lastLoginAt?: string | null;
 }
