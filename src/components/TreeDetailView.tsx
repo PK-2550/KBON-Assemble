@@ -10,14 +10,23 @@ import {
   Radio,
   ShieldCheck,
 } from 'lucide-react';
-import { IndividualTree, DurianFarm, TreeReview, UserRole } from '../types';
+import { IndividualTree, DurianFarm, TreeReview, UserRole, NfcScannedFruit } from '../types';
 import { fetchTreeReviews } from '../services/farmService';
+import { useAuth } from '../context/AuthContext';
 import { CareLogTimeline } from './CareLogTimeline';
+import { TreeReviewForm } from './TreeReviewForm';
 
 interface TreeDetailViewProps {
   tree: IndividualTree;
   farm: DurianFarm;
   currentRole?: UserRole;
+  /**
+   * ผลที่ผู้ใช้เพิ่งสแกนแท็ก NFC มา
+   *
+   * มีค่าเฉพาะตอนที่เข้ามาถึงหน้านี้ด้วยการสแกนจริง ถ้าเดินเข้ามาจากหน้าฟาร์ม
+   * จะไม่มีค่า และฟอร์มเขียนรีวิวจะไม่แสดง ตามกติกาเดิมของระบบ
+   */
+  scannedFruit?: NfcScannedFruit;
   onBack: () => void;
 }
 
@@ -47,11 +56,16 @@ const Row: React.FC<{ label: React.ReactNode; value: React.ReactNode }> = ({ lab
  * และบนมือถือต้องเลื่อนอ่านเนื้อหาในกล่องเล็ก ๆ อีกที
  * เปลี่ยนเป็นหน้าเต็มแบบเดียวกับหน้า strain ของต้นแบบ
  */
-export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, onBack }) => {
+export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, scannedFruit, onBack }) => {
   const [activeTab, setActiveTab] = useState<'passport' | 'diaries' | 'reviews'>('passport');
 
   // เริ่มจากรีวิวที่ติดมากับข้อมูลต้นไม้ แล้วแทนที่ด้วยของล่าสุดจาก API
   const [reviewsList, setReviewsList] = useState<TreeReview[]>(tree.reviews || []);
+
+  const { currentUser } = useAuth();
+
+  // ต้องล็อกอิน และต้องสแกนแท็กของต้นนี้มาจริง จึงจะเขียนรีวิวได้
+  const canReview = Boolean(currentUser) && scannedFruit?.treeCode === tree.code;
 
   useEffect(() => {
     let cancelled = false;
@@ -230,14 +244,26 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, onBa
           </div>
 
           {/* กติกาเดิมของระบบ -- เขียนรีวิวได้ต่อเมื่อสแกนแท็ก NFC ที่ขั้วผลจากต้นนี้
-              ทำให้รีวิวทุกรายการผูกกับผลจริงที่ซื้อไป ไม่ใช่ใครก็มาให้คะแนนได้ */}
-          <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-surface border border-line">
-            <Radio className="w-4 h-4 text-gold shrink-0 mt-0.5" />
-            <p className="text-[11px] sm:text-xs text-fg-2 leading-relaxed">
-              เขียนรีวิวได้เฉพาะผู้ที่สแกนแท็ก NFC ที่ขั้วผลจากต้นนี้แล้วเท่านั้น
-              ทุกรีวิวจึงผูกกับผลจริงที่ตรวจสอบย้อนกลับได้
-            </p>
-          </div>
+              ทำให้รีวิวทุกรายการผูกกับผลจริงที่ซื้อไป ไม่ใช่ใครก็มาให้คะแนนได้
+
+              เทียบรหัสต้นด้วย ไม่ได้ดูแค่ว่ามีการสแกนมา เพราะผู้ใช้อาจสแกนผลของต้นหนึ่ง
+              แล้วเดินไปดูอีกต้นหนึ่ง ซึ่งไม่ควรเขียนรีวิวให้ต้นที่ไม่ได้ถือผลอยู่ */}
+          {canReview ? (
+            <TreeReviewForm
+              treeCode={tree.code}
+              scannedFruit={scannedFruit!}
+              onSubmitted={(created) => setReviewsList((prev) => [created, ...prev])}
+            />
+          ) : (
+            <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-surface border border-line">
+              <Radio className="w-4 h-4 text-gold shrink-0 mt-0.5" />
+              <p className="text-[11px] sm:text-xs text-fg-2 leading-relaxed">
+                {currentUser
+                  ? 'เขียนรีวิวได้เฉพาะผู้ที่สแกนแท็ก NFC ที่ขั้วผลจากต้นนี้แล้วเท่านั้น ทุกรีวิวจึงผูกกับผลจริงที่ตรวจสอบย้อนกลับได้'
+                  : 'เขียนรีวิวได้เฉพาะผู้ที่เข้าสู่ระบบแล้วและสแกนแท็ก NFC ที่ขั้วผลจากต้นนี้ ทุกรีวิวจึงผูกกับผลจริงที่ตรวจสอบย้อนกลับได้'}
+              </p>
+            </div>
+          )}
 
           {reviewsList.length === 0 ? (
             <div className="bg-surface rounded-2xl border border-line p-8 text-center">

@@ -46,7 +46,14 @@ function MainAppContent() {
   const [editingRequest, setEditingRequest] = useState<FarmRegistrationRequest | null>(null);
   const [isAdminApprovalModalOpen, setIsAdminApprovalModalOpen] = useState(false);
   const [isGlobalNfcScannerOpen, setIsGlobalNfcScannerOpen] = useState(false);
-  const [activeScannedTree, setActiveScannedTree] = useState<{ tree: IndividualTree; farm: DurianFarm } | null>(null);
+  // เก็บผลที่สแกนได้ไว้ด้วย ไม่ใช่แค่ต้นกับฟาร์ม
+  // เพราะหน้ารายละเอียดต้นไม้ใช้ค่านี้เป็นหลักฐานว่าผู้ใช้ถือผลจริงอยู่ในมือ
+  // จึงจะเปิดฟอร์มเขียนรีวิวให้
+  const [activeScannedTree, setActiveScannedTree] = useState<{
+    tree: IndividualTree;
+    farm: DurianFarm;
+    fruit: NfcScannedFruit;
+  } | null>(null);
   const [isGuestPreview, setIsGuestPreview] = useState(false);
 
   /**
@@ -171,7 +178,7 @@ function MainAppContent() {
       if (tree) {
         setFarmsError(null);
         setSelectedFarm(farm);
-        setActiveScannedTree({ tree, farm });
+        setActiveScannedTree({ tree, farm, fruit: scannedFruit });
         return;
       }
     }
@@ -297,6 +304,7 @@ function MainAppContent() {
           <TreeDetailView
             tree={activeScannedTree.tree}
             farm={activeScannedTree.farm}
+            scannedFruit={activeScannedTree.fruit}
             currentRole={roleMode}
             onBack={() => setActiveScannedTree(null)}
           />
