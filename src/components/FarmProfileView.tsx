@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { DurianFarm, IndividualTree, FruitTreeVariety, UserRole, SmartTechItem } from '../types';
 import { TreeDetailView } from './TreeDetailView';
+import { FarmTreesTab, type TreeFilter, type TreeSort } from './FarmTreesTab';
 import { FarmRegistrationModal } from './FarmRegistrationModal';
 import { saveFarm } from '../services/farmService';
 import { useAuth } from '../context/AuthContext';
@@ -71,12 +72,19 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 }) => {
   const { currentUser } = useAuth();
   const [currentFarm, setCurrentFarm] = useState<DurianFarm>(initialFarm);
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'auto' | 'photo' | 'companion'>('all');
-  const [treeSearch, setTreeSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'rating' | 'az' | 'yield' | 'diaries' | 'code'>('rating');
   const [activeTab, setActiveTab] = useState<'trees' | 'certs' | 'about'>('trees');
   const [storyExpanded, setStoryExpanded] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  // ตัวกรอง คำค้น และลำดับการเรียงของแท็บต้นไม้
+  //
+  // เก็บไว้ที่นี่แม้จะใช้จริงแค่ใน FarmTreesTab เพราะ selectedTree ข้างล่าง
+  // ทำให้คอมโพเนนต์นี้ return หน้ารายละเอียดต้นไม้ออกมาแทนทั้งหน้า
+  // แท็บจึงถูก unmount ถ้า state อยู่ในแท็บ ค่าที่ผู้ใช้ตั้งไว้จะหาย
+  // ตอนกดย้อนกลับจากหน้าต้นไม้
+  const [treeFilter, setTreeFilter] = useState<TreeFilter>('all');
+  const [treeSearch, setTreeSearch] = useState('');
+  const [treeSort, setTreeSort] = useState<TreeSort>('rating');
+
   const [selectedTree, setSelectedTree] = useState<IndividualTree | null>(null);
 
   // Modals
@@ -130,57 +138,12 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
     return SAMPLE_GARDEN_PHOTOS.slice(0, 3);
   }, [currentFarm]);
 
-  const allTrees: IndividualTree[] = currentFarm.individualTrees || [];
-
-  // Filter & Sort individual trees
-  const filteredAndSortedTrees = useMemo(() => {
-    let list = [...allTrees];
-
-    if (selectedFilter === 'auto') {
-      list = list.filter((t) => t.propagationCode === 'AUTO' || t.category === 'durian_main');
-    } else if (selectedFilter === 'photo') {
-      list = list.filter((t) => t.propagationCode === 'PHOTO' || t.category === 'durian_rare');
-    } else if (selectedFilter === 'companion') {
-      list = list.filter((t) => t.category === 'companion_fruit');
-    }
-
-    if (treeSearch.trim()) {
-      const q = treeSearch.toLowerCase().trim();
-      list = list.filter(
-        (t) =>
-          t.code.toLowerCase().includes(q) ||
-          t.name.toLowerCase().includes(q) ||
-          t.variety.toLowerCase().includes(q) ||
-          t.zone.toLowerCase().includes(q)
-      );
-    }
-
-    list.sort((a, b) => {
-      if (sortBy === 'rating') {
-        if (b.rating !== a.rating) return b.rating - a.rating;
-        return b.diariesCount - a.diariesCount;
-      }
-      if (sortBy === 'az') {
-        return a.name.localeCompare(b.name, 'th');
-      }
-      if (sortBy === 'yield') {
-        return b.yieldFruitCount - a.yieldFruitCount;
-      }
-      if (sortBy === 'diaries') {
-        return b.diariesCount - a.diariesCount;
-      }
-      if (sortBy === 'code') {
-        return a.code.localeCompare(b.code);
-      }
-      return 0;
-    });
-
-    return list;
-  }, [allTrees, selectedFilter, treeSearch, sortBy]);
-
-  const autoCount = allTrees.filter((t) => t.propagationCode === 'AUTO' || t.category === 'durian_main').length;
-  const photoCount = allTrees.filter((t) => t.propagationCode === 'PHOTO' || t.category === 'durian_rare').length;
-  const companionCount = allTrees.filter((t) => t.category === 'companion_fruit').length;
+  // ห่อด้วย useMemo เพราะเดิมสร้าง array ใหม่ทุกรอบ render
+  // ทำให้ของที่รับค่านี้ไปคำนวณใหม่ทุกครั้งโดยไม่จำเป็น (eslint exhaustive-deps ทัก)
+  const allTrees: IndividualTree[] = useMemo(
+    () => currentFarm.individualTrees || [],
+    [currentFarm.individualTrees]
+  );
 
   const farmInitials = (currentFarm?.name || 'TC')
     .split(' ')
@@ -634,137 +597,16 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
       {/* Tab: Individual Trees List */}
       {activeTab === 'trees' && (
-        <div className="space-y-3">
-          <div className="flex flex-col gap-2.5 w-full">
-            <div className="flex flex-wrap items-center gap-1.5 w-full text-xs font-semibold">
-              <button
-                onClick={() => setSelectedFilter('all')}
-                className={`px-3 py-1.5 rounded-full font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer text-xs ${
-                  selectedFilter === 'all'
-                    ? 'bg-gold text-gold-ink shadow-md'
-                    : 'bg-surface border border-line text-fg-2 hover:text-white'
-                }`}
-              >
-                <span>ทั้งหมด</span>
-                <span className="text-[11px] opacity-90 font-mono font-bold">({allTrees.length})</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedFilter('auto')}
-                className={`px-3 py-1.5 rounded-full font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer text-xs ${
-                  selectedFilter === 'auto'
-                    ? 'bg-gold text-gold-ink shadow-md'
-                    : 'bg-surface border border-line text-fg-2 hover:text-white'
-                }`}
-              >
-                <span>สายพันธุ์หลัก</span>
-                <span className="text-[11px] opacity-90 font-mono font-bold">({autoCount})</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedFilter('photo')}
-                className={`px-3 py-1.5 rounded-full font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer text-xs ${
-                  selectedFilter === 'photo'
-                    ? 'bg-gold text-gold-ink shadow-md'
-                    : 'bg-surface border border-line text-fg-2 hover:text-white'
-                }`}
-              >
-                <span>สายพันธุ์พิเศษ</span>
-                <span className="text-[11px] opacity-90 font-mono font-bold">({photoCount})</span>
-              </button>
-
-              {companionCount > 0 && (
-                <button
-                  onClick={() => setSelectedFilter('companion')}
-                  className={`px-3 py-1.5 rounded-full font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer text-xs ${
-                    selectedFilter === 'companion'
-                      ? 'bg-gold text-gold-ink shadow-md'
-                      : 'bg-surface border border-line text-fg-2 hover:text-white'
-                  }`}
-                >
-                  <span>ไม้ผลร่วม</span>
-                  <span className="text-[11px] opacity-90 font-mono font-bold">({companionCount})</span>
-                </button>
-              )}
-            </div>
-
-            {/* Search and Sort */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-              <div className="relative w-full">
-                <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-gold" />
-                <input
-                  type="text"
-                  placeholder="ค้นหารหัสต้น / ชื่อต้น..."
-                  value={treeSearch}
-                  onChange={(e) => setTreeSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-surface border border-line rounded-xl text-xs text-white placeholder-[#688d77] focus:outline-hidden focus:border-gold shadow-inner"
-                />
-              </div>
-
-              <div className="relative w-full">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full bg-surface border border-line rounded-xl px-3 py-2 text-xs font-bold text-gold-soft focus:outline-hidden cursor-pointer shadow-inner"
-                >
-                  <option value="rating" className="bg-surface text-white">คะแนนรีวิวสูงสุด ⭐</option>
-                  <option value="az" className="bg-surface text-white">ชื่อต้น (ก-ฮ) 🌳</option>
-                  <option value="code" className="bg-surface text-white">รหัสต้น (Tree Code) 🏷️</option>
-                  <option value="yield" className="bg-surface text-white">ผลผลิตต่อต้น 📈</option>
-                  <option value="diaries" className="bg-surface text-white">ประวัติการดูแล 📖</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Tree List */}
-          <div className="bg-surface rounded-3xl border border-line shadow-2xl overflow-hidden divide-y divide-line">
-            {filteredAndSortedTrees.length === 0 ? (
-              <div className="p-10 text-center text-fg-2 text-xs">
-                ไม่พบรายชื่อต้นไม้ตามเงื่อนไขที่ค้นหา
-              </div>
-            ) : (
-              /* แถวต้นไม้แบบตาราง เทียบเท่าตาราง Strains ของต้นแบบ
-                 เอารูปภาพประกอบขนาด 48px ออก เพราะเป็นรูปทุเรียนรูปเดียวกันทุกต้น
-                 จึงไม่ได้แยกแยะอะไร มีแต่กินพื้นที่และทำให้ไล่สายตาตามคอลัมน์ยาก */
-              filteredAndSortedTrees.map((tree) => (
-                <div
-                  key={tree.id}
-                  onClick={() => setSelectedTree(tree)}
-                  className="group flex items-center gap-3 py-2.5 px-3 sm:px-4 hover:bg-surface-2 transition-colors cursor-pointer"
-                >
-                  {/* รหัสต้น -- ตัวยึดสายตาหลัก เป็นรหัสเดียวกับที่พิมพ์บนแท็ก NFC */}
-                  <span className="font-mono text-xs font-bold text-fg-3 shrink-0 w-[74px] sm:w-[86px]">
-                    {tree.code}
-                  </span>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-xs sm:text-sm text-fg truncate group-hover:text-gold-soft transition-colors">
-                      {tree.name}
-                    </div>
-                    <div className="text-[11px] text-fg-2 truncate mt-0.5">
-                      {tree.variety}
-                      <span className="hidden sm:inline"> · อายุ {tree.ageYears} ปี</span>
-                    </div>
-                  </div>
-
-                  {/* ผลผลิตต่อต้น */}
-                  <span className="hidden sm:block shrink-0 w-16 text-right text-xs text-fg-2 tabular-nums">
-                    {tree.yieldFruitCount} ลูก
-                  </span>
-
-                  {/* คะแนนรีวิว */}
-                  <span className="shrink-0 w-14 sm:w-16 flex items-center justify-end gap-1">
-                    <Star className="w-3 h-3 text-gold fill-gold" />
-                    <span className="font-bold text-xs text-fg tabular-nums">
-                      {tree.rating.toFixed(1)}
-                    </span>
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        <FarmTreesTab
+          trees={allTrees}
+          onSelectTree={setSelectedTree}
+          filter={treeFilter}
+          onFilterChange={setTreeFilter}
+          search={treeSearch}
+          onSearchChange={setTreeSearch}
+          sort={treeSort}
+          onSortChange={setTreeSort}
+        />
       )}
 
       {/* Tab: Certifications with Inspection Button */}
