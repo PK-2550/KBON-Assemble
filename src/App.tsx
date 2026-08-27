@@ -296,7 +296,18 @@ function MainAppContent() {
       )}
 
       {/* Main Content Area - Mobile-First centered container */}
-      <main className="flex-1 px-3.5 py-3 max-w-md md:max-w-xl w-full mx-auto flex flex-col gap-3 pb-24">
+      <main
+        /*
+         * ความกว้างของเนื้อหา ไล่ตามขนาดจอ
+         *
+         * เดิมตันอยู่ที่ 576px ทุกจอ บนเดสก์ท็อป 1440px จึงเหลือขอบว่างข้างละ 430px
+         * และกริดที่เขียนไว้เป็น lg:grid-cols-4 ในแดชบอร์ดไม่เคยได้ใช้จริง
+         *
+         * ไม่ปล่อยให้เต็มจอ เพราะแถวรายชื่อฟาร์มมีไม่กี่คอลัมน์
+         * กว้างเกินไปแล้วจะเหลือที่ว่างกลางแถวมากจนอ่านยากกว่าเดิม
+         */
+        className="flex-1 px-3.5 py-3 max-w-md md:max-w-2xl lg:max-w-4xl w-full mx-auto flex flex-col gap-3 pb-24"
+      >
         {/* If a Farm is selected, show the comprehensive FarmProfileView */}
         {/* ต้นไม้ที่เพิ่งสแกน NFC มา -- แสดงเป็นหน้าเต็มแทนเนื้อหาหลัก
             ของเดิมเปิดเป็นหน้าต่างซ้อนทับหน้าที่อยู่เบื้องหลัง */}

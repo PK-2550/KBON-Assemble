@@ -244,12 +244,12 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
       {(currentFarm.highlight || currentFarm.aboutStory) && (
         <div className="space-y-1.5">
           {currentFarm.highlight && (
-            <p className="text-sm text-fg font-medium leading-relaxed">{currentFarm.highlight}</p>
+            <p className="text-sm text-fg font-medium leading-relaxed max-w-[68ch]">{currentFarm.highlight}</p>
           )}
           {currentFarm.aboutStory && (
             <>
               <p
-                className={`text-xs text-fg-2 leading-relaxed ${
+                className={`text-xs text-fg-2 leading-relaxed max-w-[68ch] ${
                   storyExpanded ? '' : 'line-clamp-3'
                 }`}
               >

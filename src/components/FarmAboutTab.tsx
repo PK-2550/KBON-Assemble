@@ -13,7 +13,7 @@ export const FarmAboutTab: React.FC<FarmAboutTabProps> = ({ farm: currentFarm })
         <span>📖</span>
         <span>ประวัติความเป็นมาและเรื่องราวของฟาร์ม</span>
       </h3>
-      <p className="text-xs text-fg-2 leading-relaxed whitespace-pre-line">
+      <p className="text-xs text-fg-2 leading-relaxed whitespace-pre-line max-w-[68ch]">
         {currentFarm.aboutStory || currentFarm.highlight || 'ฟาร์มทุเรียนคุณภาพ มุ่งเน้นการผลิตทุเรียนคุณภาพสูงด้วยระบบเกษตรแม่นยำ พร้อมระบบติดตามตรวจสอบย้อนกลับด้วยเทคโนโลยี NFC'}
       </p>
     </div>

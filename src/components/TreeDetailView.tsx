@@ -154,7 +154,7 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, scan
           </div>
 
           {tree.notes && (
-            <p className="text-xs sm:text-sm text-fg-2 leading-relaxed">{tree.notes}</p>
+            <p className="text-xs sm:text-sm text-fg-2 leading-relaxed max-w-[68ch]">{tree.notes}</p>
           )}
         </div>
 
@@ -303,7 +303,7 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, scan
                     </div>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-fg leading-relaxed">{rev.comment}</p>
+                  <p className="text-xs sm:text-sm text-fg leading-relaxed max-w-[68ch]">{rev.comment}</p>
 
                   {rev.tastingNotes && rev.tastingNotes.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
