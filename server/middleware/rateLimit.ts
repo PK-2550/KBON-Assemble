@@ -12,6 +12,37 @@ import type { Request, Response } from 'express';
  * ไม่อย่างนั้นเพดานจริงจะกลายเป็นเพดานคูณจำนวน instance
  */
 
+/**
+ * ยกเว้นเพดานให้ request ที่มาจากเครื่องเดียวกัน สำหรับตอนพัฒนาและรัน smoke test
+ *
+ * smoke test สมัครสมาชิก 3 คนต่อรอบ รันซ้ำไม่กี่รอบก็ชนเพดาน 20 ครั้ง/ชั่วโมง
+ *
+ * ต้องเปิดด้วยตัวเองผ่าน RATE_LIMIT_ALLOW_LOOPBACK ไม่เปิดให้อัตโนมัติ
+ * เพราะถ้าดูแค่ IP ว่าเป็น loopback แล้วยกเว้น จะกลายเป็นรูรั่วทันที
+ * เมื่อ API อยู่หลัง reverse proxy บนเครื่องเดียวกัน เพราะ req.ip จะเป็น 127.0.0.1
+ * ของ proxy ทุก request จึงหลุดเพดานทั้งหมด เท่ากับปิด rate limit ทิ้ง
+ *
+ * กันอีกชั้นด้วยการปฏิเสธเมื่อ NODE_ENV=production ถึงตั้งตัวแปรไว้ก็ไม่มีผล
+ */
+const ALLOW_LOOPBACK =
+  process.env.RATE_LIMIT_ALLOW_LOOPBACK === 'true' &&
+  process.env.NODE_ENV !== 'production';
+
+if (process.env.RATE_LIMIT_ALLOW_LOOPBACK === 'true' && process.env.NODE_ENV === 'production') {
+  console.warn(
+    'มี RATE_LIMIT_ALLOW_LOOPBACK=true แต่ NODE_ENV=production จึงไม่เปิดการยกเว้น -- rate limit ยังทำงานตามปกติ'
+  );
+} else if (ALLOW_LOOPBACK) {
+  console.warn('ยกเว้น rate limit ให้ request จาก loopback (โหมดพัฒนา ห้ามใช้บน production)');
+}
+
+const LOOPBACK_ADDRESSES = new Set(['::1', '127.0.0.1', '::ffff:127.0.0.1']);
+
+/** true เมื่อ request นี้ไม่ต้องนับโควตา */
+function skipLoopback(req: Request): boolean {
+  return ALLOW_LOOPBACK && LOOPBACK_ADDRESSES.has(req.ip ?? '');
+}
+
 /** ข้อความเดียวกันทุกกรณี ไม่บอกว่าติดเพดานเพราะ username ไหน */
 const TOO_MANY_MESSAGE =
   'มีการพยายามเข้าสู่ระบบถี่เกินไป กรุณารอสักครู่แล้วลองใหม่อีกครั้ง';
@@ -32,6 +63,7 @@ function sendTooMany(_req: Request, res: Response) {
 export const authIpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 300,
+  skip: skipLoopback,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   handler: sendTooMany,
@@ -50,6 +82,7 @@ export const authIpLimiter = rateLimit({
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 8,
+  skip: skipLoopback,
   skipSuccessfulRequests: true,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
@@ -66,6 +99,7 @@ export const loginLimiter = rateLimit({
 export const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 20,
+  skip: skipLoopback,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   handler: (_req, res) => {
