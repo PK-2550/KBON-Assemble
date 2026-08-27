@@ -51,6 +51,12 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: 'เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง' });
 });
 
+/**
+ * ส่งออกไปให้ชุดทดสอบเรียกผ่าน supertest ได้โดยไม่ต้องเปิดพอร์ตจริง
+ * ตัวเซิร์ฟเวอร์เริ่มทำงานเฉพาะเมื่อไฟล์นี้ถูกรันตรง ไม่ใช่ตอนถูก import
+ */
+export { app };
+
 async function start() {
   try {
     await assertDbReady();
@@ -65,4 +71,8 @@ async function start() {
   });
 }
 
-start();
+// รันเซิร์ฟเวอร์เฉพาะตอนที่ไฟล์นี้ถูกสั่งรันตรง ๆ
+// เวลาชุดทดสอบ import app เข้ามา จะไม่จองพอร์ตซ้อนกับเซิร์ฟเวอร์ที่รันอยู่
+if (!process.env.VITEST) {
+  start();
+}

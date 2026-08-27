@@ -14,10 +14,12 @@ const BASE = `http://localhost:${process.env.API_PORT ?? 3001}/api`;
 
 let passed = 0;
 let failed = 0;
+/** ชื่อข้อที่ไม่ผ่าน เก็บไว้ให้ชุดทดสอบฝั่ง Vitest รายงานได้ว่าพังข้อไหน */
+const failures: string[] = [];
 
 function ok(label: string, condition: boolean, detail = '') {
   if (condition) { passed++; console.log(`  [OK  ] ${label}${detail ? '  ' + detail : ''}`); }
-  else { failed++; console.log(`  [FAIL] ${label}${detail ? '  ' + detail : ''}`); }
+  else { failed++; failures.push(label + (detail ? '  ' + detail : '')); console.log(`  [FAIL] ${label}${detail ? '  ' + detail : ''}`); }
 }
 
 /** แต่ละ session เก็บ cookie แยกกัน เพื่อจำลองผู้ใช้หลายคนพร้อมกัน */
@@ -59,7 +61,7 @@ const PASS = 'durian2026';
 const THAI_FARM = 'สวนทุเรียนทดสอบ ลุงมะนาว ๙';
 const THAI_STORY = 'สวนอินทรีย์ ๑๐๐% หวานมันกรอบนอกนุ่มใน';
 
-async function main() {
+export async function run(): Promise<{ passed: number; failed: number; failures: string[] }> {
   console.log(`ทดสอบ API คำขอขึ้นทะเบียนสวนที่ ${BASE}\n`);
 
   const health = await new Session('x').call('/health');
@@ -322,10 +324,16 @@ async function main() {
   await db.end();
 
   console.log(`\n--- สรุป: ผ่าน ${passed} / ไม่ผ่าน ${failed} ---`);
-  process.exit(failed > 0 ? 1 : 0);
+  return { passed, failed, failures };
 }
 
-main().catch((err) => {
-  console.error('\nการทดสอบล้มเหลว:', err);
-  process.exit(1);
-});
+// รันตรงจาก command line ได้เหมือนเดิม
+// เวลาถูก import จากชุดทดสอบ Vitest จะไม่รันเองและไม่เรียก process.exit
+if (!process.env.VITEST) {
+  run()
+    .then((r) => process.exit(r.failed > 0 ? 1 : 0))
+    .catch((err) => {
+      console.error('\nการทดสอบล้มเหลว:', err);
+      process.exit(1);
+    });
+}
