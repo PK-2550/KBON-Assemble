@@ -26,14 +26,10 @@ import {
 } from 'lucide-react';
 import { FarmRegistrationRequest } from '../types';
 import { openPdfDocument } from '../utils/pdfUtils';
-import {
-  THAILAND_REGIONS,
-  getDistrictsByProvince,
-} from '../constants/provinces';
-import { FarmLocationPicker } from './FarmLocationPicker';
 import { useFarmRegistrationForm } from '../hooks/useFarmRegistrationForm';
 import { FarmRegistrationStep1 } from './FarmRegistrationStep1';
 import { FarmRegistrationStep2 } from './FarmRegistrationStep2';
+import { FarmRegistrationStep3 } from './FarmRegistrationStep3';
 import { AVAILABLE_SMART_TECH, STANDARD_OPTIONS } from '../constants/farmRegistrationOptions';
 
 interface FarmRegistrationModalProps {
@@ -148,7 +144,6 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
     validateCurrentStep,
     handleNextStep,
     handleSubmit,
-    availableDistricts,
   } = useFarmRegistrationForm({ isOpen, initialData, mode, targetFarmId, onRequestSubmitted });
 
   // ต้องอยู่หลังการเรียก hook เสมอ เพราะ hook ห้ามอยู่หลังเงื่อนไข
@@ -356,152 +351,28 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
 
               {/* STEP 3: Farm Details & Interactive GPS Location Map */}
               {step === 3 && (
-                <div className="space-y-4 animate-in fade-in">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-fg-2 mb-1">
-                        ชื่อฟาร์ม (ภาษาไทย) <span className="text-rose-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="เช่น สวนทุเรียนจันทบูรณ์ พรีเมียม"
-                        value={farmName}
-                        onChange={(e) => setFarmName(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-well border border-line rounded-xl text-white placeholder-[#527861] focus:outline-hidden focus:border-leaf text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-fg-2 mb-1">
-                        ชื่อฟาร์ม (English - ถ้ามี)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Chanthaburi Durian Orchard"
-                        value={farmNameEn}
-                        onChange={(e) => setFarmNameEn(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-well border border-line rounded-xl text-white placeholder-[#527861] focus:outline-hidden focus:border-leaf text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Province & District Dropdowns */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-fg-2 mb-1">
-                        จังหวัด <span className="text-rose-400">*</span>
-                      </label>
-                      <select
-                        value={province}
-                        onChange={(e) => {
-                          const newProv = e.target.value;
-                          setProvince(newProv);
-                          const districts = getDistrictsByProvince(newProv);
-                          if (districts.length > 0) {
-                            setDistrict(districts[0]);
-                          }
-                        }}
-                        className="w-full px-3.5 py-2.5 bg-well border border-line rounded-xl text-white focus:outline-hidden focus:border-leaf text-xs"
-                      >
-                        {THAILAND_REGIONS.map((region) => (
-                          <optgroup key={region.region} label={region.region}>
-                            {region.provinces.map((p) => (
-                              <option key={p} value={p}>
-                                {p}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-fg-2 mb-1">
-                        อำเภอ/เขต <span className="text-rose-400">*</span>
-                      </label>
-                      <select
-                        value={district}
-                        onChange={(e) => setDistrict(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-well border border-line rounded-xl text-white focus:outline-hidden focus:border-leaf text-xs"
-                      >
-                        {availableDistricts.map((d) => (
-                          <option key={d} value={d}>
-                            {d}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-fg-2 mb-1">
-                      ที่อยู่แปลงปลูกโดยละเอียด
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="เช่น 12/4 หมู่ 3 ต.เขาวัว อ.ท่าใหม่"
-                      value={locationAddress}
-                      onChange={(e) => setLocationAddress(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-well border border-line rounded-xl text-white placeholder-[#527861] focus:outline-hidden focus:border-leaf text-xs"
-                    />
-                  </div>
-
-                  {/* Interactive GPS Location Picker Component */}
-                  <div className="pt-1">
-                    <FarmLocationPicker
-                      province={province}
-                      district={district}
-                      coordinates={coordinates}
-                      googleMapsUrl={googleMapsUrl}
-                      onChange={(coords, mapUrl) => {
-                        setCoordinates(coords);
-                        if (mapUrl !== undefined) {
-                          setGoogleMapsUrl(mapUrl);
-                        }
-                      }}
-                      farmName={farmName || 'สวนทุเรียน'}
-                    />
-                  </div>
-
-                  {/* Farm Size & Estimates */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                    <div>
-                      <label className="block text-xs font-bold text-fg-2 mb-1">
-                        พื้นที่แปลง (ไร่)
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={areaRai}
-                        onChange={(e) => setAreaRai(Number(e.target.value) || 1)}
-                        className="w-full px-3.5 py-2.5 bg-well border border-line rounded-xl text-white focus:outline-hidden focus:border-leaf text-xs font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-fg-2 mb-1">
-                        จำนวนต้นโดยประมาณ
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={totalTreesEstimate}
-                        onChange={(e) => setTotalTreesEstimate(Number(e.target.value) || 10)}
-                        className="w-full px-3.5 py-2.5 bg-well border border-line rounded-xl text-white focus:outline-hidden focus:border-leaf text-xs font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-fg-2 mb-1">
-                        พันธุ์ทุเรียนหลัก
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="หมอนทอง, ก้านยาว, ชะนี"
-                        value={topVarietiesInput}
-                        onChange={(e) => setTopVarietiesInput(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-well border border-line rounded-xl text-white focus:outline-hidden focus:border-leaf text-xs"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <FarmRegistrationStep3
+                  farmName={farmName}
+                  onFarmNameChange={setFarmName}
+                  farmNameEn={farmNameEn}
+                  onFarmNameEnChange={setFarmNameEn}
+                  province={province}
+                  onProvinceChange={setProvince}
+                  district={district}
+                  onDistrictChange={setDistrict}
+                  locationAddress={locationAddress}
+                  onLocationAddressChange={setLocationAddress}
+                  coordinates={coordinates}
+                  onCoordinatesChange={setCoordinates}
+                  googleMapsUrl={googleMapsUrl}
+                  onGoogleMapsUrlChange={setGoogleMapsUrl}
+                  areaRai={areaRai}
+                  onAreaRaiChange={setAreaRai}
+                  totalTreesEstimate={totalTreesEstimate}
+                  onTotalTreesEstimateChange={setTotalTreesEstimate}
+                  topVarietiesInput={topVarietiesInput}
+                  onTopVarietiesInputChange={setTopVarietiesInput}
+                />
               )}
 
               {/* STEP 4: Farm Atmosphere Photos, Smart Farm Technologies, Story & Social Links */}

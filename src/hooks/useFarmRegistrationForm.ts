@@ -8,7 +8,6 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { submitFarmRegistrationRequest } from '../services/farmRequestService';
 import { compressImageFile } from '../utils/imageCompressor';
-import { getDistrictsByProvince } from '../constants/provinces';
 import { AVAILABLE_SMART_TECH, STANDARD_OPTIONS } from '../constants/farmRegistrationOptions';
 
 interface UseFarmRegistrationFormArgs {
@@ -747,7 +746,6 @@ export function useFarmRegistrationForm({
     }
   };
 
-  const availableDistricts = getDistrictsByProvince(province);
 
   return {
     photoInputRef,
@@ -818,6 +816,5 @@ export function useFarmRegistrationForm({
     validateCurrentStep,
     handleNextStep,
     handleSubmit,
-    availableDistricts,
   };
 }
