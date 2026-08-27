@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
-  Sprout,
   Award,
   Share2,
   FileText,
@@ -12,27 +11,17 @@ import {
   AlertCircle,
   Loader2,
   Sparkles,
-  Phone,
   Facebook,
   Instagram,
-  MessageCircle,
   Image as ImageIcon,
   Plus,
   Trash2,
   Cpu,
-  Droplets,
-  Radio,
-  Sun,
   ShieldCheck,
-  File,
   Eye,
   ExternalLink,
   Paperclip,
   Check,
-  MapPin,
-  Navigation,
-  Crosshair,
-  HelpCircle,
   Shield,
   User,
   AlertTriangle,
@@ -43,7 +32,6 @@ import {
   SocialContact,
   SmartTechItem,
   CertificationDetail,
-  DurianFarm,
 } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { submitFarmRegistrationRequest } from '../services/farmRequestService';
@@ -51,7 +39,6 @@ import { openPdfDocument } from '../utils/pdfUtils';
 import { compressImageFile } from '../utils/imageCompressor';
 import {
   THAILAND_REGIONS,
-  THAILAND_PROVINCES_ALL,
   getDistrictsByProvince,
 } from '../constants/provinces';
 import { FarmLocationPicker } from './FarmLocationPicker';
@@ -153,10 +140,6 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
   const isUpdateMode =
     mode === 'update' || Boolean(targetFarmId) || initialData?.requestType === 'update_farm';
 
-  const isManagerRegistration =
-    (currentUser?.role === 'manager' || isUpdateMode) &&
-    initialData?.requestCategory !== 'manager_application';
-
   // Draft storage key
   const draftStorageKey = `durian_farm_registration_draft_${currentUser?.uid || 'guest'}`;
 
@@ -164,7 +147,6 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
 
   // Update Notes (for Manager to communicate specific changes to Admin)
   const [updateNotes, setUpdateNotes] = useState(
@@ -292,9 +274,6 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
     ];
   });
 
-  // Lightbox preview for cert in registration modal
-  const [previewCert, setPreviewCert] = useState<CertificationDetail | null>(null);
-
   // Step 5: Garden Atmosphere Photos, Smart Farm, Story & Contact
   const [atmospherePhotos, setAtmospherePhotos] = useState<string[]>(
     initialData?.atmospherePhotos && initialData.atmospherePhotos.length > 0
@@ -372,7 +351,6 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
     setAboutStory('');
     setUpdateNotes('');
     setStep(1);
-    setHasRestoredDraft(false);
   };
 
   // Sync state if initialData updates or modal opens
@@ -468,7 +446,6 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
             if (draft.instagram !== undefined) setInstagram(draft.instagram);
             if (draft.aboutStory !== undefined) setAboutStory(draft.aboutStory);
             if (draft.step) setStep(draft.step);
-            setHasRestoredDraft(true);
           }
         } catch {
           // ignore error

@@ -10,13 +10,10 @@ import {
   ShieldCheck,
   Search,
   Cpu,
-  Sparkles,
   Camera,
-  Plus,
   Trash2,
   X,
   ExternalLink,
-  Settings2,
   FileText,
   Sliders,
   Check,
@@ -25,7 +22,7 @@ import {
   Send,
   Upload,
 } from 'lucide-react';
-import { DurianFarm, IndividualTree, FruitTreeVariety, UserRole, SmartTechItem, CertificationDetail } from '../types';
+import { DurianFarm, IndividualTree, FruitTreeVariety, UserRole, SmartTechItem } from '../types';
 import { TreeDetailView } from './TreeDetailView';
 import { FarmRegistrationModal } from './FarmRegistrationModal';
 import { saveFarm } from '../services/farmService';
@@ -77,7 +74,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'auto' | 'photo' | 'companion'>('all');
   const [treeSearch, setTreeSearch] = useState('');
   const [sortBy, setSortBy] = useState<'rating' | 'az' | 'yield' | 'diaries' | 'code'>('rating');
-  const [activeTab, setActiveTab] = useState<'trees' | 'smartfarm' | 'certs' | 'about'>('trees');
+  const [activeTab, setActiveTab] = useState<'trees' | 'certs' | 'about'>('trees');
   const [storyExpanded, setStoryExpanded] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [selectedTree, setSelectedTree] = useState<IndividualTree | null>(null);
@@ -209,22 +206,6 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
       setTimeout(() => setUpdateSuccessToast(''), 2500);
     } catch {
       // ผู้ใช้กดยกเลิก share sheet เอง ไม่ต้องแจ้งอะไร
-    }
-  };
-
-  // Save Photos to Firestore
-  const handleSavePhotos = async () => {
-    const updated: DurianFarm = {
-      ...currentFarm,
-      atmospherePhotos: photoList,
-      photos: photoList,
-    };
-    setCurrentFarm(updated);
-    setIsPhotoManagerOpen(false);
-    try {
-      await saveFarm(updated);
-    } catch (err) {
-      console.error('Failed to save photos to Firestore:', err);
     }
   };
 
