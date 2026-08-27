@@ -37,7 +37,7 @@ class Session {
     const setCookie = res.headers.get('set-cookie');
     if (setCookie) this.cookie = setCookie.split(';')[0];
     const text = await res.text();
-    let body: any = null;
+    let body: any;
     try { body = JSON.parse(text); } catch { body = text; }
     return { status: res.status, body };
   }
