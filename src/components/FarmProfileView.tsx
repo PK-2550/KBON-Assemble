@@ -7,8 +7,6 @@ import {
   CheckCircle2,
   Share2,
   Phone,
-  ShieldCheck,
-  Search,
   Cpu,
   Camera,
   Trash2,
@@ -17,7 +15,6 @@ import {
   FileText,
   Sliders,
   Check,
-  Eye,
   FileEdit,
   Send,
   Upload,
@@ -25,6 +22,8 @@ import {
 import { DurianFarm, IndividualTree, FruitTreeVariety, UserRole, SmartTechItem } from '../types';
 import { TreeDetailView } from './TreeDetailView';
 import { FarmTreesTab, type TreeFilter, type TreeSort } from './FarmTreesTab';
+import { FarmCertificationsTab, type CertDocView } from './FarmCertificationsTab';
+import { FarmAboutTab } from './FarmAboutTab';
 import { FarmRegistrationModal } from './FarmRegistrationModal';
 import { saveFarm } from '../services/farmService';
 import { useAuth } from '../context/AuthContext';
@@ -92,16 +91,9 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
   const [isSmartTechModalOpen, setIsSmartTechModalOpen] = useState(false);
   const [isUpdateRequestModalOpen, setIsUpdateRequestModalOpen] = useState(false);
   const [updateSuccessToast, setUpdateSuccessToast] = useState('');
-  const [selectedCertDoc, setSelectedCertDoc] = useState<{
-    name: string;
-    shortCode: string;
-    certNumber: string;
-    issuedBy: string;
-    validUntil: string;
-    photoUrl: string;
-    fileType?: 'image' | 'pdf';
-    fileName?: string;
-  } | null>(null);
+  // อยู่ที่นี่ไม่ได้ย้ายลงไปในแท็บ เพราะหน้าต่างแสดงเอกสารข้างล่างเป็นคนอ่านค่านี้
+  // ซึ่ง render อยู่คนละกิ่งกับแท็บใบรับรอง
+  const [selectedCertDoc, setSelectedCertDoc] = useState<CertDocView | null>(null);
 
   // Photo manager form state
   const [photoList, setPhotoList] = useState<string[]>(
@@ -611,122 +603,11 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
       {/* Tab: Certifications with Inspection Button */}
       {activeTab === 'certs' && (
-        <div className="bg-surface rounded-3xl border border-line p-5 shadow-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-line pb-3">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-leaf" />
-              <h3 className="font-bold text-sm text-white">
-                ใบรับรองมาตรฐานทางการเกษตร (Official Certificates)
-              </h3>
-            </div>
-            <span className="text-[10px] font-bold bg-surface-2 text-leaf border border-[#235b3a] px-2.5 py-1 rounded-full">
-              ✓ ผ่านการตรวจสอบ ({currentFarm.certificationDetails?.length || 1} รายการ)
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {currentFarm.certificationDetails && currentFarm.certificationDetails.length > 0 ? (
-              currentFarm.certificationDetails.map((cert, idx) => {
-                const certPhoto = cert.documentPhoto || currentFarm.certDocumentPhoto || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80';
-                const isPdf = cert.fileType === 'pdf' || certPhoto.includes('application/pdf') || certPhoto.toLowerCase().endsWith('.pdf');
-
-                return (
-                  <div
-                    key={cert.id || idx}
-                    className="p-4 rounded-2xl border border-line bg-[#122b1c] space-y-2.5 flex flex-col justify-between"
-                  >
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-xs text-gold font-mono">{cert.shortCode}</span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${
-                            isPdf
-                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                          }`}>
-                            {isPdf ? 'PDF' : 'PNG/รูป'}
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-bold bg-gold/20 text-gold-soft px-2 py-0.5 rounded-full border border-gold/40">
-                          ตรวจสอบแล้ว
-                        </span>
-                      </div>
-                      <div className="text-xs text-white font-bold">{cert.nameTh || cert.name}</div>
-                      <div className="text-[11px] text-fg-2 font-mono">
-                        เลขที่: <span className="text-gold-soft font-bold">{cert.certNumber}</span>
-                      </div>
-                      <div className="text-[10px] text-fg-2">
-                        ออกโดย: {cert.issuedBy} (ใช้ได้ถึง {cert.validUntil})
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() =>
-                        setSelectedCertDoc({
-                          name: cert.nameTh || cert.name,
-                          shortCode: cert.shortCode,
-                          certNumber: cert.certNumber,
-                          issuedBy: cert.issuedBy,
-                          validUntil: cert.validUntil,
-                          photoUrl: certPhoto,
-                          fileType: isPdf ? 'pdf' : 'image',
-                          fileName: cert.fileName || `${cert.shortCode}_Certificate.${isPdf ? 'pdf' : 'png'}`,
-                        })
-                      }
-                      className="w-full py-2 bg-well hover:bg-surface-2 border border-line hover:border-gold rounded-xl text-xs font-bold text-gold-soft flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
-                    >
-                      {isPdf ? (
-                        <FileText className="w-3.5 h-3.5 text-rose-400" />
-                      ) : (
-                        <Eye className="w-3.5 h-3.5 text-gold" />
-                      )}
-                      <span>{isPdf ? 'เปิดดูเอกสารใบรับรอง (PDF)' : 'ดูภาพถ่ายใบรับรองฉบับจริง'}</span>
-                    </button>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="p-4 rounded-2xl border border-line bg-[#122b1c] space-y-3 col-span-2">
-                <div className="flex items-center gap-2 text-xs text-gold-soft font-semibold">
-                  <CheckCircle2 className="w-4 h-4 text-leaf" />
-                  <span>ได้รับการรับรองมาตรฐาน GAP กรมวิชาการเกษตร (ตรวจสอบแล้ว)</span>
-                </div>
-                <button
-                  onClick={() =>
-                    setSelectedCertDoc({
-                      name: 'GAP มาตรฐานการปฏิบัติทางการเกษตรที่ดี',
-                      shortCode: 'GAP',
-                      certNumber: 'GAP-DOA-TH-2026',
-                      issuedBy: 'กรมวิชาการเกษตร',
-                      validUntil: '2028',
-                      photoUrl: currentFarm.certDocumentPhoto || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80',
-                      fileType: 'image',
-                      fileName: 'GAP_Certificate.png',
-                    })
-                  }
-                  className="py-2 px-4 bg-well hover:bg-surface-2 border border-line hover:border-gold rounded-xl text-xs font-bold text-gold-soft inline-flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5 text-gold" />
-                  <span>ดูภาพถ่ายใบรับรองฉบับจริง</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <FarmCertificationsTab farm={currentFarm} onViewDocument={setSelectedCertDoc} />
       )}
 
       {/* Tab: About Farm Story */}
-      {activeTab === 'about' && (
-        <div className="bg-surface rounded-3xl border border-line p-5 shadow-2xl space-y-3">
-          <h3 className="font-bold text-sm text-white flex items-center gap-2">
-            <span>📖</span>
-            <span>ประวัติความเป็นมาและเรื่องราวของฟาร์ม</span>
-          </h3>
-          <p className="text-xs text-fg-2 leading-relaxed whitespace-pre-line">
-            {currentFarm.aboutStory || currentFarm.highlight || 'ฟาร์มทุเรียนคุณภาพ มุ่งเน้นการผลิตทุเรียนคุณภาพสูงด้วยระบบเกษตรแม่นยำ พร้อมระบบติดตามตรวจสอบย้อนกลับด้วยเทคโนโลยี NFC'}
-          </p>
-        </div>
-      )}
+      {activeTab === 'about' && <FarmAboutTab farm={currentFarm} />}
 
       {/* MODAL 1: Certificate Lightbox Modal (Supports PDF & PNG/JPG Images) */}
       {selectedCertDoc && (
