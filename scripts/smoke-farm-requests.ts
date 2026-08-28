@@ -122,7 +122,7 @@ export async function run(): Promise<{ passed: number; failed: number; failures:
       gapCertNumber: 'GAP-TH-68-000001',
       certIssuedBy: 'กรมวิชาการเกษตร',
       certValidUntil: '2029',
-      farmerIdCardNumber: '1234567890123',
+      farmerIdCardNumber: '1101700234568',
       agreedToCriteria: true,
       hasSmartFarm: true,
       smartTechnologies: [{ id: 'st-1', name: 'ระบบน้ำหยด', subtext: 'IoT', iconEmoji: '💧', active: true }],
@@ -260,7 +260,7 @@ export async function run(): Promise<{ passed: number; failed: number; failures:
   // ถ้าหลุด ผู้โจมตีจะได้เลขบัตรประชาชนและภาพถ่ายบัตรคืนมาจาก RETURNING *
   console.log('\n--- 7. คนอื่นเขียนทับคำขอไม่ได้ ---');
   const idorId = `req_${STAMP}_idor`;
-  const ID_CARD = '1234567890123';
+  const ID_CARD = '1101700234568';
   const ID_PHOTO = 'data:image/png;base64,SMOKEIDCARDPHOTO';
 
   const victimReq = await farmer.call('/farm-requests', {
