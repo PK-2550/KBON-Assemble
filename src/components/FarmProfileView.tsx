@@ -180,89 +180,103 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
   }
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-200">
-      {/* Main Container */}
-      <FarmProfileHeaderCard
-        farm={currentFarm}
-        photos={displayPhotos}
-        registeredTreeCount={allTrees.length}
-        defaultSmartTech={DEFAULT_SMART_TECH_OPTIONS}
-        isOwnerOrAdmin={isOwnerOrAdmin}
-        successToast={updateSuccessToast}
-        storyExpanded={storyExpanded}
-        onToggleStory={() => setStoryExpanded(!storyExpanded)}
-        onBack={onBack}
-        onOpenGallery={() => setGalleryOpen(true)}
-        onShare={handleShare}
-        onOpenPhotoManager={() => setIsPhotoManagerOpen(true)}
-        onOpenUpdateRequest={() => setIsUpdateRequestModalOpen(true)}
-        onOpenSmartTechConfig={(hasSmartFarm, techList) => {
-          setTempHasSmartFarm(hasSmartFarm);
-          setTempSmartTechList(techList);
-          setIsSmartTechModalOpen(true);
-        }}
-      />
+    <div className="animate-in fade-in duration-200">
+      {/* แผ่นเนื้อหาของหน้าฟาร์ม
+          margin ติดลบเป็นการดึงตัวเองออกนอก padding ของ <main> รูปปกจะได้กว้าง
+          เต็มกรอบและชนขอบบนพอดีตามต้นแบบ ส่วน -mb-24 pb-24 คือคืนที่ว่างด้านล่าง
+          ให้เท่าเดิม
 
-      {/* Navigation Tabs */}
-      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full pt-1">
-        <button
-          onClick={() => setActiveTab('trees')}
-          className={`py-2.5 px-1 sm:px-3 rounded-2xl transition-all font-bold text-center flex items-center justify-center gap-1 cursor-pointer text-xs sm:text-sm ${
-            activeTab === 'trees'
-              ? 'bg-gold text-gold-ink shadow-md font-extrabold'
-              : 'bg-surface text-fg-2 hover:text-white hover:bg-surface-2 border border-line'
-          }`}
-        >
-          <span>🌳</span>
-          <span className="truncate">รายชื่อต้นไม้ ({allTrees.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('certs')}
-          className={`py-2.5 px-1 sm:px-3 rounded-2xl transition-all font-bold text-center flex items-center justify-center gap-1 cursor-pointer text-xs sm:text-sm ${
-            activeTab === 'certs'
-              ? 'bg-gold text-gold-ink shadow-md font-extrabold'
-              : 'bg-surface text-fg-2 hover:text-white hover:bg-surface-2 border border-line'
-          }`}
-        >
-          <span>📜</span>
-          <span className="truncate">ใบรับรอง ({currentFarm.certificationDetails?.length || currentFarm.certifications?.length || 1})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('about')}
-          className={`py-2.5 px-1 sm:px-3 rounded-2xl transition-all font-bold text-center flex items-center justify-center gap-1 cursor-pointer text-xs sm:text-sm ${
-            activeTab === 'about'
-              ? 'bg-gold text-gold-ink shadow-md font-extrabold'
-              : 'bg-surface text-fg-2 hover:text-white hover:bg-surface-2 border border-line'
-          }`}
-        >
-          <span>📖</span>
-          <span className="truncate">ประวัติฟาร์ม</span>
-        </button>
-      </div>
-
-      {/* Tab: Individual Trees List */}
-      {activeTab === 'trees' && (
-        <FarmTreesTab
-          trees={allTrees}
-          onSelectTree={setSelectedTree}
-          filter={treeFilter}
-          onFilterChange={setTreeFilter}
-          search={treeSearch}
-          onSearchChange={setTreeSearch}
-          sort={treeSort}
-          onSortChange={setTreeSort}
+          โมดัลทุกตัวอยู่นอกแผ่นนี้ ระยะขอบติดลบจึงไม่ไปดันตำแหน่งของโมดัล */}
+      <div className="bg-canvas text-fg -mx-3.5 -mt-3 -mb-24 pb-24 min-h-[60vh]">
+        {/* Main Container */}
+        <FarmProfileHeaderCard
+          farm={currentFarm}
+          photos={displayPhotos}
+          registeredTreeCount={allTrees.length}
+          defaultSmartTech={DEFAULT_SMART_TECH_OPTIONS}
+          isOwnerOrAdmin={isOwnerOrAdmin}
+          successToast={updateSuccessToast}
+          storyExpanded={storyExpanded}
+          onToggleStory={() => setStoryExpanded(!storyExpanded)}
+          onBack={onBack}
+          onOpenGallery={() => setGalleryOpen(true)}
+          onShare={handleShare}
+          onOpenPhotoManager={() => setIsPhotoManagerOpen(true)}
+          onOpenUpdateRequest={() => setIsUpdateRequestModalOpen(true)}
+          onOpenSmartTechConfig={(hasSmartFarm, techList) => {
+            setTempHasSmartFarm(hasSmartFarm);
+            setTempSmartTechList(techList);
+            setIsSmartTechModalOpen(true);
+          }}
         />
-      )}
 
-      {/* Tab: Certifications with Inspection Button */}
-      {activeTab === 'certs' && (
-        <FarmCertificationsTab farm={currentFarm} onViewDocument={setSelectedCertDoc} />
-      )}
+        {/* แถบเมนูและเนื้อหาของแท็บ อยู่ในระยะขอบชุดเดียวกับส่วนหัวด้านบน */}
+        <div className="px-4 sm:px-6 lg:px-8 pt-5 space-y-4">
+          {/* Navigation Tabs -- เรียงแนวนอนชิดซ้ายใต้ส่วนข้อมูลหลักตามต้นแบบ
+              แท็บที่เลือกอยู่ใช้เส้นใต้บาง ๆ แทนปุ่มพื้นทองเต็มช่องแบบเดิม
+              ของเดิมเป็นกริดสามช่องเท่ากันซึ่งบีบชื่อแท็บจนต้องตัดคำทิ้ง
+              จอแคบให้เลื่อนแถบไปทางข้างแทนการบีบตัวหนังสือ */}
+          <div className="flex items-center gap-5 sm:gap-7 border-b border-line overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => setActiveTab('trees')}
+              className={`-mb-px shrink-0 flex items-center gap-1.5 border-b-2 pb-3 text-xs sm:text-sm font-bold transition-colors cursor-pointer ${
+                activeTab === 'trees'
+                  ? 'border-gold text-fg'
+                  : 'border-transparent text-fg-2 hover:text-fg'
+              }`}
+            >
+              <span>🌳</span>
+              <span>รายชื่อต้นไม้ ({allTrees.length})</span>
+            </button>
 
-      {/* Tab: About Farm Story */}
-      {activeTab === 'about' && <FarmAboutTab farm={currentFarm} />}
+            <button
+              onClick={() => setActiveTab('certs')}
+              className={`-mb-px shrink-0 flex items-center gap-1.5 border-b-2 pb-3 text-xs sm:text-sm font-bold transition-colors cursor-pointer ${
+                activeTab === 'certs'
+                  ? 'border-gold text-fg'
+                  : 'border-transparent text-fg-2 hover:text-fg'
+              }`}
+            >
+              <span>📜</span>
+              <span>ใบรับรอง ({currentFarm.certificationDetails?.length || currentFarm.certifications?.length || 1})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('about')}
+              className={`-mb-px shrink-0 flex items-center gap-1.5 border-b-2 pb-3 text-xs sm:text-sm font-bold transition-colors cursor-pointer ${
+                activeTab === 'about'
+                  ? 'border-gold text-fg'
+                  : 'border-transparent text-fg-2 hover:text-fg'
+              }`}
+            >
+              <span>📖</span>
+              <span>ประวัติฟาร์ม</span>
+            </button>
+          </div>
+
+          {/* Tab: Individual Trees List */}
+          {activeTab === 'trees' && (
+            <FarmTreesTab
+              trees={allTrees}
+              onSelectTree={setSelectedTree}
+              filter={treeFilter}
+              onFilterChange={setTreeFilter}
+              search={treeSearch}
+              onSearchChange={setTreeSearch}
+              sort={treeSort}
+              onSortChange={setTreeSort}
+            />
+          )}
+
+          {/* Tab: Certifications with Inspection Button */}
+          {activeTab === 'certs' && (
+            <FarmCertificationsTab farm={currentFarm} onViewDocument={setSelectedCertDoc} />
+          )}
+
+          {/* Tab: About Farm Story */}
+          {activeTab === 'about' && <FarmAboutTab farm={currentFarm} />}
+        </div>
+      </div>
 
       {/* MODAL 1: Certificate Lightbox Modal (Supports PDF & PNG/JPG Images) */}
       {selectedCertDoc && (
