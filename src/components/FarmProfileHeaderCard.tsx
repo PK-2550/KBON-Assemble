@@ -15,11 +15,26 @@ import { DurianFarm, SmartTechItem } from '../types';
 
 /**
  * ตัวเลขหนึ่งตัวในแถบสถิติ -- ค่าอยู่บน ป้ายกำกับอยู่ล่าง
- * ตั้งขนาดใหญ่โดยตั้งใจ ตัวเลขคือสิ่งที่คนมาดูหน้าฟาร์มอยากรู้ก่อน
+ *
+ * เรียงต่อกันเป็นแนวนอนในระนาบเดียวกันทั้งแถวตามต้นแบบ จึงไม่มีกรอบเป็นของตัวเอง
+ * strong ใช้กับสองค่าแรก (อันดับ กับ คะแนน) ที่ต้นแบบชูให้ใหญ่กว่าค่าอื่น
  */
-const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+const Stat: React.FC<{
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+  strong?: boolean;
+  accent?: boolean;
+}> = ({ label, value, icon, strong = false, accent = false }) => (
   <div className="min-w-0">
-    <div className="text-xl sm:text-2xl font-black text-fg tabular-nums leading-none">{value}</div>
+    <div
+      className={`flex items-center gap-1.5 font-black tabular-nums leading-none ${
+        strong ? 'text-2xl sm:text-3xl' : 'text-lg sm:text-xl'
+      } ${accent ? 'text-gold' : 'text-fg'}`}
+    >
+      {icon}
+      <span>{value}</span>
+    </div>
     <div className="text-[11px] sm:text-xs text-fg-2 mt-1.5 truncate">{label}</div>
   </div>
 );
@@ -68,8 +83,10 @@ interface FarmProfileHeaderCardProps {
 }
 
 /**
- * การ์ดหัวหน้าฟาร์ม แบนเนอร์ ชื่อ สถิติ ปุ่มติดต่อ เรื่องราว
- * ลิงก์โซเชียล แถบผู้จัดการสวน และการ์ดสถานะ SmartFarm
+ * ส่วนหัวของหน้าฟาร์ม เรียงตามผังต้นแบบ
+ *
+ * ปกเต็มความกว้าง -> รูปหลักทางซ้ายเหลื่อมขอบล่างของปก คู่กับชื่อฟาร์มและปุ่มติดต่อ
+ * -> แถบตัวเลขแนวนอน -> เรื่องราว -> ช่องทางติดต่อ -> แถบผู้จัดการสวนและ SmartFarm
  */
 export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
   farm: currentFarm,
@@ -99,20 +116,21 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
   const showSmartFarmCard = currentFarm.hasSmartFarm !== false && activeSmartTech.length > 0;
 
   return (
-  <div className="bg-surface text-fg rounded-3xl overflow-hidden shadow-xl border border-line">
-    {/* แบนเนอร์พื้นหลัง -- รูปบรรยากาศสวนใบแรก ใช้เป็นพื้นหลังเฉย ๆ
-        หรี่แสงลงมากเพื่อให้เป็นฉากหลัง ไม่แย่งความสนใจจากเนื้อหา
-        ต้นแบบก็ใช้แบนเนอร์กว้างเต็มด้านบนแบบนี้ */}
-    <div className="relative h-28 sm:h-40 bg-canvas overflow-hidden">
+  <div className="bg-surface text-fg border-b border-line">
+    {/* 1) แบนเนอร์ปก -- อยู่บนสุดของหน้าและกว้างเต็มกรอบ ไม่มีมุมโค้งและไม่มีขอบ
+        เดิมเป็นรูปหรี่แสงทั้งใบอยู่ในการ์ดมุมโค้ง จึงอ่านเป็นพื้นหลังของการ์ด ไม่ใช่ปกของหน้า
+        ตอนนี้ปล่อยรูปเต็มความสว่าง แล้วใช้ฟิล์มไล่ระดับแทน ด้านบนเข้มพอให้ปุ่มที่ลอยอยู่อ่านออก
+        ด้านล่างจมลงไปเป็นสีการ์ด รอยต่อกับเนื้อหาข้างล่างจะได้ไม่เป็นเส้นตัด */}
+    <div className="relative h-32 sm:h-44 lg:h-52 bg-canvas overflow-hidden">
       <img
         src={photos[0]}
         alt=""
         aria-hidden="true"
-        className="w-full h-full object-cover opacity-35"
+        className="w-full h-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-surface/80 pointer-events-none" />
 
-      <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
+      <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-6 sm:right-6 flex items-center justify-between z-10">
         <button
           onClick={onBack}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-canvas/70 hover:bg-canvas backdrop-blur-md rounded-full text-xs font-bold text-fg border border-line transition-colors cursor-pointer"
@@ -133,99 +151,80 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
       </div>
     </div>
 
-    {/* Farm Identity Header & Rating Card */}
-    <div className="p-4 sm:p-6 space-y-5">
-      {/* การ์ดรูปแนวตั้ง + ตัวตนของฟาร์ม วางคู่กันแบบต้นแบบ
-          รูปเป็นการ์ดใบเดียวมีป้ายนับ กดแล้วเปิดดูรูปที่เหลือด้วยการเลื่อนลง
-          ของเดิมเป็นแกลเลอรีเต็มความกว้างพร้อมแถบรูปย่อ ซึ่งกินพื้นที่บนสุด
-          ของหน้าไปมากทั้งที่รูปบรรยากาศไม่ใช่ข้อมูลที่คนมาหา */}
-      <div className="flex items-start gap-3.5 sm:gap-5 -mt-12 sm:-mt-16 relative z-10">
+    <div className="px-4 sm:px-6 lg:px-8 pb-6 space-y-5">
+      {/* 2) + 3) รูปหลักอยู่ซ้ายมือและถูกดึงขึ้นไปเหลื่อมขอบล่างของปกเล็กน้อย
+          ชื่อฟาร์มกับปุ่มติดต่อวางข้าง ๆ รูปในแถวเดียวกันตามต้นแบบ
+          จอแคบให้แถบปุ่มตกลงมาเป็นบรรทัดของตัวเอง (w-full) จะได้ไม่เบียดกับชื่อฟาร์ม */}
+      <div className="flex flex-wrap items-end gap-4 sm:gap-6 -mt-10 sm:-mt-14 relative z-10">
         <button
           onClick={() => onOpenGallery()}
-          className="relative shrink-0 w-[38%] max-w-[170px] aspect-3/4 rounded-2xl overflow-hidden border border-line bg-canvas cursor-pointer group"
+          className="relative shrink-0 w-24 sm:w-36 lg:w-40 aspect-3/4 rounded-2xl overflow-hidden border-4 border-surface bg-canvas shadow-lg cursor-pointer group"
         >
           <img
             src={photos[0]}
             alt={`บรรยากาศ${currentFarm.name}`}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
-          <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-canvas/85 text-fg text-[11px] font-bold tabular-nums">
+          <span className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-canvas/85 text-fg text-[11px] font-bold tabular-nums">
             1/{photos.length}
           </span>
         </button>
 
-        <div className="min-w-0 flex-1 pt-12 sm:pt-16">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-surface-2 border border-line-strong flex items-center justify-center text-gold font-black text-xl sm:text-2xl font-serif mb-2.5">
+        <div className="min-w-0 flex-1 basis-40 flex items-center gap-3 pb-1">
+          <div className="hidden sm:flex w-14 h-14 shrink-0 rounded-2xl bg-surface-2 border border-line-strong items-center justify-center text-gold font-black text-2xl font-serif">
             {farmInitials}
           </div>
 
-          <h1 className="text-xl sm:text-3xl font-black text-fg tracking-tight leading-tight">
-            {currentFarm.name}
-          </h1>
-          <div className="flex items-center gap-1 text-xs sm:text-sm text-fg-2 mt-1.5">
-            <MapPin className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">
-              {currentFarm.district ? `${currentFarm.district} · ` : ''}
-              {currentFarm.province}
-            </span>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-fg tracking-tight leading-tight">
+              {currentFarm.name}
+            </h1>
+            <div className="flex items-center gap-1 text-xs sm:text-sm text-fg-2 mt-1">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">
+                {currentFarm.district ? `${currentFarm.district} · ` : ''}
+                {currentFarm.province}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ตัวเลขชูโรง -- อันดับกับคะแนน วางคู่กันและตั้งขนาดใหญ่
-          เหมือนที่ต้นแบบชู #1 กับ 8.9 ให้เห็นก่อนอย่างอื่น
-          ของเดิมสองค่านี้ถูกยัดรวมไปกับสถิติอื่นในขนาด 16px จนจมหาย */}
-      <div className="flex items-stretch rounded-2xl border border-line overflow-hidden">
-        <div className="flex-1 py-3.5 text-center">
-          <div className="text-3xl sm:text-4xl font-black text-fg tabular-nums leading-none">
-            #{currentFarm.rank}
-          </div>
-          <div className="text-[11px] sm:text-xs text-fg-2 mt-1.5">อันดับทำเนียบ</div>
-        </div>
+        {/* ปุ่มหลัก -- ตำแหน่งเดียวกับ Buy Now / Message ของต้นแบบ คือขวาสุดของแถวชื่อ
+            โทรหาฟาร์มเป็นสิ่งที่ผู้ซื้อทำจริงมากที่สุด จึงให้เป็นปุ่มเด่นสุดของหน้า */}
+        <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 sm:pb-1">
+          {currentFarm.contact?.phoneNumber ? (
+            <a
+              href={`tel:${currentFarm.contact.phoneNumber.replace(/[^0-9+]/g, '')}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-gold hover:bg-gold-hi text-gold-ink text-sm font-bold rounded-full transition-colors"
+            >
+              <Phone className="w-4 h-4" />
+              <span>ติดต่อฟาร์ม</span>
+            </a>
+          ) : null}
 
-        <div className="w-px bg-line" />
-
-        <div className="flex-1 py-3.5 text-center">
-          <div className="flex items-center justify-center gap-1.5">
-            <Star className="w-6 h-6 sm:w-7 sm:h-7 text-gold fill-gold" />
-            <span className="text-3xl sm:text-4xl font-black text-gold tabular-nums leading-none">
-              {currentFarm.rating.toFixed(1)}
-            </span>
-          </div>
-          <div className="text-[11px] sm:text-xs text-fg-2 mt-1.5 tabular-nums">
-            {currentFarm.reviewCount.toLocaleString()} รีวิว
-          </div>
-        </div>
-      </div>
-
-      {/* ปุ่มหลัก -- ตำแหน่งเดียวกับ Buy Now / Message ของต้นแบบ
-          โทรหาฟาร์มเป็นสิ่งที่ผู้ซื้อทำจริงมากที่สุด จึงให้เป็นปุ่มเด่นสุดของหน้า */}
-      <div className="flex items-center gap-2.5">
-        {currentFarm.contact?.phoneNumber ? (
-          <a
-            href={`tel:${currentFarm.contact.phoneNumber.replace(/[^0-9+]/g, '')}`}
-            onClick={(e) => e.stopPropagation()}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-gold hover:bg-gold-hi text-gold-ink text-base font-bold rounded-2xl transition-colors"
+          <button
+            onClick={onShare}
+            className="shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg text-sm font-bold rounded-full transition-colors cursor-pointer"
           >
-            <Phone className="w-5 h-5" />
-            <span>ติดต่อฟาร์ม</span>
-          </a>
-        ) : null}
-
-        <button
-          onClick={onShare}
-          className="shrink-0 flex items-center justify-center gap-2 px-5 py-3.5 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg text-base font-bold rounded-2xl transition-colors cursor-pointer"
-        >
-          <Share2 className="w-5 h-5" />
-          <span className="hidden sm:inline">แชร์</span>
-        </button>
+            <Share2 className="w-4 h-4" />
+            <span>แชร์</span>
+          </button>
+        </div>
       </div>
 
-      {/* สถิติรอง -- วางไว้ใต้ปุ่มตามลำดับของต้นแบบ
-          แสดงเฉพาะค่าที่มีข้อมูลจริง ของเดิมเติมค่าปลอมเมื่อไม่มีข้อมูล
-          (พื้นที่ 48 ไร่ เก็บ 3 รอบต่อปี น้ำหนักคำนวณจากผลคูณ 3.5)
-          ซึ่งแสดงเลขที่แต่งขึ้นราวกับเป็นข้อเท็จจริงของฟาร์มนั้น */}
-      <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+      {/* 4) ชุดตัวเลขสถิติ -- เรียงต่อกันเป็นแนวนอนระนาบเดียวกันแบบเรียบ ๆ ไม่มีกรอบ
+          อันดับกับคะแนนตั้งขนาดใหญ่กว่าตัวอื่นตามต้นแบบที่ชู #1 กับ 8.9 ให้เห็นก่อน
+          แสดงเฉพาะค่าที่มีข้อมูลจริง ไม่เติมค่าที่แต่งขึ้นเมื่อไม่มีข้อมูล */}
+      <div className="flex flex-wrap items-start gap-x-6 sm:gap-x-10 gap-y-4">
+        <Stat label="อันดับทำเนียบ" value={`#${currentFarm.rank}`} strong />
+        <Stat
+          label={`${currentFarm.reviewCount.toLocaleString()} รีวิว`}
+          value={currentFarm.rating.toFixed(1)}
+          icon={<Star className="w-5 h-5 sm:w-6 sm:h-6 text-gold fill-gold" />}
+          strong
+          accent
+        />
         <Stat label="ต้นทุเรียน" value={currentFarm.totalTrees.toLocaleString()} />
         <Stat label="ผลผลิตสะสม" value={currentFarm.harvestedFruits.toLocaleString()} />
         <Stat
@@ -239,8 +238,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
         <Stat label="ต้นที่ขึ้นทะเบียน" value={String(registeredTreeCount)} />
       </div>
 
-      {/* เรื่องราวของฟาร์ม -- ย้ายขึ้นมาไว้ใต้สถิติตามผังต้นแบบ
-          ของเดิมซ่อนอยู่ในแท็บ "ประวัติฟาร์ม" ซึ่งคนส่วนใหญ่ไม่ได้กดเข้าไปดู */}
+      {/* เรื่องราวของฟาร์ม -- อยู่ใต้แถบตัวเลขตามผังต้นแบบ */}
       {(currentFarm.highlight || currentFarm.aboutStory) && (
         <div className="space-y-1.5">
           {currentFarm.highlight && (
@@ -257,7 +255,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
               </p>
               <button
                 onClick={() => onToggleStory()}
-                className="text-xs font-bold text-gold-soft hover:text-gold cursor-pointer"
+                className="text-xs font-bold text-gold-soft hover:text-gold cursor-pointer underline underline-offset-2"
               >
                 {storyExpanded ? 'ย่อลง' : 'อ่านเพิ่มเติม'}
               </button>
@@ -266,18 +264,18 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
         </div>
       )}
 
-      {/* ช่องทางติดต่อ -- ย้ายลงมาไว้ใต้เรื่องราวตามผังต้นแบบ
-          ของเดิมอยู่เหนือสถิติ ซึ่งดันเนื้อหาหลักของฟาร์มให้ลงไปอยู่ล่าง */}
-      <div className="grid grid-cols-3 gap-2 text-xs font-bold">
+      {/* ช่องทางติดต่อ -- ต้นแบบวางลิงก์เว็บไซต์เป็นบรรทัดเล็ก ๆ ใต้คำอธิบาย
+          จึงเปลี่ยนจากกริดสามช่องเต็มความกว้าง มาเป็นชิปเรียงชิดซ้ายตามความกว้างของข้อความ */}
+      <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
         <a
           href={currentFarm.contact?.facebook || 'https://facebook.com'}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg rounded-xl transition-colors"
+          className="inline-flex items-center gap-1.5 py-2 px-3.5 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg rounded-full transition-colors"
         >
           <span className="font-extrabold">f</span>
-          <span className="truncate">Facebook</span>
+          <span>Facebook</span>
         </a>
 
         <a
@@ -285,10 +283,10 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg rounded-xl transition-colors"
+          className="inline-flex items-center gap-1.5 py-2 px-3.5 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg rounded-full transition-colors"
         >
           <span>📷</span>
-          <span className="truncate">Instagram</span>
+          <span>Instagram</span>
         </a>
 
         <a
@@ -296,10 +294,10 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg rounded-xl transition-colors"
+          className="inline-flex items-center gap-1.5 py-2 px-3.5 bg-surface-2 border border-line hover:border-line-strong text-fg-2 hover:text-fg rounded-full transition-colors"
         >
           <span>💬</span>
-          <span className="truncate">LINE OA</span>
+          <span>LINE OA</span>
         </a>
       </div>
 
