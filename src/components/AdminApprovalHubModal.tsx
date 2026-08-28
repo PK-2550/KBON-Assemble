@@ -42,6 +42,7 @@ import {
   getReadRequestIds,
   markRequestsAsRead,
   subscribeReadRequestIds,
+  revealFarmRequestIdCard,
 } from '../services/farmRequestService';
 import { DocumentViewerModal, DocumentViewerData } from './DocumentViewerModal';
 
@@ -73,6 +74,62 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
   const [rejectReason, setRejectReason] = useState('');
   const [successToast, setSuccessToast] = useState('');
   const [previewDoc, setPreviewDoc] = useState<DocumentViewerData | null>(null);
+
+  // เลขบัตรฉบับเต็มของคำขอที่แอดมินกดขอดู
+  //
+  // เก็บไว้ใน state ของคอมโพเนนต์นี้เท่านั้น ไม่เอาไปรวมกับรายการคำขอที่ cache ไว้
+  // และไม่เขียนลง localStorage เพราะทุกครั้งที่ดึงมาถูกบันทึกไว้ในฐานข้อมูล
+  // ถ้าเก็บค้างไว้ ค่าจะอยู่ในเครื่องต่อไปโดยไม่มีบันทึกว่าถูกดูอีกกี่ครั้ง
+  const [revealedIdCard, setRevealedIdCard] = useState<{ requestId: string; number: string | null } | null>(null);
+  const [revealBusy, setRevealBusy] = useState(false);
+  const [revealError, setRevealError] = useState<{ requestId: string; message: string } | null>(null);
+
+  /**
+   * ปิดโมดัลพร้อมล้างเลขที่เปิดเผยไว้ทิ้ง
+   *
+   * คอมโพเนนต์นี้ถูก mount ค้างไว้ตลอดใน App การกดปิดเป็นแค่การสลับ isOpen
+   * ถ้าไม่ล้าง เลขเต็มจะโผล่กลับมาทันทีตอนเปิดใหม่โดยไม่ต้องกดขออีก
+   * แปลว่ามีคนเห็นเลขเพิ่มโดยไม่มีบันทึกการเข้าถึงเพิ่มตามไปด้วย
+   *
+   * ล้างในตัวจัดการเหตุการณ์ ไม่ใช่ใน effect ที่คอยดู isOpen
+   * เพราะทางเดียวที่โมดัลนี้ถูกปิดคือผ่าน onClose อยู่แล้ว
+   */
+  const handleClose = () => {
+    setRevealedIdCard(null);
+    setRevealError(null);
+    setRevealBusy(false);
+    onClose();
+  };
+
+  /**
+   * ขอเลขบัตรและสำเนาบัตรฉบับเต็มจากเซิร์ฟเวอร์
+   *
+   * เรียกตอนกดเท่านั้น ทุกครั้งที่เรียกถูกบันทึกไว้ในตาราง id_card_access_log
+   * ว่าใครดูของใครเมื่อไหร่ ถ้าโดนจำกัดอัตราจะได้ 429 ซึ่งแสดงข้อความจากเซิร์ฟเวอร์ตรง ๆ
+   */
+  const handleRevealIdCard = async (requestId: string, openPhoto: boolean, title: string) => {
+    setRevealBusy(true);
+    setRevealError(null);
+    try {
+      const data = await revealFarmRequestIdCard(requestId);
+      setRevealedIdCard({ requestId, number: data.farmerIdCardNumber });
+
+      if (openPhoto && data.farmerIdCardPhoto) {
+        setPreviewDoc({
+          title,
+          fileUrl: data.farmerIdCardPhoto,
+          fileType: data.farmerIdCardFileType || 'image',
+        });
+      }
+    } catch (err) {
+      setRevealError({
+        requestId,
+        message: err instanceof Error ? err.message : 'เปิดดูข้อมูลบัตรไม่สำเร็จ',
+      });
+    } finally {
+      setRevealBusy(false);
+    }
+  };
 
   // Subscribe to read IDs in real time
   useEffect(() => {
@@ -295,7 +352,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in"
-      onClick={() => onClose()}
+      onClick={() => handleClose()}
     >
       <div
         className="bg-canvas text-white rounded-3xl max-w-5xl w-full h-[90vh] flex flex-col shadow-2xl border border-line relative overflow-hidden"
@@ -338,7 +395,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
             </button>
 
             <button
-              onClick={() => onClose()}
+              onClick={() => handleClose()}
               className="p-2 text-fg-2 hover:text-white hover:bg-surface-2 rounded-full transition-colors border border-line cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -555,9 +612,24 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                     </div>
                     <div>
                       <span className="text-fg-2">เลขประจำตัวประชาชน (13 หลัก):</span>
-                      <p className="font-mono font-bold text-gold-soft mt-0.5">
-                        {selectedRequest.farmerIdCardMasked || '-'}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="font-mono font-bold text-gold-soft">
+                          {revealedIdCard?.requestId === selectedRequest.id && revealedIdCard.number
+                            ? revealedIdCard.number
+                            : selectedRequest.farmerIdCardMasked || '-'}
+                        </p>
+                        {selectedRequest.farmerIdCardMasked &&
+                          revealedIdCard?.requestId !== selectedRequest.id && (
+                            <button
+                              type="button"
+                              disabled={revealBusy}
+                              onClick={() => handleRevealIdCard(selectedRequest.id, false, '')}
+                              className="px-2 py-0.5 bg-surface-2 hover:bg-[#1f4c33] text-leaf border border-[#235b3a] rounded-md text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-50"
+                            >
+                              {revealBusy ? 'กำลังขอ...' : 'ขอดูเลขเต็ม'}
+                            </button>
+                          )}
+                      </div>
                     </div>
                     <div>
                       <span className="text-fg-2">เบอร์โทรศัพท์ติดต่อ:</span>
@@ -570,7 +642,13 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                   </div>
 
                   {/* ID Card Document View Button */}
-                  {selectedRequest.farmerIdCardPhoto && (
+                  {revealError?.requestId === selectedRequest.id && (
+                    <div className="p-2 bg-rose-950/60 border border-rose-800 rounded-lg text-[11px] font-bold text-rose-200">
+                      {revealError.message}
+                    </div>
+                  )}
+
+                  {selectedRequest.hasIdCardPhoto && (
                     <div className="flex items-center justify-between p-2.5 bg-panel rounded-xl border border-line">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-gold" />
@@ -578,17 +656,18 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                       </div>
                       <button
                         type="button"
+                        disabled={revealBusy}
                         onClick={() =>
-                          setPreviewDoc({
-                            title: `สำเนาบัตรประชาชน - ${selectedRequest.farmerFullName || selectedRequest.userDisplayName}`,
-                            fileUrl: selectedRequest.farmerIdCardPhoto!,
-                            fileType: selectedRequest.farmerIdCardFileType || 'image',
-                          })
+                          handleRevealIdCard(
+                            selectedRequest.id,
+                            true,
+                            `สำเนาบัตรประชาชน - ${selectedRequest.farmerFullName || selectedRequest.userDisplayName}`
+                          )
                         }
                         className="px-3 py-1.5 bg-surface-2 hover:bg-[#1f4c33] text-leaf border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        <span>เปิดดูเอกสารบัตร</span>
+                        <span>{revealBusy ? 'กำลังเปิด...' : 'เปิดดูเอกสารบัตร'}</span>
                       </button>
                     </div>
                   )}

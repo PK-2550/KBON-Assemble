@@ -503,6 +503,22 @@ function generateInitialTreesForFarm(farmCode: string, varieties: string[], coun
  * - For Manager Role Application: Upgrades user role to 'manager' so they can register their farm later. Does NOT create an auto-published farm.
  * - For Farm Verification / Registration: Validates and saves the verified farm into /farms with verified credentials.
  */
+/**
+ * ขอดูเลขบัตรและสำเนาบัตรฉบับเต็ม -- แอดมินเท่านั้น
+ *
+ * เรียกทีละใบตอนที่แอดมินกดดูจริง ๆ ไม่ดึงมาล่วงหน้าและไม่เก็บลง cache
+ * เพราะทุกครั้งที่เรียกจะถูกบันทึกไว้ในตาราง id_card_access_log
+ * การดึงมาเผื่อไว้จะทำให้บันทึกเต็มไปด้วยการเข้าถึงที่ไม่มีใครตั้งใจดูจริง
+ * จนแยกไม่ออกว่าครั้งไหนคือการเปิดดูของจริง
+ */
+export async function revealFarmRequestIdCard(requestId: string): Promise<{
+  farmerIdCardNumber: string | null;
+  farmerIdCardPhoto: string | null;
+  farmerIdCardFileType: 'image' | 'pdf';
+}> {
+  return api.get(`/farm-requests/${encodeURIComponent(requestId)}/id-card`);
+}
+
 export async function approveFarmRequest(
   request: FarmRegistrationRequest,
   adminName: string
