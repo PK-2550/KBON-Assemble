@@ -56,12 +56,26 @@ export function useFarmRegistrationForm({
   );
 
   // Helper to get initial state from draft if available
+  //
+  // เลขบัตรประชาชนถูกคัดออกจากแบบร่างเสมอ ทั้งตอนอ่านและตอนเขียน
+  // ของเดิมเก็บเลข 13 หลักดิบลง localStorage ทุกครั้งที่ผู้ใช้พิมพ์ ไม่เข้ารหัส
+  // ไม่มีวันหมดอายุ และเก็บแม้ผู้ใช้จะไม่ได้กดส่งคำขอ ใครที่เข้าถึง storage ได้
+  // (XSS สักจุดในแอป เครื่องสาธารณะ ส่วนขยายเบราว์เซอร์) ก็อ่านได้ทันที
+  // โดยไม่ต้องผ่านเซิร์ฟเวอร์เลย
+  //
+  // ตรงนี้ลบค่าที่ค้างอยู่ในเครื่องผู้ใช้เดิมทิ้งด้วย ไม่ใช่แค่หยุดเขียนของใหม่
+  // ถ้าไม่ลบ คนที่เคยกรอกไว้ก่อนแพตช์นี้จะยังมีเลขค้างในเบราว์เซอร์ตลอดไป
   const getInitialDraft = () => {
     if (typeof window === 'undefined') return null;
     try {
       const saved = localStorage.getItem(draftStorageKey);
       if (saved) {
-        return JSON.parse(saved);
+        const draft = JSON.parse(saved);
+        if (draft && typeof draft === 'object' && 'farmerIdCardNumber' in draft) {
+          delete draft.farmerIdCardNumber;
+          localStorage.setItem(draftStorageKey, JSON.stringify(draft));
+        }
+        return draft;
       }
     } catch {
       // ignore
@@ -83,8 +97,10 @@ export function useFarmRegistrationForm({
       currentUser?.displayName ||
       ''
   );
+  // ไม่มี initialDraft ตรงนี้โดยตั้งใจ -- เลขบัตรไม่ถูกเก็บลงแบบร่างแล้ว
+  // ผู้ใช้ที่กลับมากรอกต่อต้องพิมพ์เลขใหม่ ฟิลด์อื่นยังกู้คืนให้เหมือนเดิมทุกช่อง
   const [farmerIdCardNumber, setFarmerIdCardNumber] = useState<string>(
-    initialData?.farmerIdCardNumber || initialDraft?.farmerIdCardNumber || ''
+    initialData?.farmerIdCardNumber || ''
   );
   const [farmerIdCardPhoto, setFarmerIdCardPhoto] = useState<string>(
     initialData?.farmerIdCardPhoto || initialDraft?.farmerIdCardPhoto || ''
@@ -324,7 +340,7 @@ export function useFarmRegistrationForm({
             const draft = JSON.parse(saved);
             if (draft.agreedToCriteria !== undefined) setAgreedToCriteria(draft.agreedToCriteria);
             if (draft.farmerFullName) setFarmerFullName(draft.farmerFullName);
-            if (draft.farmerIdCardNumber) setFarmerIdCardNumber(draft.farmerIdCardNumber);
+            // เลขบัตรไม่ถูกกู้คืนจากแบบร่าง ดูเหตุผลที่ getInitialDraft
             if (draft.farmerIdCardPhoto) setFarmerIdCardPhoto(draft.farmerIdCardPhoto);
             if (draft.farmerIdCardFileType) setFarmerIdCardFileType(draft.farmerIdCardFileType);
             if (draft.farmerIdCardFileName) setFarmerIdCardFileName(draft.farmerIdCardFileName);
@@ -363,7 +379,7 @@ export function useFarmRegistrationForm({
       const draftData = {
         agreedToCriteria,
         farmerFullName,
-        farmerIdCardNumber,
+        // ไม่บันทึก farmerIdCardNumber ลงแบบร่าง ดูเหตุผลที่ getInitialDraft
         farmerIdCardPhoto: farmerIdCardPhoto && farmerIdCardPhoto.length > 500 && farmerIdCardPhoto.startsWith('data:') ? '' : farmerIdCardPhoto,
         farmerIdCardFileType,
         farmerIdCardFileName,
