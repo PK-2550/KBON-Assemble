@@ -1,5 +1,6 @@
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import type { Request, Response } from 'express';
+import { logIdCardAccessBestEffort } from '../security/idCardAccessLog.js';
 
 /**
  * ตัวจำกัดอัตราการเรียกสำหรับ endpoint ที่เกี่ยวกับบัญชีผู้ใช้
@@ -93,6 +94,49 @@ export const loginLimiter = rateLimit({
     return `${ipKeyGenerator(req.ip ?? '')}:${username}`;
   },
   handler: sendTooMany,
+});
+
+/**
+ * กันการดึงข้อมูลบัตรประชาชนจำนวนมากผิดปกติ
+ *
+ * นับตาม uid ของแอดมิน ไม่ใช่ตาม IP เพราะคำถามที่ต้องตอบคือ
+ * "บัญชีไหนกำลังกวาดข้อมูล" ไม่ใช่ "เครื่องไหน" แอดมินคนเดียวที่ย้ายเครื่อง
+ * หรือเปลี่ยนเน็ตยังต้องนับรวมเป็นคนเดิม
+ *
+ * จงใจไม่ใส่ skip: skipLoopback ต่างจากตัวอื่นในไฟล์นี้
+ * การยกเว้น loopback มีไว้ให้ smoke test สมัครสมาชิกรัว ๆ ได้ตอนพัฒนา
+ * ซึ่งเป็นคนละเรื่องกับการอ่านข้อมูลบัตรประชาชน ตัวนี้จึงทำงานทุกสภาพแวดล้อม
+ *
+ * เพดาน 30 ครั้งต่อ 10 นาที กว้างพอสำหรับแอดมินที่ไล่ตรวจคำขอทีละใบตามปกติ
+ * แต่แคบพอที่การกวาดข้อมูลทั้งฐานจะชนเพดานตั้งแต่ยังไม่ได้อะไรไปมาก
+ */
+export const idCardRevealLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const uid = (req as Request & { user?: { uid?: string } }).user?.uid;
+    // ถ้าไม่มี uid แปลว่ามาไม่ผ่าน requireAdmin ซึ่งไม่ควรเกิด นับตาม IP ไว้ก่อน
+    return uid ? `admin:${uid}` : `ip:${ipKeyGenerator(req.ip ?? '')}`;
+  },
+  handler: (req, res) => {
+    // การชนเพดานคือสัญญาณตรง ๆ ของการกวาดข้อมูล ต้องบันทึกไว้ให้เห็น
+    // ไม่ใช่ปฏิเสธเงียบ ๆ แล้วไม่เหลือร่องรอยว่าใครพยายามทำอะไร
+    const uid = (req as Request & { user?: { uid?: string } }).user?.uid;
+    if (uid) {
+      logIdCardAccessBestEffort({
+        adminUserId: uid,
+        farmRequestId: req.params?.id ?? '(ไม่ระบุ)',
+        outcome: 'rate_limited',
+        ip: req.ip ?? null,
+      });
+    }
+
+    res.status(429).json({
+      error: 'เปิดดูข้อมูลบัตรประชาชนถี่เกินไป กรุณารอสักครู่แล้วลองใหม่',
+    });
+  },
 });
 
 /** กันสมัครสมาชิกรัวจาก IP เดียว */

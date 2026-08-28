@@ -4,6 +4,7 @@ import 'dotenv/config';
 
 import { assertDbReady } from './db.js';
 import { readUser } from './middleware/auth.js';
+import { assertIdCardEncryptionKey } from './security/idCardCipher.js';
 import { authIpLimiter } from './middleware/rateLimit.js';
 import { authRouter } from './routes/auth.js';
 import { farmsRouter } from './routes/farms.js';
@@ -94,6 +95,16 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 export { app };
 
 async function start() {
+  // ล้มตั้งแต่ตอนเปิดเซิร์ฟเวอร์ถ้ากุญแจเข้ารหัสบัตรประชาชนตั้งไว้ไม่ถูก
+  // ไม่ใช่ปล่อยให้ไปเจอตอนผู้ใช้กดยื่นคำขอแล้วได้ 500 โดยไม่รู้สาเหตุ
+  try {
+    assertIdCardEncryptionKey();
+  } catch (err) {
+    console.error('\nกุญแจเข้ารหัสข้อมูลบัตรประชาชนตั้งค่าไม่ถูกต้อง');
+    console.error(`   ${err instanceof Error ? err.message : String(err)}\n`);
+    process.exit(1);
+  }
+
   try {
     await assertDbReady();
   } catch (err) {

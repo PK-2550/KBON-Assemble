@@ -3,11 +3,40 @@ import { asyncHandler } from '../asyncHandler.js';
 import { pool } from '../db.js';
 import { loadFarms, upsertFarm } from '../farmsRepo.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { idCardRevealLimiter } from '../middleware/rateLimit.js';
+import { decryptIdCardValue, IdCardDecryptionError } from '../security/idCardCipher.js';
+import { logIdCardAccess, logIdCardAccessBestEffort } from '../security/idCardAccessLog.js';
+import { maskedThaiNationalIdFromCheckDigit } from '../../src/shared/thaiNationalId.js';
 
 export const farmRequestsRouter = Router();
 
-/** แปลงแถวในตาราง กลับเป็นรูปร่าง FarmRegistrationRequest ที่ frontend ใช้ */
-function toRequest(r: Record<string, any>) {
+/**
+ * แปลงแถวในตาราง กลับเป็นรูปร่าง FarmRegistrationRequest ที่ frontend ใช้
+ *
+ * เลขบัตรประชาชนและรูปถ่ายบัตรไม่เคยถูกส่งออกไปจากที่นี่ ไม่ว่าผู้เรียกจะเป็นใคร
+ *
+ * จงใจปิดบังที่นี่จุดเดียว ไม่ใช่ไปแยกทำตามแต่ละ route เพราะทุกเส้นทางที่ตอบ
+ * ข้อมูลคำขอกลับไปล้วนผ่านฟังก์ชันนี้ทั้งหมด ทั้งของผู้ใช้ทั่วไปและของแอดมิน
+ * ถ้าไปปิดบังทีละ route วันหนึ่งจะมีคนเพิ่ม route ใหม่แล้วลืม
+ *
+ * และการปิดบังต้องอยู่ฝั่งเซิร์ฟเวอร์เท่านั้น การซ่อนที่หน้าจอไม่นับเป็นการแก้
+ * เพราะใครเปิด devtools หรือยิง curl ตรง ๆ ก็ข้ามการซ่อนฝั่งหน้าจอได้หมด
+ */
+export function toRequest(r: Record<string, any>) {
+  // หลังรัน 007 คอลัมน์ข้อความธรรมดาจะหายไป เหลือแต่หลักตรวจสอบที่เก็บแยกไว้
+  // ระหว่างนี้ยังมีทั้งสองอย่าง จึงใช้หลักตรวจสอบก่อน แล้วค่อยถอยไปใช้ค่าเดิม
+  const checkDigit: string | undefined =
+    r.farmer_id_card_check_digit ??
+    (typeof r.farmer_id_card_number === 'string' && r.farmer_id_card_number.length > 0
+      ? r.farmer_id_card_number.slice(-1)
+      : undefined);
+
+  const hasIdCardNumber = Boolean(
+    r.farmer_id_card_ciphertext || r.farmer_id_card_number || r.farmer_id_card_check_digit
+  );
+
+  const hasIdCardPhoto = Boolean(r.farmer_id_card_photo_ciphertext || r.farmer_id_card_photo);
+
   const payload = r.payload ?? {};
   return {
     id: r.id,
@@ -38,8 +67,12 @@ function toRequest(r: Record<string, any>) {
     hasSmartFarm: r.has_smart_farm,
     smartTechnologies: payload.smartTechnologies ?? [],
     farmerFullName: r.farmer_full_name ?? undefined,
-    farmerIdCardNumber: r.farmer_id_card_number ?? undefined,
-    farmerIdCardPhoto: r.farmer_id_card_photo ?? undefined,
+    // ไม่มี farmerIdCardNumber และ farmerIdCardPhoto ในคำตอบโดยตั้งใจ
+    // เลขเต็มและรูปเต็มดูได้ทางเดียวคือ endpoint สำหรับแอดมินที่มี audit log กำกับ
+    farmerIdCardMasked: hasIdCardNumber
+      ? maskedThaiNationalIdFromCheckDigit(checkDigit)
+      : undefined,
+    hasIdCardPhoto,
     farmerIdCardFileType: r.farmer_id_card_file_type ?? undefined,
     agreedToCriteria: r.agreed_to_criteria,
     coordinates: payload.coordinates ?? undefined,
@@ -382,6 +415,105 @@ farmRequestsRouter.post('/:id/approve', requireAdmin, asyncHandler(async (req, r
     client.release();
   }
 }));
+
+/**
+ * เปิดดูเลขบัตรประชาชนและสำเนาบัตรฉบับเต็ม -- ทางเดียวที่ข้อมูลนี้ออกจากระบบได้
+ *
+ * ทุกเส้นทางอื่นปิดบังหมดแล้วที่ toRequest() ที่นี่จึงเป็นประตูบานเดียว
+ * และเป็นเหตุผลที่ต้องมีทั้งการตรวจสิทธิ์ การจำกัดอัตรา และการบันทึกไว้ครบ
+ *
+ * ลำดับ middleware สำคัญ requireAdmin ต้องมาก่อน idCardRevealLimiter เสมอ
+ * เพราะตัวจำกัดอัตรานับตาม uid ของแอดมินซึ่งจะมีค่าก็ต่อเมื่อผ่านการตรวจสิทธิ์แล้ว
+ * ถ้าสลับลำดับ คนที่ยังไม่ได้ล็อกอินจะถูกนับรวมกันเป็นก้อนเดียวตาม IP
+ * แล้วกลายเป็นช่องให้ยิงจนแอดมินตัวจริงใช้งานไม่ได้
+ *
+ * บันทึกการเข้าถึงครบทุกทางที่คำขอเดินไปได้ ทั้งสำเร็จและถูกปฏิเสธ
+ *
+ *   success not_found decrypt_failed   บันทึกในตัว handler ก่อนตอบกลับเสมอ
+ *   forbidden                          บันทึกที่ middleware ตัวแรก เพราะ requireAdmin
+ *                                      ปฏิเสธก่อนจะถึง handler
+ *   rate_limited                       บันทึกใน handler ของ idCardRevealLimiter
+ *
+ * สองอันหลังสำคัญเป็นพิเศษ เพราะการที่บัญชีหนึ่งโดนปฏิเสธซ้ำ ๆ คือสัญญาณ
+ * ของการกวาดข้อมูลหรือการใช้บัญชีผิดคน ถ้าปฏิเสธเงียบ ๆ สัญญาณนั้นจะหายไปทั้งหมด
+ *
+ * ที่สามอันแรกต้อง await ก่อนตอบ เพราะถ้าเขียนบันทึกไม่สำเร็จ ผู้เรียกต้องไม่ได้
+ * ข้อมูลไปด้วย ส่วนสองอันหลังไม่ต้อง เพราะตรงนั้นไม่มีข้อมูลอะไรจะรั่วอยู่แล้ว
+ */
+farmRequestsRouter.get(
+  '/:id/id-card',
+  // บันทึกความพยายามของคนที่ไม่ใช่แอดมินก่อน แล้วปล่อยให้ requireAdmin เป็นคนปฏิเสธ
+  // readUser ที่ระดับแอปเติม req.user ให้แล้วถ้ามี token ที่ใช้ได้
+  (req, _res, next) => {
+    const user = (req as typeof req & { user?: { uid?: string; role?: string } }).user;
+    if (user?.uid && user.role !== 'admin') {
+      logIdCardAccessBestEffort({
+        adminUserId: user.uid,
+        farmRequestId: req.params.id,
+        outcome: 'forbidden',
+        ip: req.ip ?? null,
+      });
+    }
+    next();
+  },
+  requireAdmin,
+  idCardRevealLimiter,
+  asyncHandler(async (req, res) => {
+    const requestId = req.params.id;
+    const adminUid = req.user!.uid;
+    const ip = req.ip ?? null;
+
+    const writeLog = (outcome: 'success' | 'not_found' | 'decrypt_failed') =>
+      logIdCardAccess({ adminUserId: adminUid, farmRequestId: requestId, outcome, ip });
+
+    // ห้าม cache ข้อมูลชั้นนี้ไว้ที่ไหนทั้งสิ้น ถ้าวันหนึ่งมี proxy หรือ CDN
+    // มาคั่นหน้า API ขึ้นมา คำตอบนี้ต้องไม่ถูกเก็บไว้ให้ใครหยิบต่อได้
+    res.set('Cache-Control', 'no-store');
+
+    const { rows } = await pool.query(
+      `SELECT id, farmer_id_card_ciphertext, farmer_id_card_photo_ciphertext,
+              farmer_id_card_number, farmer_id_card_photo, farmer_id_card_file_type
+         FROM farm_requests WHERE id = $1`,
+      [requestId]
+    );
+
+    if (rows.length === 0) {
+      await writeLog('not_found');
+      return res.status(404).json({ error: 'ไม่พบคำขอนี้' });
+    }
+
+    const row = rows[0];
+
+    try {
+      // ระหว่างที่ยังไม่ได้รัน 007 แถวเก่าอาจมีแต่ข้อความธรรมดา
+      // จึงถอยไปอ่านคอลัมน์เดิมได้ เมื่อรัน 007 แล้วทางนี้จะเหลือแต่ ciphertext
+      const idCardNumber = row.farmer_id_card_ciphertext
+        ? decryptIdCardValue(row.farmer_id_card_ciphertext, row.id)
+        : (row.farmer_id_card_number ?? null);
+
+      const idCardPhoto = row.farmer_id_card_photo_ciphertext
+        ? decryptIdCardValue(row.farmer_id_card_photo_ciphertext, row.id)
+        : (row.farmer_id_card_photo ?? null);
+
+      await writeLog('success');
+
+      return res.json({
+        farmerIdCardNumber: idCardNumber,
+        farmerIdCardPhoto: idCardPhoto,
+        farmerIdCardFileType: row.farmer_id_card_file_type ?? 'image',
+      });
+    } catch (err) {
+      await writeLog('decrypt_failed');
+
+      if (err instanceof IdCardDecryptionError) {
+        // ตัวโมดูลเข้ารหัสบันทึกรายละเอียดไว้ฝั่งเซิร์ฟเวอร์แล้ว
+        // ตรงนี้ตอบข้อความกลาง ๆ ไม่บอกว่าล้มเพราะอะไร
+        return res.status(500).json({ error: 'อ่านข้อมูลบัตรประชาชนไม่สำเร็จ' });
+      }
+      throw err;
+    }
+  })
+);
 
 /** ตีกลับคำขอ -- ระบุ needsRevision ถ้าต้องการให้ผู้ใช้แก้แล้วส่งใหม่ */
 farmRequestsRouter.post('/:id/reject', requireAdmin, asyncHandler(async (req, res) => {

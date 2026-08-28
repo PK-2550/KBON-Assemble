@@ -7,6 +7,19 @@ export interface SocialContact {
   locationAddress?: string;
 }
 
+/**
+ * ระดับของใบรับรอง -- แบ่งตามว่าใบนั้นรับรอง "อะไร" ไม่ใช่รับรอง "ใคร"
+ *
+ * farm          ระดับสวน เช่น GAP, Organic Thailand
+ * packing_house ระดับโรงคัดบรรจุ เช่น GMP, GACC
+ * shipment      ระดับการขนส่งรายเที่ยว เช่น ใบรับรองสุขอนามัยพืช
+ * regional      ระดับภูมิภาค เช่น GI -- ใบเดียวใช้ร่วมกันทั้งโซน ดู RegionalCertification
+ */
+export type CertificationTier = 'farm' | 'packing_house' | 'shipment' | 'regional';
+
+/** ใช้คำเดียวกับสถานะคำขอขึ้นทะเบียนสวน เพื่อให้หน้าอนุมัติของแอดมินใช้ตรรกะชุดเดิมได้ */
+export type CertificationApprovalStatus = 'pending' | 'approved' | 'rejected' | 'needs_revision';
+
 export interface CertificationDetail {
   id?: string;
   name: string; // e.g. 'GAP (Good Agricultural Practice)', 'GI (Geographical Indication)', 'Organic Thailand'
@@ -15,6 +28,16 @@ export interface CertificationDetail {
   certNumber: string; // e.g. 'GAP-502-66-8891'
   issuedBy: string; // e.g. 'กรมวิชาการเกษตร', 'กรมทรัพย์สินทางปัญญา'
   validUntil: string; // e.g. '2027'
+  /**
+   * ระดับของใบรับรอง ยังเป็น optional เพราะข้อมูลเดิมในฐานข้อมูลไม่มีค่านี้
+   * ที่ชั้นแปลงข้อมูลให้ถือว่าไม่มีค่า = 'farm' ซึ่งตรงกับของเดิมทั้งหมด
+   */
+  tier?: CertificationTier;
+  issueDate?: string; // วันที่ออกใบรับรอง
+  /** สถานะจริงที่ใช้ตัดสิน ส่วน verified ข้างล่างเก็บไว้ให้โค้ดเดิมที่ยังอ่านอยู่ */
+  approvalStatus?: CertificationApprovalStatus;
+  /** อ้างอิงเที่ยวขนส่ง ใช้เฉพาะ tier === 'shipment' เท่านั้น */
+  shipmentRef?: string;
   verified: boolean;
   documentPhoto?: string; // ภาพถ่ายใบรับรองฉบับจริง หรือ Base64 Data URL (PNG/JPG/PDF)
   fileType?: 'image' | 'pdf'; // 'image' or 'pdf'
@@ -80,8 +103,36 @@ export interface FruitTreeVariety {
   harvestSeason?: string;
 }
 
+/**
+ * ใบรับรองระดับภูมิภาค เช่น GI ทุเรียนภูเขาไฟศรีสะเกษ
+ *
+ * แยกออกมาจาก CertificationDetail เพราะใบแบบนี้เป็นของโซนภูมิศาสตร์
+ * สวนหลายสิบแห่งในโซนเดียวกันอ้างอิงใบใบเดียวกัน ถ้าเก็บซ้ำเป็นแถวต่อสวน
+ * พอใบต่ออายุหรือเปลี่ยนหน่วยงานที่ออก ข้อมูลของแต่ละสวนจะเพี้ยนกันเอง
+ */
+export interface RegionalCertification {
+  id?: string;
+  shortCode: string; // 'GI'
+  name: string;
+  nameTh?: string;
+  regionName: string; // เช่น 'ทุเรียนภูเขาไฟศรีสะเกษ'
+  province: string;
+  issuedBy?: string;
+  certNumber?: string;
+  issueDate?: string;
+  validUntil?: string;
+  approvalStatus?: CertificationApprovalStatus;
+  documentPhoto?: string;
+  fileType?: 'image' | 'pdf';
+  fileName?: string;
+}
+
 export interface DurianFarm {
   id: string;
+  /** เลขทะเบียนสวน เช่น DT-2026-00042 ระบบออกให้ตอนอนุมัติ แก้ไม่ได้ */
+  farmSerial?: string;
+  /** ชื่อบัญชีธนาคาร ถ้าผู้ยื่นไม่ได้กรอก ระบบเติมเลขทะเบียนสวนให้ตอนอนุมัติ */
+  bankAccountName?: string;
   rank: number;
   name: string;
   nameEn?: string;
@@ -100,6 +151,8 @@ export interface DurianFarm {
   establishedYear?: number;
   certifications?: string[];
   certificationDetails?: CertificationDetail[];
+  /** ใบรับรองระดับภูมิภาคที่สวนนี้อ้างอิงอยู่ มาจากตารางกลาง ไม่ได้เป็นของสวนเอง */
+  regionalCertifications?: RegionalCertification[];
   certDocumentPhoto?: string; // ภาพถ่ายใบรับรอง GAP/GI ฉบับจริง
   contact?: SocialContact;
   highlight?: string;
@@ -163,10 +216,23 @@ export interface FarmRegistrationRequest {
   smartTechnologies?: SmartTechItem[];
   // Farmer Identity & Eligibility Verification
   farmerFullName?: string; // ชื่อ-นามสกุลจริงเจ้าของสวน
-  farmerIdCardNumber?: string; // เลขประจำตัวประชาชน 13 หลัก
+  /**
+   * เลขประจำตัวประชาชน 13 หลัก -- ส่งขึ้นได้อย่างเดียว ไม่มีทางถูกส่งกลับมา
+   * เซิร์ฟเวอร์เข้ารหัสก่อนเก็บ และตอบกลับเป็น farmerIdCardMasked แทนเสมอ
+   */
+  farmerIdCardNumber?: string;
+  /** เลขที่ปิดบังแล้วสำหรับแสดงผล เช่น X-XXXX-XXXXX-XX-8 */
+  farmerIdCardMasked?: string;
+  /**
+   * มีสำเนาบัตรแนบมาหรือไม่ -- ตัวรูปไม่เคยถูกส่งมาพร้อมรายการคำขอ
+   * แอดมินต้องเปิดดูทีละใบผ่าน endpoint ที่มี audit log กำกับ
+   */
+  hasIdCardPhoto?: boolean;
   farmerIdCardPhoto?: string; // รูปถ่ายหรือ PDF บัตรประชาชนเจ้าของสวน (มี Watermark ปลอดภัย)
   farmerIdCardFileType?: 'image' | 'pdf'; // 'image' | 'pdf'
   agreedToCriteria?: boolean; // ยินยอมตามเกณฑ์คัดเลือกสวนพรีเมียม 3 ข้อ
+  /** ชื่อบัญชีธนาคาร ช่องเสริม ไม่บังคับกรอก เว้นว่างแล้วระบบเติมเลขทะเบียนสวนให้ตอนอนุมัติ */
+  bankAccountName?: string;
   coordinates?: { lat: number; lng: number }; // พิกัดแปลงจริงบนแผนที่ GPS
   googleMapsUrl?: string; // ลิงก์ปักหมุด Google Maps จากผู้ใช้
   // Approval state

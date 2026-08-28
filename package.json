@@ -25,6 +25,7 @@
     "smoke:farm-requests": "tsx scripts/smoke-farm-requests.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "import:care-logs": "tsx scripts/import-care-logs.ts",
+    "encrypt:id-cards": "tsx scripts/encrypt-id-cards.ts",
     "set-password": "tsx scripts/set-password.ts",
     "delete-user": "tsx scripts/delete-user.ts",
     "list-users": "tsx scripts/list-users.ts"

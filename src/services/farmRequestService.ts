@@ -27,7 +27,7 @@ export const DEFAULT_STATIC_SAMPLE_REQUESTS: FarmRegistrationRequest[] = [
     farmName: 'สวนทุเรียนลุงสมชาย จันทบุรี',
     farmNameEn: 'Somchai Chanthaburi Durian Orchard',
     farmerFullName: 'นายสมชาย วงศ์เกษตร',
-    farmerIdCardNumber: '1229900341829',
+    farmerIdCardNumber: '1229900341828',
     farmerIdCardPhoto: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80',
     farmerIdCardFileType: 'image',
     province: 'จันทบุรี',
@@ -60,7 +60,7 @@ export const DEFAULT_STATIC_SAMPLE_REQUESTS: FarmRegistrationRequest[] = [
     farmName: 'สวนยายแม้น ระยองการ์เด้น (อินทรีย์ปลอดสารเคมี)',
     farmNameEn: 'Grandma Maen Organic Rayong Durian',
     farmerFullName: 'นางแม้น จันทรศิริ',
-    farmerIdCardNumber: '3210400192841',
+    farmerIdCardNumber: '3210400192848',
     farmerIdCardPhoto: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80',
     farmerIdCardFileType: 'image',
     province: 'ระยอง',
@@ -503,6 +503,22 @@ function generateInitialTreesForFarm(farmCode: string, varieties: string[], coun
  * - For Manager Role Application: Upgrades user role to 'manager' so they can register their farm later. Does NOT create an auto-published farm.
  * - For Farm Verification / Registration: Validates and saves the verified farm into /farms with verified credentials.
  */
+/**
+ * ขอดูเลขบัตรและสำเนาบัตรฉบับเต็ม -- แอดมินเท่านั้น
+ *
+ * เรียกทีละใบตอนที่แอดมินกดดูจริง ๆ ไม่ดึงมาล่วงหน้าและไม่เก็บลง cache
+ * เพราะทุกครั้งที่เรียกจะถูกบันทึกไว้ในตาราง id_card_access_log
+ * การดึงมาเผื่อไว้จะทำให้บันทึกเต็มไปด้วยการเข้าถึงที่ไม่มีใครตั้งใจดูจริง
+ * จนแยกไม่ออกว่าครั้งไหนคือการเปิดดูของจริง
+ */
+export async function revealFarmRequestIdCard(requestId: string): Promise<{
+  farmerIdCardNumber: string | null;
+  farmerIdCardPhoto: string | null;
+  farmerIdCardFileType: 'image' | 'pdf';
+}> {
+  return api.get(`/farm-requests/${encodeURIComponent(requestId)}/id-card`);
+}
+
 export async function approveFarmRequest(
   request: FarmRegistrationRequest,
   adminName: string
@@ -552,7 +568,7 @@ export async function seedSampleManagerRequests(): Promise<FarmRegistrationReque
     farmName: 'สวนทุเรียนลุงสมชาย จันทบุรี',
     farmNameEn: 'Somchai Chanthaburi Durian Orchard',
     farmerFullName: 'นายสมชาย วงศ์เกษตร',
-    farmerIdCardNumber: '1229900341829',
+    farmerIdCardNumber: '1229900341828',
     farmerIdCardPhoto: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80',
     farmerIdCardFileType: 'image',
     province: 'จันทบุรี',
@@ -583,7 +599,7 @@ export async function seedSampleManagerRequests(): Promise<FarmRegistrationReque
     farmName: 'สวนยายแม้น ระยองการ์เด้น (อินทรีย์ปลอดสารเคมี)',
     farmNameEn: 'Grandma Maen Organic Rayong Durian',
     farmerFullName: 'นางแม้น จันทรศิริ',
-    farmerIdCardNumber: '3210400192841',
+    farmerIdCardNumber: '3210400192848',
     farmerIdCardPhoto: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80',
     farmerIdCardFileType: 'image',
     province: 'ระยอง',
