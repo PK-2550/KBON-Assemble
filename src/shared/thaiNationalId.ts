@@ -67,9 +67,23 @@ export function isValidThaiNationalId(value: string): boolean {
  */
 export function maskThaiNationalId(value: string): string {
   const digits = normalizeThaiNationalId(value);
-  if (digits.length !== THAI_ID_LENGTH) return 'X-XXXX-XXXXX-XX-X';
+  if (digits.length !== THAI_ID_LENGTH) return maskedThaiNationalIdFromCheckDigit();
 
-  return `X-XXXX-XXXXX-XX-${digits[12]}`;
+  return maskedThaiNationalIdFromCheckDigit(digits[12]);
+}
+
+/**
+ * สร้างข้อความปิดบังจากหลักตรวจสอบอย่างเดียว
+ *
+ * ใช้ตอนที่เลขเต็มถูกเข้ารหัสไปแล้วและเหลือแค่หลักที่ 13 เก็บไว้ต่างหาก
+ * ฝั่งเซิร์ฟเวอร์จึงแสดงผลได้โดยไม่ต้องถอดรหัสทุกครั้งที่มีคนเรียกดูรายการ
+ *
+ * แยกออกมาเพื่อให้รูปแบบการปิดบังมีนิยามอยู่ที่เดียว ไม่ว่าจะมาจากเลขเต็ม
+ * หรือมาจากหลักตรวจสอบ ถ้าวันหนึ่งเปลี่ยนรูปแบบ จะไม่มีทางเปลี่ยนหลุดข้างเดียว
+ */
+export function maskedThaiNationalIdFromCheckDigit(checkDigit?: string | null): string {
+  const digit = typeof checkDigit === 'string' && /^[0-9]$/.test(checkDigit) ? checkDigit : 'X';
+  return `X-XXXX-XXXXX-XX-${digit}`;
 }
 
 /**

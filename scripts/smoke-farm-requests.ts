@@ -300,8 +300,18 @@ export async function run(): Promise<{ passed: number; failed: number; failures:
     body: JSON.stringify({ id: idorId, farmName: THAI_FARM, province: 'จันทบุรี', updateNotes: 'แก้ไขเอง' }),
   });
   ok('เจ้าของยังส่งแก้ไขของตัวเองได้', ownEdit.status === 201, `(ได้ ${ownEdit.status})`);
+  // คำตอบไม่ส่งเลขเต็มกลับมาแล้วไม่ว่าใครถาม จึงยืนยันสองอย่างแทน
+  // คือค่าที่ปิดบังตรงกับเลขจริง และเลขจริงยังอยู่ในฐานข้อมูลไม่ถูกล้าง
+  ok('คำตอบปิดบังเลขบัตร ไม่ส่งเลขเต็มกลับมา',
+    ownEdit.body?.request?.farmerIdCardNumber === undefined &&
+    ownEdit.body?.request?.farmerIdCardMasked === `X-XXXX-XXXXX-XX-${ID_CARD.slice(-1)}`);
+
+  const stillThere = await db.query(
+    'SELECT farmer_id_card_number FROM farm_requests WHERE id = $1',
+    [idorId]
+  );
   ok('ข้อมูลเดิมที่ไม่ได้ส่งมายังคงอยู่',
-    ownEdit.body?.request?.farmerIdCardNumber === ID_CARD);
+    stillThere.rows[0]?.farmer_id_card_number === ID_CARD);
 
   // ---------------------------------------------------------------
   console.log('\n--- ล้างข้อมูลทดสอบ ---');

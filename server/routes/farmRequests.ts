@@ -3,11 +3,37 @@ import { asyncHandler } from '../asyncHandler.js';
 import { pool } from '../db.js';
 import { loadFarms, upsertFarm } from '../farmsRepo.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { maskedThaiNationalIdFromCheckDigit } from '../../src/shared/thaiNationalId.js';
 
 export const farmRequestsRouter = Router();
 
-/** แปลงแถวในตาราง กลับเป็นรูปร่าง FarmRegistrationRequest ที่ frontend ใช้ */
-function toRequest(r: Record<string, any>) {
+/**
+ * แปลงแถวในตาราง กลับเป็นรูปร่าง FarmRegistrationRequest ที่ frontend ใช้
+ *
+ * เลขบัตรประชาชนและรูปถ่ายบัตรไม่เคยถูกส่งออกไปจากที่นี่ ไม่ว่าผู้เรียกจะเป็นใคร
+ *
+ * จงใจปิดบังที่นี่จุดเดียว ไม่ใช่ไปแยกทำตามแต่ละ route เพราะทุกเส้นทางที่ตอบ
+ * ข้อมูลคำขอกลับไปล้วนผ่านฟังก์ชันนี้ทั้งหมด ทั้งของผู้ใช้ทั่วไปและของแอดมิน
+ * ถ้าไปปิดบังทีละ route วันหนึ่งจะมีคนเพิ่ม route ใหม่แล้วลืม
+ *
+ * และการปิดบังต้องอยู่ฝั่งเซิร์ฟเวอร์เท่านั้น การซ่อนที่หน้าจอไม่นับเป็นการแก้
+ * เพราะใครเปิด devtools หรือยิง curl ตรง ๆ ก็ข้ามการซ่อนฝั่งหน้าจอได้หมด
+ */
+export function toRequest(r: Record<string, any>) {
+  // หลังรัน 007 คอลัมน์ข้อความธรรมดาจะหายไป เหลือแต่หลักตรวจสอบที่เก็บแยกไว้
+  // ระหว่างนี้ยังมีทั้งสองอย่าง จึงใช้หลักตรวจสอบก่อน แล้วค่อยถอยไปใช้ค่าเดิม
+  const checkDigit: string | undefined =
+    r.farmer_id_card_check_digit ??
+    (typeof r.farmer_id_card_number === 'string' && r.farmer_id_card_number.length > 0
+      ? r.farmer_id_card_number.slice(-1)
+      : undefined);
+
+  const hasIdCardNumber = Boolean(
+    r.farmer_id_card_ciphertext || r.farmer_id_card_number || r.farmer_id_card_check_digit
+  );
+
+  const hasIdCardPhoto = Boolean(r.farmer_id_card_photo_ciphertext || r.farmer_id_card_photo);
+
   const payload = r.payload ?? {};
   return {
     id: r.id,
@@ -38,8 +64,12 @@ function toRequest(r: Record<string, any>) {
     hasSmartFarm: r.has_smart_farm,
     smartTechnologies: payload.smartTechnologies ?? [],
     farmerFullName: r.farmer_full_name ?? undefined,
-    farmerIdCardNumber: r.farmer_id_card_number ?? undefined,
-    farmerIdCardPhoto: r.farmer_id_card_photo ?? undefined,
+    // ไม่มี farmerIdCardNumber และ farmerIdCardPhoto ในคำตอบโดยตั้งใจ
+    // เลขเต็มและรูปเต็มดูได้ทางเดียวคือ endpoint สำหรับแอดมินที่มี audit log กำกับ
+    farmerIdCardMasked: hasIdCardNumber
+      ? maskedThaiNationalIdFromCheckDigit(checkDigit)
+      : undefined,
+    hasIdCardPhoto,
     farmerIdCardFileType: r.farmer_id_card_file_type ?? undefined,
     agreedToCriteria: r.agreed_to_criteria,
     coordinates: payload.coordinates ?? undefined,

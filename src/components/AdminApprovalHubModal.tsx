@@ -556,7 +556,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                     <div>
                       <span className="text-fg-2">เลขประจำตัวประชาชน (13 หลัก):</span>
                       <p className="font-mono font-bold text-gold-soft mt-0.5">
-                        {selectedRequest.farmerIdCardNumber || '-'}
+                        {selectedRequest.farmerIdCardMasked || '-'}
                       </p>
                     </div>
                     <div>

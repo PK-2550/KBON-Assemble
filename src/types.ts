@@ -223,6 +223,11 @@ export interface FarmRegistrationRequest {
   farmerIdCardNumber?: string;
   /** เลขที่ปิดบังแล้วสำหรับแสดงผล เช่น X-XXXX-XXXXX-XX-8 */
   farmerIdCardMasked?: string;
+  /**
+   * มีสำเนาบัตรแนบมาหรือไม่ -- ตัวรูปไม่เคยถูกส่งมาพร้อมรายการคำขอ
+   * แอดมินต้องเปิดดูทีละใบผ่าน endpoint ที่มี audit log กำกับ
+   */
+  hasIdCardPhoto?: boolean;
   farmerIdCardPhoto?: string; // รูปถ่ายหรือ PDF บัตรประชาชนเจ้าของสวน (มี Watermark ปลอดภัย)
   farmerIdCardFileType?: 'image' | 'pdf'; // 'image' | 'pdf'
   agreedToCriteria?: boolean; // ยินยอมตามเกณฑ์คัดเลือกสวนพรีเมียม 3 ข้อ
