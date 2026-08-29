@@ -43,7 +43,8 @@ const Stat: React.FC<{ label: string; value: React.ReactNode }> = ({ label, valu
 
 /** แถวข้อมูลหนึ่งบรรทัดในพาสปอร์ตต้นไม้ */
 const Row: React.FC<{ label: React.ReactNode; value: React.ReactNode }> = ({ label, value }) => (
-  <div className="flex items-center justify-between gap-3 py-2.5 text-xs sm:text-sm">
+  <div className="flex items-center justify-between gap-3 py-2.5 text-xs sm:text-sm
+                  lg:border-t lg:border-line lg:first:border-t-0 lg:[&:nth-child(2)]:border-t-0">
     <span className="text-fg-2 shrink-0">{label}</span>
     <span className="font-semibold text-fg text-right min-w-0 truncate">{value}</span>
   </div>
@@ -105,9 +106,15 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, scan
 
       <div className="bg-surface rounded-2xl border border-line overflow-hidden">
         {/* หัวเรื่อง -- รูปต้นไม้คู่กับรหัสและชื่อ แบบเดียวกับหน้า strain ของต้นแบบ */}
-        <div className="p-4 sm:p-6 space-y-5">
-          <div className="flex items-start gap-3.5 sm:gap-5">
-            <div className="shrink-0 w-[38%] max-w-[170px] aspect-3/4 rounded-2xl overflow-hidden border border-line bg-canvas">
+        <div className="p-4 sm:p-6 space-y-5
+                        lg:space-y-0 lg:grid lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-[min-content_min-content_1fr]
+                        lg:gap-x-8 lg:gap-y-5 lg:items-start">
+          {/* จอแคบรูปอยู่บนสุดเต็มความกว้าง จอกว้างรูปย้ายไปเป็นคอลัมน์ซ้าย
+              lg:contents สลายกรอบแถวนี้ทิ้งเฉพาะจอกว้าง ลูกทั้งสองจึงไปเป็น
+              ช่องของกริดชั้นนอกได้โดยไม่ต้องย้าย DOM */}
+          <div className="flex flex-col gap-4 lg:contents">
+            <div className="w-full aspect-16/10 rounded-2xl overflow-hidden border border-line bg-canvas
+                            lg:aspect-4/3 lg:col-start-1 lg:row-start-1 lg:row-end-4">
               <img
                 src={photo}
                 alt={tree.name}
@@ -116,7 +123,7 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, scan
               />
             </div>
 
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 lg:col-start-2 lg:row-start-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-mono text-xs font-bold text-fg-3">{tree.code}</span>
                 {tree.badge && (
@@ -138,7 +145,7 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, scan
           </div>
 
           {/* สถิติของต้น -- คะแนน ผลผลิต น้ำหนักเฉลี่ยต่อลูก และจำนวนรีวิว */}
-          <div className="grid grid-cols-4 gap-x-3 py-4 border-y border-line">
+          <div className="grid grid-cols-4 gap-x-3 py-4 border-y border-line lg:col-start-2 lg:row-start-2">
             <Stat
               label="คะแนนรีวิว"
               value={
@@ -154,17 +161,19 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, scan
           </div>
 
           {tree.notes && (
-            <p className="text-xs sm:text-sm text-fg-2 leading-relaxed max-w-[68ch]">{tree.notes}</p>
+            <p className="text-xs sm:text-sm text-fg-2 leading-relaxed max-w-[68ch] lg:col-start-2 lg:row-start-3">
+              {tree.notes}
+            </p>
           )}
         </div>
 
         {/* แท็บ */}
-        <div className="flex border-t border-line">
+        <div className="flex border-t border-line lg:px-2">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs sm:text-sm font-bold transition-colors cursor-pointer border-b-2 ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs sm:text-sm font-bold transition-colors cursor-pointer border-b-2 lg:flex-none lg:px-7 ${
                 activeTab === t.id
                   ? 'border-gold text-fg'
                   : 'border-transparent text-fg-2 hover:text-fg'
@@ -179,7 +188,8 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, scan
 
       {/* ข้อมูลต้น */}
       {activeTab === 'passport' && (
-        <div className="bg-surface rounded-2xl border border-line px-4 sm:px-5 divide-y divide-line">
+        <div className="bg-surface rounded-2xl border border-line px-4 sm:px-5 divide-y divide-line
+                        lg:grid lg:grid-cols-2 lg:gap-x-10 lg:divide-y-0">
           <Row label="รหัสประจำต้น" value={<span className="font-mono">{tree.code}</span>} />
           <Row label="สายพันธุ์" value={tree.variety} />
           <Row
@@ -274,7 +284,8 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, scan
               </p>
             </div>
           ) : (
-            reviewsList.map((rev) => {
+            <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3 lg:items-start">
+            {reviewsList.map((rev) => {
               const tag = rev.nfcFruitTag
                 ? rev.nfcFruitTag.replace(/NFC\s*Tag:\s*/i, '').trim()
                 : `#${tree.code}`;
@@ -324,7 +335,8 @@ export const TreeDetailView: React.FC<TreeDetailViewProps> = ({ tree, farm, scan
                   </div>
                 </article>
               );
-            })
+            })}
+            </div>
           )}
         </div>
       )}

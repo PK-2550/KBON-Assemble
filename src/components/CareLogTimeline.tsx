@@ -114,18 +114,29 @@ export const CareLogTimeline: React.FC<CareLogTimelineProps> = ({ treeCode }) =>
 
   return (
     <>
-      <div className="bg-surface rounded-2xl border border-line divide-y divide-line">
+      {/* จอแคบเป็นแกนเวลาจริง เส้นตั้งลากผ่านไอคอนของทุกรายการ
+          ลำดับก่อนหลังจึงอ่านออกทันทีโดยไม่ต้องไล่วันที่ทีละบรรทัด
+
+          จอกว้างเลิกใช้เส้นแกน เปลี่ยนเป็นการ์ดสองคอลัมน์
+          เพราะแกนตั้งคอลัมน์เดียวบนจอกว้างจะเหลือที่ว่างขวามือทั้งแถบ */}
+      <div className="relative space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3 lg:items-start">
+        <div
+          aria-hidden
+          className="absolute left-4 top-4 bottom-4 w-px bg-line lg:hidden"
+        />
+
         {logs.map((log) => {
           const Icon = ACTIVITY_ICONS[log.activityType] ?? CircleDot;
           const title = log.activityLabel || CARE_ACTIVITY_LABELS[log.activityType];
 
           return (
-            <div key={log.id} className="flex items-start gap-3 p-4">
-              <div className="w-8 h-8 shrink-0 rounded-xl bg-surface-2 border border-line flex items-center justify-center text-fg-3">
+            <div key={log.id} className="relative flex items-start gap-3">
+              {/* ไอคอนทับเส้นแกนพอดี จึงต้องมีพื้นหลังทึบ ไม่งั้นเส้นจะลอดผ่านกลางวงกลม */}
+              <div className="w-8 h-8 shrink-0 rounded-xl bg-surface-2 border border-line flex items-center justify-center text-fg-3 relative z-10">
                 <Icon className="w-4 h-4" />
               </div>
 
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 rounded-2xl border border-line bg-surface p-3.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="font-bold text-xs sm:text-sm text-fg truncate">{title}</span>
                   <span className="text-[11px] text-fg-2 shrink-0 tabular-nums">
@@ -179,16 +190,17 @@ export const CareLogTimeline: React.FC<CareLogTimelineProps> = ({ treeCode }) =>
           </div>
 
           <div
-            className="h-[calc(100vh-64px)] overflow-y-auto px-4 py-4 space-y-4"
+            className="h-[calc(100vh-64px)] overflow-y-auto px-4 py-4 space-y-4
+                       lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4 lg:content-start lg:items-start lg:px-6"
             onClick={(e) => e.stopPropagation()}
           >
             {photos === null ? (
-              <div className="flex items-center justify-center gap-2 py-12 text-fg-2">
+              <div className="flex items-center justify-center gap-2 py-12 text-fg-2 lg:col-span-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-xs">กำลังโหลดรูป</span>
               </div>
             ) : photos.length === 0 ? (
-              <p className="py-12 text-center text-xs text-fg-2">โหลดรูปไม่สำเร็จ</p>
+              <p className="py-12 text-center text-xs text-fg-2 lg:col-span-2">โหลดรูปไม่สำเร็จ</p>
             ) : (
               photos.map((p, idx) => (
                 <figure

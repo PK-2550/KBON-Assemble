@@ -76,7 +76,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
       </div>
 
       {/* Search Bar */}
-      <div className="relative">
+      {/* ช่องค้นหา -- เฉพาะมือถือกับแท็บเล็ต
+          บนจอกว้างย้ายไปอยู่ในแถบ Navbar แถวเดียวกับโลโก้ตามต้นแบบ
+          ถ้าเปิดไว้ทั้งสองที่จะมีช่องค้นหาซ้อนกันสองช่องบนจอกว้าง */}
+      <div className="relative lg:hidden">
         <input
           type="text"
           id="farm-search-input"

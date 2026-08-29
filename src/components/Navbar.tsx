@@ -15,6 +15,7 @@ import {
   Clock,
   HelpCircle,
   CheckCircle2,
+  Search,
 } from 'lucide-react';
 import { UserRole, DurianFarm, FarmRegistrationRequest } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -32,6 +33,9 @@ interface NavbarProps {
   onRoleChange: (role: UserRole) => void;
   onOpenNfcScanner: () => void;
   onOpenRegisterFarm?: (existingRequest?: FarmRegistrationRequest) => void;
+  /** ช่องค้นหาบนแถบ Navbar มีเฉพาะจอกว้าง บนมือถืออยู่ใน HeaderBar เหมือนเดิม */
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
   onOpenAdminApproval?: (tab?: 'manager_application' | 'farm_verification') => void;
   farms?: DurianFarm[];
   onSelectFarm?: (farm: DurianFarm) => void;
@@ -44,6 +48,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onRoleChange,
   onOpenNfcScanner,
   onOpenRegisterFarm,
+  searchQuery,
+  onSearchChange,
   onOpenAdminApproval,
   farms = [],
   onSelectFarm,
@@ -123,8 +129,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <nav className="bg-canvas/95 border-b border-line px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between shrink-0 sticky top-0 z-40 backdrop-blur-md shadow-lg">
-      {/* Left Column: Spacer or Desktop Tab Link */}
-      <div className="flex items-center gap-2 w-1/4 sm:w-1/3 justify-start">
+      {/* กลุ่มแท็บ
+          มือถือ  เป็นคอลัมน์ซ้ายเปล่า ๆ ที่ทำหน้าที่ถ่วงให้โลโก้อยู่กึ่งกลาง
+          จอกว้าง ย้ายไปอยู่ขวาสุดคู่กับไอคอนบัญชี ใช้ order สลับที่โดยไม่ต้องย้าย DOM
+                  มือถือจึงไม่ถูกแตะเลย */}
+      <div className="flex items-center gap-2 w-1/4 sm:w-1/3 justify-start lg:w-auto lg:order-3">
         {/* Desktop Tabs */}
         <div className="hidden md:flex items-center gap-1 text-xs font-bold text-fg-2">
           <button
@@ -150,9 +159,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Center Column: Centered Website Name & Brand Logo */}
+      {/* โลโก้
+          มือถือ  อยู่กึ่งกลางโดยมีคอลัมน์ซ้ายขวาถ่วงไว้
+          จอกว้าง ชิดซ้ายสุดตามต้นแบบ */}
       <div
-        className="flex items-center justify-center gap-2 cursor-pointer select-none"
+        className="flex items-center justify-center gap-2 cursor-pointer select-none lg:order-1 lg:justify-start"
         onClick={() => onTabChange('farms')}
       >
         {/* Gold & Emerald Logo Badge */}
@@ -169,8 +180,28 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
+      {/* ช่องค้นหาบนแถบ -- เฉพาะจอกว้าง
+          มือถือยังใช้ช่องใน HeaderBar เหมือนเดิม เพราะแถบบนแคบเกินกว่าจะใส่ได้
+          จำกัดความกว้างไว้ ไม่ปล่อยยืดเต็มจอ ของเดิมยืดเต็ม 1536px ซึ่งกว้างเกินจำเป็น */}
+      {onSearchChange && activeTab === 'farms' && (
+        <div className="hidden lg:flex lg:order-2 flex-1 min-w-0 ml-6 mr-4">
+          <div className="relative w-full max-w-md">
+            <input
+              type="text"
+              value={searchQuery ?? ''}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="ค้นหารายชื่อฟาร์ม, สายพันธุ์, หรือจังหวัด..."
+              className="w-full pl-4 pr-10 py-2 text-sm bg-surface border border-line rounded-xl
+                         focus:outline-hidden focus:ring-2 focus:ring-gold/40 focus:border-gold
+                         text-white placeholder-[#688d77] transition-all"
+            />
+            <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-fg-3 pointer-events-none" />
+          </div>
+        </div>
+      )}
+
       {/* Right Column: Admin Hub Button + Profile Avatar */}
-      <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-1/4 sm:w-1/3" ref={profileMenuRef}>
+      <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-1/4 sm:w-1/3 lg:w-auto lg:order-4 lg:ml-2" ref={profileMenuRef}>
         {/* Admin Quick Approval Hub Button (Placed right beside Profile avatar as requested) */}
         {isAdmin && onOpenAdminApproval && (
           <button
