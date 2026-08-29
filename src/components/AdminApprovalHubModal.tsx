@@ -95,10 +95,25 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
    * เพราะทางเดียวที่โมดัลนี้ถูกปิดคือผ่าน onClose อยู่แล้ว
    */
   const handleClose = () => {
+    clearRevealedIdCard();
+    onClose();
+  };
+
+  /**
+   * ล้างเลขบัตรที่เปิดเผยไว้
+   *
+   * เรียกทั้งตอนปิดศูนย์อนุมัติ และตอนปิดหน้าต่างดูเอกสาร
+   *
+   * เดิมล้างเฉพาะตอนปิดศูนย์อนุมัติ แอดมินที่กดดูเอกสารแล้วปิดแค่หน้าต่างรูป
+   * จึงยังเห็นเลข 13 หลักค้างบนจอต่อไปเรื่อย ๆ โดยไม่มีบันทึกการเข้าถึงเพิ่ม
+   * ซึ่งขัดกับหลักที่ตั้งไว้ว่าทุกครั้งที่มีคนเห็นข้อมูลต้องมีบันทึกกำกับ
+   *
+   * ปิดแล้วอยากดูอีกก็กดใหม่ได้ ซึ่งจะยิงขอใหม่และถูกบันทึกอีกครั้ง
+   */
+  const clearRevealedIdCard = () => {
     setRevealedIdCard(null);
     setRevealError(null);
     setRevealBusy(false);
-    onClose();
   };
 
   /**
@@ -1022,7 +1037,10 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
       {/* High-Resolution Document & File Lightbox Viewer */}
       <DocumentViewerModal
         data={previewDoc}
-        onClose={() => setPreviewDoc(null)}
+        onClose={() => {
+          setPreviewDoc(null);
+          clearRevealedIdCard();
+        }}
       />
     </div>
   );
