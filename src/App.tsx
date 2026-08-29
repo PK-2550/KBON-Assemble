@@ -261,6 +261,8 @@ function MainAppContent() {
         currentRole={roleMode}
         onRoleChange={setRoleMode}
         onOpenNfcScanner={() => setIsGlobalNfcScannerOpen(true)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
         onOpenRegisterFarm={(req) => {
           setEditingRequest(req || null);
           setIsRegisterFarmModalOpen(true);
