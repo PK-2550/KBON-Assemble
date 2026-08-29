@@ -29,6 +29,17 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { fetchFarms, createFarm } from './services/farmService';
 import { Trees, Loader2, ArrowLeft, AlertCircle } from 'lucide-react';
 
+/**
+ * เพดานความกว้างของแต่ละหน้า
+ *
+ * LEGACY คือค่าเดิมที่ main เคยบังคับให้ทุกหน้า หน้าที่ยังไม่ได้ออกแบบใหม่
+ * ใช้ค่านี้ต่อไป จะได้ไม่เปลี่ยนหน้าตาโดยไม่ตั้งใจระหว่างทยอยออกแบบใหม่
+ *
+ * WIDE ใช้กับหน้าที่ออกแบบมาให้ใช้พื้นที่แนวนอนจริง เพดาน 1536px
+ * กว้างพอให้ตารางหลายคอลัมน์อ่านสบาย แต่ไม่ยืดจนบรรทัดยาวเกินกวาดสายตา
+ */
+const PAGE_WIDTH_LEGACY = 'w-full max-w-md md:max-w-2xl lg:max-w-4xl mx-auto flex flex-col gap-3';
+const PAGE_WIDTH_WIDE = 'w-full max-w-screen-2xl mx-auto flex flex-col gap-3';
 function MainAppContent() {
   const { currentUser, loading, roleMode, isAdmin, setRoleMode, connectionError, retryConnection } =
     useAuth();
@@ -298,20 +309,22 @@ function MainAppContent() {
       {/* Main Content Area - Mobile-First centered container */}
       <main
         /*
-         * ความกว้างของเนื้อหา ไล่ตามขนาดจอ
+         * ความกว้างของเนื้อหาเป็นหน้าที่ของแต่ละหน้า ไม่ใช่ของ main
          *
-         * เดิมตันอยู่ที่ 576px ทุกจอ บนเดสก์ท็อป 1440px จึงเหลือขอบว่างข้างละ 430px
-         * และกริดที่เขียนไว้เป็น lg:grid-cols-4 ในแดชบอร์ดไม่เคยได้ใช้จริง
+         * เดิม main กำหนดเพดาน 896px ให้ทุกหน้าพร้อมกัน หน้ารายชื่อฟาร์มที่ควร
+         * ใช้พื้นที่แนวนอนได้เต็มที่จึงถูกบีบไปด้วย บนจอ 1920px เหลือขอบว่าง
+         * ข้างละราว 500px
          *
-         * ไม่ปล่อยให้เต็มจอ เพราะแถวรายชื่อฟาร์มมีไม่กี่คอลัมน์
-         * กว้างเกินไปแล้วจะเหลือที่ว่างกลางแถวมากจนอ่านยากกว่าเดิม
+         * ย้ายเพดานไปไว้ที่แต่ละหน้าแทน หน้าที่ยังไม่ได้ออกแบบใหม่ใช้ค่าเดิม
+         * ผ่าน PAGE_WIDTH_LEGACY จึงไม่มีหน้าไหนเปลี่ยนไปโดยไม่ตั้งใจ
          */
-        className="flex-1 px-3.5 py-3 max-w-md md:max-w-2xl lg:max-w-4xl w-full mx-auto flex flex-col gap-3 pb-24"
+        className="flex-1 px-3.5 py-3 w-full flex flex-col gap-3 pb-24"
       >
         {/* If a Farm is selected, show the comprehensive FarmProfileView */}
         {/* ต้นไม้ที่เพิ่งสแกน NFC มา -- แสดงเป็นหน้าเต็มแทนเนื้อหาหลัก
             ของเดิมเปิดเป็นหน้าต่างซ้อนทับหน้าที่อยู่เบื้องหลัง */}
         {activeScannedTree ? (
+          <div className={PAGE_WIDTH_LEGACY}>
           <TreeDetailView
             tree={activeScannedTree.tree}
             farm={activeScannedTree.farm}
@@ -319,7 +332,9 @@ function MainAppContent() {
             currentRole={roleMode}
             onBack={() => setActiveScannedTree(null)}
           />
+          </div>
         ) : selectedFarm ? (
+          <div className={PAGE_WIDTH_LEGACY}>
           <FarmProfileView
             farm={selectedFarm}
             currentRole={roleMode}
@@ -328,10 +343,11 @@ function MainAppContent() {
               console.log('Selected variety:', variety.name);
             }}
           />
+          </div>
         ) : (
           <>
             {activeTab === 'farms' && (
-              <>
+              <div className={PAGE_WIDTH_WIDE}>
                 {/* Header & Controls */}
                 <HeaderBar
                   searchQuery={searchQuery}
@@ -362,11 +378,11 @@ function MainAppContent() {
                   onOpenAddModal={() => setIsAddModalOpen(true)}
                   currentRole={roleMode}
                 />
-              </>
+              </div>
             )}
 
             {activeTab === 'dashboard' && (
-              <div className="space-y-4 sm:space-y-6">
+              <div className={`${PAGE_WIDTH_LEGACY} space-y-4 sm:space-y-6`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
                   <div>
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">

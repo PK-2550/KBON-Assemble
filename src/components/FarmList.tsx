@@ -41,7 +41,7 @@ export const FarmList: React.FC<FarmListProps> = ({
   // Grid View
   if (viewMode === 'grid') {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
         {farms.map((farm, index) => (
           <FarmCard
             key={farm.id}
@@ -69,7 +69,19 @@ export const FarmList: React.FC<FarmListProps> = ({
 
   // Rank List View (Sequential 1, 2, 3, 4...)
   return (
-    <div className="bg-surface rounded-2xl border border-line overflow-hidden divide-y divide-line">
+    /*
+     * มือถือกับจอกว้างใช้ผังคนละแบบ
+     *
+     * มือถือ   กล่องเดียวมีเส้นคั่นระหว่างแถว อ่านไล่ลงมาเป็นรายการ
+     * จอกว้าง  การ์ดแยกใบวางในกริดที่ห่อเองตามความกว้างจริง
+     *          ใช้ auto-fit กับ minmax แทนการตรึงจำนวนคอลัมน์
+     *          จอ 1536px ได้สองคอลัมน์ จอกว้างกว่านั้นได้สาม จอแคบลงเหลือหนึ่ง
+     *          โดยไม่ต้องเพิ่ม breakpoint ใหม่ทุกครั้งที่จอเปลี่ยน
+     */
+    <div className="bg-surface rounded-2xl border border-line overflow-hidden divide-y divide-line
+                    lg:bg-transparent lg:rounded-none lg:border-0 lg:overflow-visible lg:divide-y-0
+                    lg:grid lg:gap-3 lg:[grid-template-columns:repeat(auto-fit,minmax(34rem,1fr))]">
+
       {farms.map((farm, index) => (
         <FarmRow
           key={farm.id}
