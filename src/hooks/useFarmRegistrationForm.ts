@@ -42,6 +42,18 @@ export function useFarmRegistrationForm({
   const isUpdateMode =
     mode === 'update' || Boolean(targetFarmId) || initialData?.requestType === 'update_farm';
 
+  /**
+   * มีสำเนาบัตรเก็บไว้ในระบบแล้วหรือยัง
+   *
+   * เซิร์ฟเวอร์ไม่ส่งตัวไฟล์กลับมาให้ใครทั้งสิ้นตั้งแต่มีการเข้ารหัสข้อมูลบัตร
+   * ช่องแนบไฟล์ในฟอร์มจึงว่างเสมอเมื่อเปิดคำขอเดิมขึ้นมาแก้ ทั้งที่ไฟล์ยังอยู่ครบ
+   * ตัวที่บอกแทนคือ hasIdCardPhoto ซึ่งส่งมาแทนตัวไฟล์
+   *
+   * ถ้าไม่ดูค่านี้ ด่านตรวจขั้นที่ 2 จะบังคับให้แนบไฟล์ใหม่ทุกครั้ง
+   * เจ้าของคำขอที่ถูกตีกลับให้แก้ไขจึงกดถัดไปไม่ได้เลย
+   */
+  const hasIdCardPhotoOnFile = Boolean(initialData?.hasIdCardPhoto);
+
   // Draft storage key
   const draftStorageKey = `durian_farm_registration_draft_${currentUser?.uid || 'guest'}`;
 
@@ -599,7 +611,8 @@ export function useFarmRegistrationForm({
         setErrorMessage('เลขประจำตัวประชาชนต้องเป็นตัวเลข 13 หลัก');
         return false;
       }
-      if (!farmerIdCardPhoto && !isUpdateMode) {
+      // ไฟล์ที่แนบไว้แล้วนับว่าผ่าน ไม่ต้องแนบซ้ำ เว้นว่างไว้เซิร์ฟเวอร์จะคงค่าเดิมให้
+      if (!farmerIdCardPhoto && !hasIdCardPhotoOnFile && !isUpdateMode) {
         setErrorMessage('กรุณาแนบรูปถ่ายหรือไฟล์ PDF บัตรประจำตัวประชาชนเพื่อยืนยันสิทธิ์');
         return false;
       }
@@ -780,6 +793,7 @@ export function useFarmRegistrationForm({
     setFarmerFullName,
     farmerIdCardNumber,
     setFarmerIdCardNumber,
+    hasIdCardPhotoOnFile,
     farmerIdCardPhoto,
     farmerIdCardFileType,
     farmerIdCardFileName,

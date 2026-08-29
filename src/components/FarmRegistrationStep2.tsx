@@ -7,6 +7,8 @@ interface FarmRegistrationStep2Props {
   farmerIdCardNumber: string;
   onFarmerIdCardNumberChange: (value: string) => void;
   farmerIdCardPhoto: string;
+  /** มีสำเนาบัตรเก็บไว้ในระบบแล้ว แม้ตัวไฟล์จะไม่ถูกส่งกลับมาให้ฟอร์ม */
+  hasIdCardPhotoOnFile?: boolean;
   farmerIdCardFileType: 'image' | 'pdf';
   farmerIdCardFileName: string;
   /** input ไฟล์ของขั้นนี้ ถือไว้ที่ hook เพราะ handler อัปโหลดอยู่ที่นั่น */
@@ -31,6 +33,7 @@ export const FarmRegistrationStep2: React.FC<FarmRegistrationStep2Props> = ({
   farmerIdCardNumber,
   onFarmerIdCardNumberChange,
   farmerIdCardPhoto,
+  hasIdCardPhotoOnFile,
   farmerIdCardFileType,
   farmerIdCardFileName,
   idCardInputRef,
@@ -158,8 +161,21 @@ export const FarmRegistrationStep2: React.FC<FarmRegistrationStep2Props> = ({
               className="w-full py-4 border-2 border-dashed border-[#235b3a] hover:border-leaf bg-canvas rounded-xl flex flex-col items-center justify-center gap-1.5 text-xs text-fg-2 hover:text-white transition-all cursor-pointer"
             >
               <Upload className="w-5 h-5 text-leaf" />
-              <span className="font-bold text-white">คลิกเพื่ออัปโหลดสำเนาบัตรประชาชน</span>
-              <span className="text-[10px] text-[#527861]">รองรับไฟล์ PDF หรือ รูปภาพ JPG/PNG ไม่เกิน 10MB</span>
+              {/* ไฟล์ที่เคยแนบไว้ไม่ถูกส่งกลับมาให้ฟอร์มเพราะถูกเข้ารหัสไว้
+                  ถ้าไม่บอกตรงนี้ ผู้ใช้จะเข้าใจว่าไฟล์ที่เคยแนบหายไปแล้ว */}
+              {hasIdCardPhotoOnFile ? (
+                <>
+                  <span className="font-bold text-white">มีสำเนาบัตรเก็บไว้ในระบบแล้ว</span>
+                  <span className="text-[10px] text-[#527861]">
+                    ไม่ต้องแนบซ้ำ ข้ามไปขั้นถัดไปได้เลย หรือคลิกที่นี่ถ้าต้องการเปลี่ยนไฟล์ใหม่
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="font-bold text-white">คลิกเพื่ออัปโหลดสำเนาบัตรประชาชน</span>
+                  <span className="text-[10px] text-[#527861]">รองรับไฟล์ PDF หรือ รูปภาพ JPG/PNG ไม่เกิน 10MB</span>
+                </>
+              )}
             </button>
           )}
         </div>

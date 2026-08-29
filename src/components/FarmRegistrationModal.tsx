@@ -55,6 +55,7 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
     farmerFullName,
     setFarmerFullName,
     farmerIdCardNumber,
+    hasIdCardPhotoOnFile,
     setFarmerIdCardNumber,
     farmerIdCardPhoto,
     farmerIdCardFileType,
@@ -301,6 +302,7 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
                   farmerIdCardNumber={farmerIdCardNumber}
                   onFarmerIdCardNumberChange={setFarmerIdCardNumber}
                   farmerIdCardPhoto={farmerIdCardPhoto}
+                  hasIdCardPhotoOnFile={hasIdCardPhotoOnFile}
                   farmerIdCardFileType={farmerIdCardFileType}
                   farmerIdCardFileName={farmerIdCardFileName}
                   idCardInputRef={idCardInputRef}
