@@ -4,7 +4,11 @@ import { pool } from '../db.js';
 import { loadFarms, upsertFarm } from '../farmsRepo.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { idCardRevealLimiter } from '../middleware/rateLimit.js';
-import { decryptIdCardValue, IdCardDecryptionError } from '../security/idCardCipher.js';
+import {
+  encryptIdCardValue,
+  decryptIdCardValue,
+  IdCardDecryptionError,
+} from '../security/idCardCipher.js';
 import { logIdCardAccess, logIdCardAccessBestEffort } from '../security/idCardAccessLog.js';
 import { maskedThaiNationalIdFromCheckDigit } from '../../src/shared/thaiNationalId.js';
 
@@ -199,6 +203,26 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
   const optBool = (v: unknown, previous: boolean | undefined) =>
     v === undefined ? (previous ?? false) : v === true;
 
+  /**
+   * เข้ารหัสข้อมูลบัตรก่อนเขียนลงฐานข้อมูล
+   *
+   * เดิมเขียนเลขบัตรและรูปลงคอลัมน์ข้อความธรรมดาตรง ๆ ทั้งที่ระบบมีการเข้ารหัส
+   * และมีการปิดบังขาออกแล้ว การเข้ารหัสจึงครอบเฉพาะข้อมูลเก่าที่แปลงไว้ตอน migration
+   * ส่วนคำขอที่ยื่นเข้ามาใหม่ยังเป็นข้อความธรรมดาอยู่ทั้งหมด
+   *
+   * ผูก id ของแถวเป็น AAD เหมือนกับตอนแปลงข้อมูลเก่า ค่าที่ได้จึงอ่านได้เฉพาะ
+   * ในบริบทของแถวนี้เท่านั้น
+   *
+   * ส่งค่า null ให้คอลัมน์ข้อความธรรมดาเสมอ ไม่ใช่แค่เลิกเขียนค่าใหม่
+   * เพราะถ้ายังเขียนอยู่ การรัน 007 ที่ลบคอลัมน์นั้นจะทำให้ข้อมูลหายจริง
+   */
+  const rawIdCardNumber = typeof b.farmerIdCardNumber === 'string' ? b.farmerIdCardNumber.trim() : '';
+  const rawIdCardPhoto = typeof b.farmerIdCardPhoto === 'string' ? b.farmerIdCardPhoto : '';
+
+  const idCardCiphertext = rawIdCardNumber ? encryptIdCardValue(rawIdCardNumber, id) : null;
+  const idCardPhotoCiphertext = rawIdCardPhoto ? encryptIdCardValue(rawIdCardPhoto, id) : null;
+  const idCardCheckDigit = rawIdCardNumber ? rawIdCardNumber.slice(-1) : null;
+
   const { rows } = await pool.query(
     `INSERT INTO farm_requests (
        id, request_category, request_type, target_farm_id, update_notes,
@@ -208,11 +232,13 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
        gap_cert_number, cert_issued_by, cert_valid_until, cert_document_photo, other_certs,
        farmer_full_name, farmer_id_card_number, farmer_id_card_photo, farmer_id_card_file_type,
        agreed_to_criteria, google_maps_url, has_smart_farm, payload,
-       status, previous_admin_notes, resubmitted_at
+       status, previous_admin_notes, resubmitted_at,
+       farmer_id_card_ciphertext, farmer_id_card_photo_ciphertext, farmer_id_card_check_digit
      ) VALUES (
        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
        $23,$24,$25,$26,$27,$28,$29,$30,
-       'pending',$31,$32
+       'pending',$31,$32,
+       $33,$34,$35
      )
      ON CONFLICT (id) DO UPDATE SET
        -- ทุกคอลัมน์ใช้ COALESCE เพื่อเลียนแบบ merge:true ของ Firestore
@@ -240,8 +266,14 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
        other_certs=CASE WHEN cardinality(EXCLUDED.other_certs) > 0
                         THEN EXCLUDED.other_certs ELSE farm_requests.other_certs END,
        farmer_full_name=COALESCE(EXCLUDED.farmer_full_name, farm_requests.farmer_full_name),
-       farmer_id_card_number=COALESCE(EXCLUDED.farmer_id_card_number, farm_requests.farmer_id_card_number),
-       farmer_id_card_photo=COALESCE(EXCLUDED.farmer_id_card_photo, farm_requests.farmer_id_card_photo),
+       -- ไม่แตะคอลัมน์ข้อความธรรมดาอีกแล้ว ค่าที่ส่งเข้ามาถูกเข้ารหัสไว้ก่อนถึงตรงนี้
+       -- แถวเก่าที่ยังมีข้อความธรรมดาค้างอยู่ปล่อยไว้ให้สคริปต์แปลงข้อมูลจัดการ
+       farmer_id_card_ciphertext=COALESCE(EXCLUDED.farmer_id_card_ciphertext,
+                                          farm_requests.farmer_id_card_ciphertext),
+       farmer_id_card_photo_ciphertext=COALESCE(EXCLUDED.farmer_id_card_photo_ciphertext,
+                                                farm_requests.farmer_id_card_photo_ciphertext),
+       farmer_id_card_check_digit=COALESCE(EXCLUDED.farmer_id_card_check_digit,
+                                           farm_requests.farmer_id_card_check_digit),
        farmer_id_card_file_type=COALESCE(EXCLUDED.farmer_id_card_file_type, farm_requests.farmer_id_card_file_type),
        agreed_to_criteria=COALESCE(EXCLUDED.agreed_to_criteria, farm_requests.agreed_to_criteria),
        google_maps_url=COALESCE(EXCLUDED.google_maps_url, farm_requests.google_maps_url),
@@ -277,8 +309,9 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
       opt(b.certDocumentPhoto),
       Array.isArray(b.otherCerts) ? b.otherCerts.map(String) : [],
       opt(b.farmerFullName),
-      opt(b.farmerIdCardNumber),
-      opt(b.farmerIdCardPhoto),
+      // คอลัมน์ข้อความธรรมดาไม่ถูกเขียนอีกต่อไป ค่าจริงอยู่ในคอลัมน์ ciphertext ข้างล่าง
+      null,
+      null,
       opt(b.farmerIdCardFileType),
       optBool(b.agreedToCriteria, prev?.agreed_to_criteria),
       opt(b.googleMapsUrl),
@@ -286,6 +319,9 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
       JSON.stringify(payload),
       isResubmit ? existing.rows[0].admin_notes : null,
       isResubmit ? new Date() : null,
+      idCardCiphertext,
+      idCardPhotoCiphertext,
+      idCardCheckDigit,
     ]
   );
 
