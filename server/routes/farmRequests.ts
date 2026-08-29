@@ -10,7 +10,11 @@ import {
   IdCardDecryptionError,
 } from '../security/idCardCipher.js';
 import { logIdCardAccess, logIdCardAccessBestEffort } from '../security/idCardAccessLog.js';
-import { maskedThaiNationalIdFromCheckDigit } from '../../src/shared/thaiNationalId.js';
+import {
+  maskedThaiNationalIdFromCheckDigit,
+  normalizeThaiNationalId,
+  isValidThaiNationalId,
+} from '../../src/shared/thaiNationalId.js';
 
 export const farmRequestsRouter = Router();
 
@@ -216,8 +220,25 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
    * ส่งค่า null ให้คอลัมน์ข้อความธรรมดาเสมอ ไม่ใช่แค่เลิกเขียนค่าใหม่
    * เพราะถ้ายังเขียนอยู่ การรัน 007 ที่ลบคอลัมน์นั้นจะทำให้ข้อมูลหายจริง
    */
-  const rawIdCardNumber = typeof b.farmerIdCardNumber === 'string' ? b.farmerIdCardNumber.trim() : '';
+  // ผู้ใช้พิมพ์ขีดคั่นมาได้ตามสะดวก เก็บและตรวจด้วยตัวเลขล้วนเสมอ
+  const rawIdCardNumber =
+    typeof b.farmerIdCardNumber === 'string' ? normalizeThaiNationalId(b.farmerIdCardNumber) : '';
   const rawIdCardPhoto = typeof b.farmerIdCardPhoto === 'string' ? b.farmerIdCardPhoto : '';
+
+  /**
+   * ตรวจหลักตรวจสอบของเลขบัตรที่เซิร์ฟเวอร์ ไม่ใช่แค่ที่ฟอร์ม
+   *
+   * การตรวจฝั่งหน้าจอเป็นเรื่องความสะดวกของผู้ใช้ ไม่ใช่การบังคับ
+   * ใครยิง API ตรงก็ข้ามไปได้ ด่านที่นับจริงจึงต้องอยู่ที่นี่
+   *
+   * เป็นช่องไม่บังคับกรอก ถ้าไม่ส่งมาเลยก็ผ่าน แต่ถ้าส่งมาต้องถูกต้อง
+   */
+  if (rawIdCardNumber && !isValidThaiNationalId(rawIdCardNumber)) {
+    return res.status(400).json({
+      error:
+        'เลขประจำตัวประชาชนไม่ถูกต้อง กรุณาตรวจสอบให้เป็นตัวเลข 13 หลักตามที่ปรากฏบนบัตร',
+    });
+  }
 
   const idCardCiphertext = rawIdCardNumber ? encryptIdCardValue(rawIdCardNumber, id) : null;
   const idCardPhotoCiphertext = rawIdCardPhoto ? encryptIdCardValue(rawIdCardPhoto, id) : null;
