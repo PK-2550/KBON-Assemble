@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { submitFarmRegistrationRequest } from '../services/farmRequestService';
 import { compressImageFile } from '../utils/imageCompressor';
 import { AVAILABLE_SMART_TECH, STANDARD_OPTIONS } from '../constants/farmRegistrationOptions';
+import { isValidThaiNationalId } from '../shared/thaiNationalId';
 
 interface UseFarmRegistrationFormArgs {
   isOpen: boolean;
@@ -609,6 +610,14 @@ export function useFarmRegistrationForm({
       const cleanId = farmerIdCardNumber.replace(/\D/g, '');
       if (cleanId.length > 0 && cleanId.length !== 13) {
         setErrorMessage('เลขประจำตัวประชาชนต้องเป็นตัวเลข 13 หลัก');
+        return false;
+      }
+      // เตือนตั้งแต่ขั้นที่กรอก ไม่ปล่อยให้กรอกจนจบห้าขั้นแล้วค่อยโดนเซิร์ฟเวอร์ปฏิเสธ
+      // ด่านที่บังคับจริงยังอยู่ที่เซิร์ฟเวอร์ ตรงนี้เป็นเรื่องความสะดวกของผู้ใช้
+      if (cleanId.length === 13 && !isValidThaiNationalId(cleanId)) {
+        setErrorMessage(
+          'เลขประจำตัวประชาชนไม่ถูกต้อง กรุณาตรวจสอบตัวเลขให้ตรงกับที่ปรากฏบนบัตร'
+        );
         return false;
       }
       // ไฟล์ที่แนบไว้แล้วนับว่าผ่าน ไม่ต้องแนบซ้ำ เว้นว่างไว้เซิร์ฟเวอร์จะคงค่าเดิมให้
