@@ -156,7 +156,9 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
         บล็อกที่เป็นแผงเต็มความกว้าง (toast แบนเนอร์ผู้จัดการ SmartFarm)
         คร่อมสองคอลัมน์ เพราะไม่ใช่ข้อมูลประจำตัวของฟาร์ม */}
     <div className="px-4 sm:px-6 lg:px-8 pb-6 space-y-5
-                    lg:space-y-0 lg:grid lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-x-10 lg:gap-y-5 lg:items-start">
+                    lg:space-y-0 lg:grid lg:grid-cols-[20rem_minmax(0,1fr)]
+                    lg:grid-rows-[min-content_min-content_min-content_min-content_1fr]
+                    lg:gap-x-10 lg:gap-y-5 lg:items-start">
       {/* 2) + 3) รูปหลักอยู่ซ้ายมือและถูกดึงขึ้นไปเหลื่อมขอบล่างของปกเล็กน้อย
           ชื่อฟาร์มกับปุ่มติดต่อวางข้าง ๆ รูปในแถวเดียวกันตามต้นแบบ
           จอแคบให้แถบปุ่มตกลงมาเป็นบรรทัดของตัวเอง (w-full) จะได้ไม่เบียดกับชื่อฟาร์ม */}

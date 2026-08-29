@@ -326,7 +326,9 @@ function MainAppContent() {
         {/* ต้นไม้ที่เพิ่งสแกน NFC มา -- แสดงเป็นหน้าเต็มแทนเนื้อหาหลัก
             ของเดิมเปิดเป็นหน้าต่างซ้อนทับหน้าที่อยู่เบื้องหลัง */}
         {activeScannedTree ? (
-          <div className={PAGE_WIDTH_LEGACY}>
+          /* หน้าต้นไม้ใช้ความกว้างชุดเดียวกับหน้าฟาร์ม เพราะจอกว้างวางรูป
+             กับข้อมูลเคียงข้างกันเหมือนกัน */
+          <div className={PAGE_WIDTH_WIDE}>
           <TreeDetailView
             tree={activeScannedTree.tree}
             farm={activeScannedTree.farm}
