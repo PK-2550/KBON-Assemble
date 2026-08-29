@@ -9,6 +9,7 @@
 
 import 'dotenv/config';
 import { Client } from 'pg';
+import { decryptIdCardValue } from '../server/security/idCardCipher.js';
 
 const BASE = `http://localhost:${process.env.API_PORT ?? 3001}/api`;
 
@@ -286,14 +287,19 @@ export async function run(): Promise<{ passed: number; failed: number; failures:
   ok('คำตอบไม่รั่วเลขบัตรประชาชน', !leaked.includes(ID_CARD));
   ok('คำตอบไม่รั่วภาพถ่ายบัตร', !leaked.includes(ID_PHOTO));
 
+  // เลขบัตรถูกเข้ารหัสตั้งแต่ตอนเขียนแล้ว จึงต้องถอดรหัสออกมาเทียบ
+  // ไม่ใช่อ่านคอลัมน์ข้อความธรรมดาซึ่งต้องเป็น null เสมอสำหรับคำขอที่ยื่นใหม่
   const untouched = await db.query(
-    'SELECT farm_name, province, farmer_id_card_number FROM farm_requests WHERE id = $1',
+    `SELECT farm_name, province, farmer_id_card_number, farmer_id_card_ciphertext
+       FROM farm_requests WHERE id = $1`,
     [idorId]
   );
   ok('ข้อมูลในฐานข้อมูลไม่ถูกเขียนทับ',
     untouched.rows[0]?.farm_name === THAI_FARM &&
     untouched.rows[0]?.province === 'จันทบุรี' &&
-    untouched.rows[0]?.farmer_id_card_number === ID_CARD);
+    decryptIdCardValue(untouched.rows[0]?.farmer_id_card_ciphertext, idorId) === ID_CARD);
+  ok('ฐานข้อมูลไม่เก็บเลขบัตรเป็นข้อความธรรมดา',
+    untouched.rows[0]?.farmer_id_card_number === null);
 
   const ownEdit = await farmer.call('/farm-requests', {
     method: 'POST',
@@ -307,11 +313,11 @@ export async function run(): Promise<{ passed: number; failed: number; failures:
     ownEdit.body?.request?.farmerIdCardMasked === `X-XXXX-XXXXX-XX-${ID_CARD.slice(-1)}`);
 
   const stillThere = await db.query(
-    'SELECT farmer_id_card_number FROM farm_requests WHERE id = $1',
+    'SELECT farmer_id_card_ciphertext FROM farm_requests WHERE id = $1',
     [idorId]
   );
   ok('ข้อมูลเดิมที่ไม่ได้ส่งมายังคงอยู่',
-    stillThere.rows[0]?.farmer_id_card_number === ID_CARD);
+    decryptIdCardValue(stillThere.rows[0]?.farmer_id_card_ciphertext, idorId) === ID_CARD);
 
   // ---------------------------------------------------------------
   console.log('\n--- ล้างข้อมูลทดสอบ ---');

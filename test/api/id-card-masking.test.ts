@@ -3,6 +3,7 @@ import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server/index';
 import { pool } from '../../server/db';
+import { decryptIdCardValue } from '../../server/security/idCardCipher';
 
 /**
  * เลขบัตรและรูปถ่ายบัตรต้องไม่หลุดออกทาง API ไม่ว่าผู้เรียกจะเป็นใคร
@@ -70,13 +71,20 @@ afterAll(async () => {
 });
 
 describe('เลขบัตรและรูปถ่ายบัตรไม่หลุดออกทาง API', () => {
-  test('คำขอถูกสร้างและเลขจริงถูกเก็บลงฐานข้อมูล', async () => {
+  test('คำขอถูกสร้างและเลขจริงถูกเก็บแบบเข้ารหัส ไม่ใช่ข้อความธรรมดา', async () => {
     expect(requestId).toBeTruthy();
     const row = await pool.query(
-      'SELECT farmer_id_card_number FROM farm_requests WHERE id = $1',
+      `SELECT farmer_id_card_number, farmer_id_card_ciphertext
+         FROM farm_requests WHERE id = $1`,
       [requestId]
     );
-    expect(row.rows[0]?.farmer_id_card_number).toBe(ID_CARD);
+
+    // เก็บไว้จริงและถอดกลับได้
+    expect(row.rows[0]?.farmer_id_card_ciphertext).not.toBeNull();
+    expect(decryptIdCardValue(row.rows[0].farmer_id_card_ciphertext, requestId)).toBe(ID_CARD);
+
+    // และต้องไม่มีข้อความธรรมดาเหลืออยู่
+    expect(row.rows[0]?.farmer_id_card_number).toBeNull();
   });
 
   test('คำตอบตอนสร้างคำขอ ไม่ส่งเลขเต็มหรือรูปกลับมา', async () => {
