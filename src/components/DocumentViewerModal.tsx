@@ -169,6 +169,8 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label="ปิดหน้าต่างเอกสาร"
+              title="ปิดหน้าต่างเอกสาร"
               className="p-1.5 sm:p-2 text-fg-2 hover:text-white hover:bg-surface-2 rounded-xl border border-line transition-colors cursor-pointer ml-1"
             >
               <X className="w-4 h-4" />
