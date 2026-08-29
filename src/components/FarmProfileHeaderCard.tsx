@@ -151,14 +151,20 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
       </div>
     </div>
 
-    <div className="px-4 sm:px-6 lg:px-8 pb-6 space-y-5">
+    {/* จอแคบเรียงลงล่างทีละบล็อก จอกว้างแบ่งเป็นสองคอลัมน์ รูปฟาร์มอยู่ซ้าย
+        ข้อมูลกับปุ่มทั้งหมดอยู่ขวา ตามผังหน้าโปรไฟล์ของต้นแบบ
+        บล็อกที่เป็นแผงเต็มความกว้าง (toast แบนเนอร์ผู้จัดการ SmartFarm)
+        คร่อมสองคอลัมน์ เพราะไม่ใช่ข้อมูลประจำตัวของฟาร์ม */}
+    <div className="px-4 sm:px-6 lg:px-8 pb-6 space-y-5
+                    lg:space-y-0 lg:grid lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-x-10 lg:gap-y-5 lg:items-start">
       {/* 2) + 3) รูปหลักอยู่ซ้ายมือและถูกดึงขึ้นไปเหลื่อมขอบล่างของปกเล็กน้อย
           ชื่อฟาร์มกับปุ่มติดต่อวางข้าง ๆ รูปในแถวเดียวกันตามต้นแบบ
           จอแคบให้แถบปุ่มตกลงมาเป็นบรรทัดของตัวเอง (w-full) จะได้ไม่เบียดกับชื่อฟาร์ม */}
-      <div className="flex flex-wrap items-end gap-4 sm:gap-6 -mt-10 sm:-mt-14 relative z-10">
+      <div className="flex flex-wrap items-end gap-4 sm:gap-6 -mt-10 sm:-mt-14 relative z-10 lg:contents">
         <button
           onClick={() => onOpenGallery()}
-          className="relative shrink-0 w-24 sm:w-36 lg:w-40 aspect-3/4 rounded-2xl overflow-hidden border-4 border-surface bg-canvas shadow-lg cursor-pointer group"
+          className="relative shrink-0 w-24 sm:w-36 aspect-3/4 rounded-2xl overflow-hidden border-4 border-surface bg-canvas shadow-lg cursor-pointer group
+                     lg:w-full lg:col-start-1 lg:row-start-1 lg:row-end-6 lg:-mt-24 lg:z-10"
         >
           <img
             src={photos[0]}
@@ -170,7 +176,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
           </span>
         </button>
 
-        <div className="min-w-0 flex-1 basis-40 flex items-center gap-3 pb-1">
+        <div className="min-w-0 flex-1 basis-40 flex items-center gap-3 pb-1 lg:col-start-2 lg:row-start-1 lg:flex-none lg:basis-auto lg:pb-0">
           <div className="hidden sm:flex w-14 h-14 shrink-0 rounded-2xl bg-surface-2 border border-line-strong items-center justify-center text-gold font-black text-2xl font-serif">
             {farmInitials}
           </div>
@@ -191,7 +197,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
 
         {/* ปุ่มหลัก -- ตำแหน่งเดียวกับ Buy Now / Message ของต้นแบบ คือขวาสุดของแถวชื่อ
             โทรหาฟาร์มเป็นสิ่งที่ผู้ซื้อทำจริงมากที่สุด จึงให้เป็นปุ่มเด่นสุดของหน้า */}
-        <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 sm:pb-1">
+        <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 sm:pb-1 lg:col-start-2 lg:row-start-2 lg:ml-0 lg:pb-0">
           {currentFarm.contact?.phoneNumber ? (
             <a
               href={`tel:${currentFarm.contact.phoneNumber.replace(/[^0-9+]/g, '')}`}
@@ -216,7 +222,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
       {/* 4) ชุดตัวเลขสถิติ -- เรียงต่อกันเป็นแนวนอนระนาบเดียวกันแบบเรียบ ๆ ไม่มีกรอบ
           อันดับกับคะแนนตั้งขนาดใหญ่กว่าตัวอื่นตามต้นแบบที่ชู #1 กับ 8.9 ให้เห็นก่อน
           แสดงเฉพาะค่าที่มีข้อมูลจริง ไม่เติมค่าที่แต่งขึ้นเมื่อไม่มีข้อมูล */}
-      <div className="flex flex-wrap items-start gap-x-6 sm:gap-x-10 gap-y-4">
+      <div className="flex flex-wrap items-start gap-x-6 sm:gap-x-10 gap-y-4 lg:col-start-2 lg:row-start-3">
         <Stat label="อันดับทำเนียบ" value={`#${currentFarm.rank}`} strong />
         <Stat
           label={`${currentFarm.reviewCount.toLocaleString()} รีวิว`}
@@ -240,7 +246,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
 
       {/* เรื่องราวของฟาร์ม -- อยู่ใต้แถบตัวเลขตามผังต้นแบบ */}
       {(currentFarm.highlight || currentFarm.aboutStory) && (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 lg:col-start-2 lg:row-start-4">
           {currentFarm.highlight && (
             <p className="text-sm text-fg font-medium leading-relaxed max-w-[68ch]">{currentFarm.highlight}</p>
           )}
@@ -266,7 +272,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
 
       {/* ช่องทางติดต่อ -- ต้นแบบวางลิงก์เว็บไซต์เป็นบรรทัดเล็ก ๆ ใต้คำอธิบาย
           จึงเปลี่ยนจากกริดสามช่องเต็มความกว้าง มาเป็นชิปเรียงชิดซ้ายตามความกว้างของข้อความ */}
-      <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+      <div className="flex flex-wrap items-center gap-2 text-xs font-bold lg:col-start-2 lg:row-start-5">
         <a
           href={currentFarm.contact?.facebook || 'https://facebook.com'}
           target="_blank"
@@ -303,7 +309,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
 
       {/* Success Toast for Update Request */}
       {successToast && (
-        <div className="p-3 bg-purple-950/80 border border-purple-500/60 rounded-2xl text-xs font-bold text-purple-200 flex items-center gap-2 animate-in slide-in-from-top shadow-lg">
+        <div className="p-3 bg-purple-950/80 border border-purple-500/60 rounded-2xl text-xs font-bold text-purple-200 flex items-center gap-2 animate-in slide-in-from-top shadow-lg lg:col-span-2">
           <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
           <span>{successToast}</span>
         </div>
@@ -311,7 +317,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
 
       {/* Manager Action Banner: Request Farm Edit/Update to Admin */}
       {isOwnerOrAdmin && (
-        <div className="p-3.5 bg-gradient-to-r from-purple-950/40 via-surface to-indigo-950/40 border border-purple-700/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-md">
+        <div className="p-3.5 bg-gradient-to-r from-purple-950/40 via-surface to-indigo-950/40 border border-purple-700/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-md lg:col-span-2">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-purple-900/60 border border-purple-600/50 flex items-center justify-center text-purple-300 shrink-0">
               <FileEdit className="w-4 h-4" />
@@ -342,7 +348,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
 
       {/* SmartFarm Innovation Section (Optional & Toggleable by Farm Manager) */}
       {showSmartFarmCard ? (
-        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#122b1c] border border-line p-4 sm:p-5 shadow-lg">
+        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#122b1c] border border-line p-4 sm:p-5 shadow-lg lg:col-span-2">
           <div className="absolute top-0 right-0 w-64 h-32 bg-emerald-600/10 blur-3xl pointer-events-none" />
 
           <div className="flex items-center justify-between mb-2 relative z-10">
@@ -409,7 +415,7 @@ export const FarmProfileHeaderCard: React.FC<FarmProfileHeaderCardProps> = ({
         </div>
       ) : (
         /* Traditional Farming Banner (When SmartFarm is disabled or not present) */
-        <div className="p-4 rounded-2xl bg-[#122b1c] border border-line flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-[#122b1c] border border-line flex items-center justify-between lg:col-span-2">
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-2xl">🌱</span>
             <div className="min-w-0">

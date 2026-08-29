@@ -336,7 +336,10 @@ function MainAppContent() {
           />
           </div>
         ) : selectedFarm ? (
-          <div className={PAGE_WIDTH_LEGACY}>
+          /* หน้ารายละเอียดฟาร์มใช้ความกว้างชุดเดียวกับหน้ารายชื่อฟาร์ม
+             เพราะจอกว้างวางรูปกับข้อมูลเคียงข้างกัน ถ้ายังคุมที่ max-w-4xl
+             คอลัมน์ขวาจะเหลือที่ไม่พอจนสถิติตกบรรทัดและตารางต้นไม้เหลือคอลัมน์เดียว */
+          <div className={PAGE_WIDTH_WIDE}>
           <FarmProfileView
             farm={selectedFarm}
             currentRole={roleMode}

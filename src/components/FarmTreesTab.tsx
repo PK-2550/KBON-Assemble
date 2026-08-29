@@ -184,10 +184,14 @@ export const FarmTreesTab: React.FC<FarmTreesTabProps> = ({
         </div>
       </div>
 
-      {/* Tree List */}
-      <div className="bg-surface rounded-3xl border border-line shadow-2xl overflow-hidden divide-y divide-line">
+      {/* Tree List -- จอแคบเรียงลงล่างทีละต้น
+          จอกว้างแบ่งเป็นสองคอลัมน์ในกล่องเดียวกัน แถวจึงไม่ยาวพาดเต็มจนไล่สายตาลำบาก
+          เส้นคั่นย้ายไปอยู่ที่ตัวแถวเอง เพราะ divide-y คั่นได้แค่ตามลำดับลูก
+          ซึ่งใช้กับสองคอลัมน์ไม่ได้ */}
+      <div className="bg-surface rounded-3xl border border-line shadow-2xl overflow-hidden divide-y divide-line
+                      lg:grid lg:grid-cols-2 lg:divide-y-0">
         {filteredAndSortedTrees.length === 0 ? (
-          <div className="p-10 text-center text-fg-2 text-xs">
+          <div className="p-10 text-center text-fg-2 text-xs lg:col-span-2">
             ไม่พบรายชื่อต้นไม้ตามเงื่อนไขที่ค้นหา
           </div>
         ) : (
@@ -198,7 +202,8 @@ export const FarmTreesTab: React.FC<FarmTreesTabProps> = ({
             <div
               key={tree.id}
               onClick={() => onSelectTree(tree)}
-              className="group flex items-center gap-3 py-2.5 px-3 sm:px-4 hover:bg-surface-2 transition-colors cursor-pointer"
+              className="group flex items-center gap-3 py-2.5 px-3 sm:px-4 hover:bg-surface-2 transition-colors cursor-pointer
+                         lg:border-t lg:border-line lg:first:border-t-0 lg:[&:nth-child(2)]:border-t-0 lg:even:border-l"
             >
               {/* รหัสต้น -- ตัวยึดสายตาหลัก เป็นรหัสเดียวกับที่พิมพ์บนแท็ก NFC */}
               <span className="font-mono text-xs font-bold text-fg-3 shrink-0 w-[74px] sm:w-[86px]">

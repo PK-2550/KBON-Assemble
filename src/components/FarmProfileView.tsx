@@ -9,6 +9,7 @@ import { FarmPhotoGalleryOverlay } from './FarmPhotoGalleryOverlay';
 import { FarmPhotoManagerModal } from './FarmPhotoManagerModal';
 import { FarmSmartTechConfigModal } from './FarmSmartTechConfigModal';
 import { FarmProfileHeaderCard } from './FarmProfileHeaderCard';
+import { FarmCertificationBadgeStrip } from './FarmCertificationBadgeStrip';
 import { FarmRegistrationModal } from './FarmRegistrationModal';
 import { saveFarm } from '../services/farmService';
 import { useAuth } from '../context/AuthContext';
@@ -212,6 +213,9 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
         {/* แถบเมนูและเนื้อหาของแท็บ อยู่ในระยะขอบชุดเดียวกับส่วนหัวด้านบน */}
         <div className="px-4 sm:px-6 lg:px-8 pt-5 space-y-4">
+          {/* ที่ว่างของตราใบรับรอง คั่นระหว่างเรื่องราวของฟาร์มกับรายชื่อต้นไม้ */}
+          <FarmCertificationBadgeStrip />
+
           {/* Navigation Tabs -- เรียงแนวนอนชิดซ้ายใต้ส่วนข้อมูลหลักตามต้นแบบ
               แท็บที่เลือกอยู่ใช้เส้นใต้บาง ๆ แทนปุ่มพื้นทองเต็มช่องแบบเดิม
               ของเดิมเป็นกริดสามช่องเท่ากันซึ่งบีบชื่อแท็บจนต้องตัดคำทิ้ง
