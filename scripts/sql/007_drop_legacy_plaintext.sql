@@ -13,6 +13,7 @@
 --   1. รัน 006 แล้ว
 --   2. รันสคริปต์เข้ารหัสข้อมูลเดิมแล้ว และตรวจแล้วว่าครบทุกแถว
 --   3. ตรวจข้อมูลที่ย้ายเข้า certifications จาก 005 แล้วว่าถูกต้อง
+--      รวมถึงรัน 009 (ย้ายใบ GI) และ 010 (เก็บตกใบที่ค้าง) แล้ว
 --   4. โค้ดฝั่งเซิร์ฟเวอร์เลิกอ่าน farmer_id_card_number, farmer_id_card_photo
 --      และตาราง farm_certifications แล้ว
 --
@@ -29,6 +30,7 @@ DECLARE
   n_id_plain    integer;
   n_photo_plain integer;
   n_cert_left   integer;
+  n_gi_left     integer;
 BEGIN
   -- ยาม 1  ยังมีเลขบัตรที่เป็นข้อความธรรมดาแต่ยังไม่มีฉบับเข้ารหัสหรือไม่
   SELECT count(*) INTO n_id_plain
@@ -53,16 +55,52 @@ BEGIN
   END IF;
 
   -- ยาม 3  ใบรับรองเดิมถูกย้ายเข้าตารางใหม่ครบหรือยัง
-  -- GI ไม่นับ เพราะตั้งใจไม่ย้ายอัตโนมัติ ต้องให้แอดมินจับคู่กับโซนเอง
+  --
+  -- เทียบถึงระดับประเภทและเลขที่ใบ ไม่ใช่แค่ว่าฟาร์มนี้มีใบอะไรสักใบในตารางใหม่
+  -- ยามรุ่นแรกเช็คแค่ว่ามีอย่างน้อยหนึ่งใบ ซึ่งปล่อยผ่านฟาร์มที่มีสามใบ
+  -- แล้วย้ายสำเร็จใบเดียว อีกสองใบจะหายไปพร้อมกับการลบตารางในไฟล์นี้
+  --
+  -- ใช้เกณฑ์จับคู่ประเภทชุดเดียวกับ 005 กับ 010 และชุดทดสอบ
+  -- certifications-legacy-parity
   SELECT count(*) INTO n_cert_left
     FROM farm_certifications fc
+    JOIN certification_types ct
+      ON ct.code = CASE
+           WHEN fc.short_code ILIKE 'GAP'      THEN 'GAP'
+           WHEN fc.short_code ILIKE 'Organic%' THEN 'ORGANIC_TH'
+           WHEN fc.short_code ILIKE 'GMP'      THEN 'GMP'
+           WHEN fc.short_code ILIKE 'GACC'     THEN 'GACC'
+           ELSE 'LEGACY_OTHER'
+         END
    WHERE fc.short_code IS DISTINCT FROM 'GI'
+     AND EXISTS (SELECT 1 FROM farms f WHERE f.id = fc.farm_id)
      AND NOT EXISTS (
-       SELECT 1 FROM certifications c WHERE c.farm_id = fc.farm_id
-     );
+           SELECT 1 FROM certifications c
+            WHERE c.farm_id = fc.farm_id
+              AND c.certification_type_id = ct.id
+              AND c.cert_number IS NOT DISTINCT FROM fc.cert_number
+         );
 
   IF n_cert_left > 0 THEN
     RAISE EXCEPTION 'หยุด: ยังมีใบรับรองเดิม % แถวที่ไม่พบคู่ในตาราง certifications', n_cert_left;
+  END IF;
+
+  -- ยาม 4  ใบ GI ถูกผูกกับโซนภูมิศาสตร์ครบหรือยัง
+  --
+  -- ยามรุ่นแรกยกเว้น GI ทั้งหมดเพราะตอนนั้นยังไม่มีที่ให้ย้ายไป
+  -- ตอนนี้ 009 ย้ายเข้า regional_certifications แล้ว ถ้าไม่ตรวจ
+  -- การลบตารางในไฟล์นี้จะทำให้ใบ GI ที่ยังไม่ถูกผูกหายไปเงียบ ๆ
+  SELECT count(*) INTO n_gi_left
+    FROM farm_certifications fc
+   WHERE fc.short_code = 'GI'
+     AND EXISTS (SELECT 1 FROM farms f WHERE f.id = fc.farm_id)
+     AND NOT EXISTS (
+           SELECT 1 FROM farm_regional_certifications frc
+            WHERE frc.farm_id = fc.farm_id
+         );
+
+  IF n_gi_left > 0 THEN
+    RAISE EXCEPTION 'หยุด: ยังมีใบ GI % แถวที่ไม่ได้ผูกกับโซนภูมิศาสตร์ รัน 009 ก่อน', n_gi_left;
   END IF;
 END $$;
 
