@@ -90,6 +90,17 @@ export async function run(): Promise<{ passed: number; failed: number; failures:
              'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/')`,
     [FIXTURE_FARM]
   );
+  // ฟิกซ์เจอร์ต้องมีใบรับรองในตารางใหม่ด้วย ไม่งั้นทุกครั้งที่รัน smoke
+  // จะทิ้งข้อมูลที่ยังไม่ถูกย้ายไว้ในฐาน แล้วชุดทดสอบเรื่องการย้ายตารางจะล้ม
+  await fx.query(
+    `INSERT INTO certifications
+       (certification_type_id, tier, farm_id, cert_number, approval_status,
+        attachment_data, attachment_file_type)
+     SELECT ct.id, ct.tier, $1, 'GAP-TEST-0001', 'approved',
+            'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/', 'image'
+       FROM certification_types ct WHERE ct.code = 'GAP'`,
+    [FIXTURE_FARM]
+  );
   await fx.query(
     `INSERT INTO trees (id, farm_id, code, name, variety, age_years, yield_fruit_count,
                         rating, health_status, sweetness_brix)

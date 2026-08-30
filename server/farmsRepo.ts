@@ -212,6 +212,126 @@ export interface UpsertFarmInput {
  * ไม่แตะตาราง trees และ reviews เพราะฟีเจอร์สมัครฟาร์มไม่ได้ส่งข้อมูลต้นไม้มาด้วย
  * ถ้าเขียนทับด้วยค่าว่างจะทำให้ต้นไม้ที่มีอยู่หายไปทั้งหมด
  */
+/**
+ * แปลงรหัสย่อแบบข้อความอิสระของตารางเก่า ให้เป็นรหัสประเภทของตารางใหม่
+ *
+ * ค่าที่จับคู่ไม่ได้ตกไปเป็น LEGACY_OTHER ไม่ใช่ถูกทิ้ง เพราะใบที่หายไปเงียบ ๆ
+ * แปลว่าฟาร์มเสียตราไปโดยไม่มีใครรู้ ใช้เกณฑ์เดียวกับที่ 005 ใช้ตอนย้ายข้อมูล
+ */
+function certificationTypeCode(shortCode: string | null): string {
+  const code = (shortCode ?? '').trim().toUpperCase();
+  if (code === 'GAP') return 'GAP';
+  if (code.startsWith('ORGANIC')) return 'ORGANIC_TH';
+  if (code === 'GMP') return 'GMP';
+  if (code === 'GACC') return 'GACC';
+  if (code === 'GI') return 'GI';
+  return 'LEGACY_OTHER';
+}
+
+/** ปีเปล่าอย่าง '2029' นับเป็นความละเอียดระดับปี แล้วปัดเป็น 31 ธ.ค. */
+function parseValidUntil(raw: string | null): {
+  expiryDate: string | null;
+  precision: 'day' | 'year';
+  legacyRaw: string | null;
+} {
+  const value = (raw ?? '').trim();
+  if (/^\d{4}$/.test(value)) {
+    return { expiryDate: `${value}-12-31`, precision: 'year', legacyRaw: null };
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return { expiryDate: value, precision: 'day', legacyRaw: null };
+  }
+  return { expiryDate: null, precision: 'day', legacyRaw: value || null };
+}
+
+/**
+ * เขียนใบรับรองลงตาราง certifications
+ *
+ * ไม่ลบแล้วเขียนใหม่แบบตารางเก่า เพราะแถวในตารางใหม่ถือสถานะการตรวจ ผู้ตรวจ
+ * และหมายเหตุของแอดมินไว้ด้วย การลบทิ้งทุกครั้งที่บันทึกฟาร์มจะล้างร่องรอย
+ * การตรวจไปหมด แล้วตราใบรับรองก็จะไม่ได้แปลว่าผ่านการตรวจแล้วอีกต่อไป
+ *
+ * ไม่ลบแถวที่ไม่อยู่ในรายการที่ส่งมาด้วย การถอนใบรับรองเป็นการกระทำของแอดมิน
+ * ที่ควรมีร่องรอย ไม่ใช่ผลข้างเคียงของการบันทึกฟาร์ม
+ */
+async function writeCertifications(
+  client: PoolClient,
+  farmId: string,
+  details: Record<string, unknown>[]
+): Promise<void> {
+  for (const c of details) {
+    const code = certificationTypeCode(str(c.shortCode));
+
+    // ใบระดับภูมิภาคอยู่คนละตาราง และ trigger ของ certifications จะโยน exception
+    // ถ้าเผลอเขียนลงมา ต้องให้แอดมินจับคู่สวนเข้ากับโซนเอง เพราะแถวเดิม
+    // ไม่มีข้อมูลบอกว่าเป็นใบของโซนไหน
+    const type = await client.query(
+      `SELECT id, tier FROM certification_types WHERE code = $1`,
+      [code]
+    );
+    if (type.rowCount === 0 || type.rows[0].tier === 'regional') continue;
+
+    const typeId = type.rows[0].id;
+    const { expiryDate, precision, legacyRaw } = parseValidUntil(str(c.validUntil));
+    const fileType = c.fileType === 'image' || c.fileType === 'pdf' ? c.fileType : null;
+
+    // ยกสถานะเป็นอนุมัติได้ แต่ไม่ลดสถานะของใบที่แอดมินอนุมัติไปแล้ว
+    const approve = c.verified === true;
+
+    const updated = await client.query(
+      `UPDATE certifications
+          SET cert_number            = $3,
+              issuing_authority      = $4,
+              expiry_date            = $5,
+              expiry_precision       = $6,
+              legacy_valid_until_raw = $7,
+              attachment_data        = COALESCE($8, attachment_data),
+              attachment_file_name   = COALESCE($9, attachment_file_name),
+              attachment_file_type   = COALESCE($10, attachment_file_type),
+              approval_status        = CASE WHEN $11 THEN 'approved' ELSE approval_status END
+        WHERE farm_id = $1 AND certification_type_id = $2
+        RETURNING id`,
+      [
+        farmId,
+        typeId,
+        str(c.certNumber),
+        str(c.issuedBy),
+        expiryDate,
+        precision,
+        legacyRaw,
+        str(c.documentPhoto),
+        str(c.fileName),
+        fileType,
+        approve,
+      ]
+    );
+
+    if (updated.rowCount === 0) {
+      await client.query(
+        `INSERT INTO certifications
+           (certification_type_id, tier, farm_id, issuing_authority, cert_number,
+            expiry_date, expiry_precision, legacy_valid_until_raw,
+            attachment_data, attachment_file_name, attachment_file_type, approval_status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          typeId,
+          type.rows[0].tier,
+          farmId,
+          str(c.issuedBy),
+          str(c.certNumber),
+          expiryDate,
+          precision,
+          legacyRaw,
+          str(c.documentPhoto),
+          str(c.fileName),
+          fileType,
+          approve ? 'approved' : 'pending',
+        ]
+      );
+    }
+  }
+}
+
 export async function upsertFarm(client: PoolClient, farm: UpsertFarmInput): Promise<string> {
   const contact = (farm.contact ?? {}) as Record<string, unknown>;
   const topVarieties = arr(farm.topVarieties);
@@ -268,11 +388,18 @@ export async function upsertFarm(client: PoolClient, farm: UpsertFarmInput): Pro
     ]
   );
 
-  // ใบรับรอง: ล้างของเดิมแล้วเขียนใหม่ เพราะไม่มี key ธรรมชาติให้ upsert
+  // ใบรับรอง -- เขียนสองตาราง
+  //
+  // ตารางเก่ายังเขียนอยู่เพราะขาอ่านยังอ่านจากตารางเก่า ถ้าตัดทิ้งตอนนี้
+  // ใบที่เพิ่งอนุมัติจะหายไปจากหน้าเว็บทันที ตัดออกพร้อมกับตอนสลับขาอ่าน
+  //
   // ทำเฉพาะตอนที่ผู้เรียกส่ง certificationDetails มาจริง ๆ
   if (Array.isArray(farm.certificationDetails)) {
+    const details = farm.certificationDetails as Record<string, unknown>[];
+
+    // ตารางเก่า: ล้างของเดิมแล้วเขียนใหม่ เพราะไม่มี key ธรรมชาติให้ upsert
     await client.query('DELETE FROM farm_certifications WHERE farm_id = $1', [farm.id]);
-    for (const [i, c] of (farm.certificationDetails as Record<string, unknown>[]).entries()) {
+    for (const [i, c] of details.entries()) {
       await client.query(
         `INSERT INTO farm_certifications
            (farm_id, name, name_th, short_code, cert_number, issued_by, valid_until,
@@ -294,6 +421,8 @@ export async function upsertFarm(client: PoolClient, farm: UpsertFarmInput): Pro
         ]
       );
     }
+
+    await writeCertifications(client, farm.id, details);
   }
 
   if (Array.isArray(farm.smartTechnologies)) {

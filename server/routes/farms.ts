@@ -151,8 +151,18 @@ farmsRouter.put('/:id', requireAuth, asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'กรุณากรอกชื่อฟาร์ม' });
   }
 
+  // ใบรับรองแก้ผ่านทางนี้ไม่ได้ ทั้งผู้จัดการสวนและแอดมิน
+  //
+  // ตราใบรับรองบนหน้าเว็บต้องแปลว่าผ่านการตรวจของแอดมินแล้วจริง ถ้าเขียนทับได้
+  // จากการบันทึกฟาร์ม เจ้าของสวนก็ตั้งตราให้ตัวเองได้ และการบันทึกเรื่องอื่น
+  // เช่นการเปิดปิด SmartFarm ก็จะพาใบรับรองทั้งชุดไปเขียนทับโดยไม่ตั้งใจ
+  // เพราะฝั่งเว็บส่งฟาร์มมาทั้งก้อนเสมอ
+  //
+  // ทางเดียวที่แก้ได้คือยื่นคำขอแก้ไขแล้วให้แอดมินอนุมัติ
+  const { certificationDetails: _ignored, ...editable } = body;
+
   // ไม่ให้ client ย้ายเจ้าของฟาร์มเอง -- คงค่าเดิมไว้เสมอ
-  await upsertFarmStandalone({ ...body, id: farmId, managerId: owner.rows[0].manager_id });
+  await upsertFarmStandalone({ ...editable, id: farmId, managerId: owner.rows[0].manager_id });
 
   const farms = await loadFarms({ farmId });
   res.json({ farm: farms[0] });
