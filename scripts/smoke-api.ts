@@ -84,14 +84,7 @@ export async function run(): Promise<{ passed: number; failed: number; failures:
      VALUES ($1, 1, $2, 'ศรีสะเกษ', 'อ.กันทรลักษ์', ARRAY['หมอนทอง','ก้านยาว'], 120, 4500, 9.8, 42, '@fixture', 2)`,
     [FIXTURE_FARM, FIXTURE_FARM_NAME]
   );
-  await fx.query(
-    `INSERT INTO farm_certifications (farm_id, name, short_code, cert_number, verified, document_photo)
-     VALUES ($1, 'GAP (Good Agricultural Practice)', 'GAP', 'GAP-TEST-0001', true,
-             'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/')`,
-    [FIXTURE_FARM]
-  );
-  // ฟิกซ์เจอร์ต้องมีใบรับรองในตารางใหม่ด้วย ไม่งั้นทุกครั้งที่รัน smoke
-  // จะทิ้งข้อมูลที่ยังไม่ถูกย้ายไว้ในฐาน แล้วชุดทดสอบเรื่องการย้ายตารางจะล้ม
+  // ใบรับรองของฟาร์มฟิกซ์เจอร์
   await fx.query(
     `INSERT INTO certifications
        (certification_type_id, tier, farm_id, cert_number, approval_status,

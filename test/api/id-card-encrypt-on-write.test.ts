@@ -34,8 +34,7 @@ function cookieOf(res: request.Response): string {
 
 async function readRow(id: string) {
   const { rows } = await pool.query(
-    `SELECT farmer_id_card_number, farmer_id_card_photo,
-            farmer_id_card_ciphertext, farmer_id_card_photo_ciphertext,
+    `SELECT farmer_id_card_ciphertext, farmer_id_card_photo_ciphertext,
             farmer_id_card_check_digit
        FROM farm_requests WHERE id = $1`,
     [id]
@@ -83,9 +82,7 @@ describe('เข้ารหัสตั้งแต่ตอนเขียน'
     expect(row.farmer_id_card_photo_ciphertext).not.toBeNull();
     expect(row.farmer_id_card_check_digit).toBe(ID_CARD.slice(-1));
 
-    // สิ่งที่ต้องไม่มี -- ถ้าข้อความธรรมดายังอยู่ แปลว่า 007 จะลบข้อมูลจริงทิ้ง
-    expect(row.farmer_id_card_number).toBeNull();
-    expect(row.farmer_id_card_photo).toBeNull();
+    // 007 ลบคอลัมน์ข้อความธรรมดาไปแล้ว ที่เก็บได้จึงมีแต่ฉบับเข้ารหัสทางเดียว
   });
 
   test('ค่าที่เข้ารหัสไว้ถอดกลับได้ตรงกับที่ยื่นเข้ามา', async () => {
@@ -114,7 +111,6 @@ describe('เข้ารหัสตั้งแต่ตอนเขียน'
     const row = await readRow(id);
     expect(row.farmer_id_card_ciphertext).not.toBeNull();
     expect(decryptIdCardValue(row.farmer_id_card_ciphertext, id)).toBe(ID_CARD);
-    expect(row.farmer_id_card_number).toBeNull();
   });
 
   test('ส่งแก้ไขพร้อมเลขบัตรใหม่ ต้องเข้ารหัสค่าใหม่ทับ ไม่ใช่เก็บดิบ', async () => {
@@ -134,7 +130,6 @@ describe('เข้ารหัสตั้งแต่ตอนเขียน'
     expect(res.status).toBe(201);
 
     const row = await readRow(id);
-    expect(row.farmer_id_card_number).toBeNull();
     expect(decryptIdCardValue(row.farmer_id_card_ciphertext, id)).toBe(NEW_ID);
     expect(row.farmer_id_card_check_digit).toBe(NEW_ID.slice(-1));
   });
@@ -152,7 +147,6 @@ describe('เข้ารหัสตั้งแต่ตอนเขียน'
     const row = await readRow(id);
     expect(row.farmer_id_card_ciphertext).toBeNull();
     expect(row.farmer_id_card_photo_ciphertext).toBeNull();
-    expect(row.farmer_id_card_number).toBeNull();
     expect(row.farmer_id_card_check_digit).toBeNull();
   });
 });

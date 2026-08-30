@@ -249,17 +249,7 @@ async function main() {
         ]
       );
 
-      await db.query(
-        `INSERT INTO farm_certifications (farm_id, name, short_code, cert_number, issued_by, valid_until, verified, sort_order)
-         VALUES ($1,'GAP (Good Agricultural Practice)','GAP',$2,'กรมวิชาการเกษตร','2029',true,0),
-                ($1,'GI สิ่งบ่งชี้ทางภูมิศาสตร์','GI',$3,'กรมทรัพย์สินทางปัญญา','2030',true,1)`,
-        [f.id, `GAP-TH-68-${f.rank}0021`, `GI-TH-${f.rank}0088`]
-      );
-
-      // เขียนตารางใบรับรองชุดใหม่ด้วย
-      //
-      // ถ้า seed เขียนแต่ตารางเก่า ทุกครั้งที่ล้างฐานแล้ว seed ใหม่จะได้ข้อมูล
-      // ที่ยังไม่ถูกย้ายกลับมาอีก ซึ่งเป็นปัญหาเดียวกับที่กำลังตามเก็บอยู่พอดี
+      // ใบรับรองระดับสวน
       await db.query(
         `INSERT INTO certifications
            (certification_type_id, tier, farm_id, issuing_authority, cert_number,

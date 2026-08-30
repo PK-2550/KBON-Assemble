@@ -31,19 +31,14 @@ export const farmRequestsRouter = Router();
  * เพราะใครเปิด devtools หรือยิง curl ตรง ๆ ก็ข้ามการซ่อนฝั่งหน้าจอได้หมด
  */
 export function toRequest(r: Record<string, any>) {
-  // หลังรัน 007 คอลัมน์ข้อความธรรมดาจะหายไป เหลือแต่หลักตรวจสอบที่เก็บแยกไว้
-  // ระหว่างนี้ยังมีทั้งสองอย่าง จึงใช้หลักตรวจสอบก่อน แล้วค่อยถอยไปใช้ค่าเดิม
-  const checkDigit: string | undefined =
-    r.farmer_id_card_check_digit ??
-    (typeof r.farmer_id_card_number === 'string' && r.farmer_id_card_number.length > 0
-      ? r.farmer_id_card_number.slice(-1)
-      : undefined);
+  // 007 ลบคอลัมน์ข้อความธรรมดาไปแล้ว เหลือแต่หลักตรวจสอบที่เก็บแยกไว้ตอนเขียน
+  const checkDigit: string | undefined = r.farmer_id_card_check_digit ?? undefined;
 
   const hasIdCardNumber = Boolean(
-    r.farmer_id_card_ciphertext || r.farmer_id_card_number || r.farmer_id_card_check_digit
+    r.farmer_id_card_ciphertext || r.farmer_id_card_check_digit
   );
 
-  const hasIdCardPhoto = Boolean(r.farmer_id_card_photo_ciphertext || r.farmer_id_card_photo);
+  const hasIdCardPhoto = Boolean(r.farmer_id_card_photo_ciphertext);
 
   const payload = r.payload ?? {};
   return {
@@ -251,15 +246,15 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
        farm_name, farm_name_en, province, district, location_address,
        area_rai, total_trees_estimate, top_varieties, about_story,
        gap_cert_number, cert_issued_by, cert_valid_until, cert_document_photo, other_certs,
-       farmer_full_name, farmer_id_card_number, farmer_id_card_photo, farmer_id_card_file_type,
+       farmer_full_name, farmer_id_card_file_type,
        agreed_to_criteria, google_maps_url, has_smart_farm, payload,
        status, previous_admin_notes, resubmitted_at,
        farmer_id_card_ciphertext, farmer_id_card_photo_ciphertext, farmer_id_card_check_digit
      ) VALUES (
        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
-       $23,$24,$25,$26,$27,$28,$29,$30,
-       'pending',$31,$32,
-       $33,$34,$35
+       $23,$24,$25,$26,$27,$28,
+       'pending',$29,$30,
+       $31,$32,$33
      )
      ON CONFLICT (id) DO UPDATE SET
        -- ทุกคอลัมน์ใช้ COALESCE เพื่อเลียนแบบ merge:true ของ Firestore
@@ -330,9 +325,6 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
       opt(b.certDocumentPhoto),
       Array.isArray(b.otherCerts) ? b.otherCerts.map(String) : [],
       opt(b.farmerFullName),
-      // คอลัมน์ข้อความธรรมดาไม่ถูกเขียนอีกต่อไป ค่าจริงอยู่ในคอลัมน์ ciphertext ข้างล่าง
-      null,
-      null,
       opt(b.farmerIdCardFileType),
       optBool(b.agreedToCriteria, prev?.agreed_to_criteria),
       opt(b.googleMapsUrl),
@@ -529,7 +521,7 @@ farmRequestsRouter.get(
 
     const { rows } = await pool.query(
       `SELECT id, farmer_id_card_ciphertext, farmer_id_card_photo_ciphertext,
-              farmer_id_card_number, farmer_id_card_photo, farmer_id_card_file_type
+              farmer_id_card_file_type
          FROM farm_requests WHERE id = $1`,
       [requestId]
     );
@@ -542,15 +534,14 @@ farmRequestsRouter.get(
     const row = rows[0];
 
     try {
-      // ระหว่างที่ยังไม่ได้รัน 007 แถวเก่าอาจมีแต่ข้อความธรรมดา
-      // จึงถอยไปอ่านคอลัมน์เดิมได้ เมื่อรัน 007 แล้วทางนี้จะเหลือแต่ ciphertext
+      // 007 ลบคอลัมน์ข้อความธรรมดาไปแล้ว ทางนี้จึงเหลือแต่ ciphertext ทางเดียว
       const idCardNumber = row.farmer_id_card_ciphertext
         ? decryptIdCardValue(row.farmer_id_card_ciphertext, row.id)
-        : (row.farmer_id_card_number ?? null);
+        : null;
 
       const idCardPhoto = row.farmer_id_card_photo_ciphertext
         ? decryptIdCardValue(row.farmer_id_card_photo_ciphertext, row.id)
-        : (row.farmer_id_card_photo ?? null);
+        : null;
 
       await writeLog('success');
 

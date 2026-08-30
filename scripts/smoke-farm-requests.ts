@@ -288,9 +288,9 @@ export async function run(): Promise<{ passed: number; failed: number; failures:
   ok('คำตอบไม่รั่วภาพถ่ายบัตร', !leaked.includes(ID_PHOTO));
 
   // เลขบัตรถูกเข้ารหัสตั้งแต่ตอนเขียนแล้ว จึงต้องถอดรหัสออกมาเทียบ
-  // ไม่ใช่อ่านคอลัมน์ข้อความธรรมดาซึ่งต้องเป็น null เสมอสำหรับคำขอที่ยื่นใหม่
+  // 007 ลบคอลัมน์ข้อความธรรมดาไปแล้ว จึงไม่มีทางอื่นให้อ่านอีก
   const untouched = await db.query(
-    `SELECT farm_name, province, farmer_id_card_number, farmer_id_card_ciphertext
+    `SELECT farm_name, province, farmer_id_card_ciphertext
        FROM farm_requests WHERE id = $1`,
     [idorId]
   );
@@ -298,8 +298,6 @@ export async function run(): Promise<{ passed: number; failed: number; failures:
     untouched.rows[0]?.farm_name === THAI_FARM &&
     untouched.rows[0]?.province === 'จันทบุรี' &&
     decryptIdCardValue(untouched.rows[0]?.farmer_id_card_ciphertext, idorId) === ID_CARD);
-  ok('ฐานข้อมูลไม่เก็บเลขบัตรเป็นข้อความธรรมดา',
-    untouched.rows[0]?.farmer_id_card_number === null);
 
   const ownEdit = await farmer.call('/farm-requests', {
     method: 'POST',
