@@ -56,8 +56,9 @@ END $$;
 -- น้อยที่สุดในกลุ่ม คือใบที่บันทึกเข้าระบบก่อนเพื่อน ไม่ได้เลือกแบบสุ่ม
 -- ถ้าในกลุ่มมีเลขที่ใบต่างกัน แอดมินแก้ให้ถูกทีหลังได้
 --
--- valid_until เดิมเก็บเป็นปีเปล่าอย่าง '2030' ตารางนี้ไม่มีคอลัมน์บอกความละเอียด
--- แบบ certifications จึงปัดเป็น 31 ธ.ค. ของปีนั้น ปีที่อ่านไม่ออกปล่อยเป็น NULL
+-- valid_until เดิมเก็บเป็นปีเปล่าอย่าง '2030' จึงปัดเป็น 31 ธ.ค. ของปีนั้น
+-- แล้วบันทึกไว้ด้วยว่ารู้แค่ระดับปี ไม่งั้นหน้าเว็บจะแสดงวันที่แม่นกว่าความจริง
+-- ค่าที่อ่านไม่ออกเก็บข้อความดิบไว้ตามเดิม (ต้องรัน 011 ก่อน)
 -- ----------------------------------------------------------------------------
 WITH gi_rows AS (
   SELECT
@@ -74,7 +75,8 @@ WITH gi_rows AS (
 )
 INSERT INTO regional_certifications (
   certification_type_id, region_name, province,
-  issuing_authority, cert_number, expiry_date, approval_status
+  issuing_authority, cert_number, expiry_date, expiry_precision,
+  legacy_valid_until_raw, approval_status
 )
 SELECT
   (SELECT id FROM certification_types WHERE code = 'GI'),
@@ -83,6 +85,8 @@ SELECT
   g.issued_by,
   g.cert_number,
   CASE WHEN g.valid_until ~ '^\d{4}$' THEN make_date(g.valid_until::int, 12, 31) END,
+  CASE WHEN g.valid_until ~ '^\d{4}$' THEN 'year' ELSE 'day' END,
+  CASE WHEN g.valid_until ~ '^\d{4}$' THEN NULL ELSE g.valid_until END,
   CASE WHEN g.verified THEN 'approved' ELSE 'pending' END
 FROM gi_rows g
 WHERE g.pick = 1

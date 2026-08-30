@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { describe, test, expect, afterAll } from 'vitest';
 import { pool } from '../../server/db';
+import { loadFarms } from '../../server/farmsRepo';
 
 /**
  * ใบรับรองทุกใบในตารางเดิมต้องมีคู่ในตารางใหม่
@@ -94,5 +95,79 @@ describe('ใบรับรองเดิมต้องถูกย้าย�
       'region_name',
     ]);
     expect(rows.every((r) => r.is_updatable === 'YES')).toBe(true);
+  });
+});
+
+describe('ขาอ่านต้องให้ผลเท่าเดิมไม่ว่าจะอ่านจากตารางไหน', () => {
+  /**
+   * ชุดนี้ต้องผ่านทั้งก่อนและหลังสลับขาอ่าน
+   *
+   * เทียบกับตารางเก่าซึ่งเป็นแหล่งอ้างอิงที่ผู้ใช้เห็นอยู่จริงก่อนสลับ
+   * ถ้าสลับขาอ่านแล้วมีใบไหนหาย เลขที่ใบเพี้ยน หรือวันหมดอายุเปลี่ยนรูป
+   * ชุดนี้จะจับได้ทันที
+   *
+   * ตรวจแบบครอบคลุม ไม่ใช่เท่ากันเป๊ะ คือทุกใบที่เคยมีในตารางเก่าต้องยังอยู่
+   * แต่มีใบเกินมาได้ เพราะหลังตัดการเขียนตารางเก่าแล้ว ใบที่อนุมัติใหม่
+   * จะอยู่ในตารางใหม่ที่เดียว ตารางเก่ากลายเป็นข้อมูลแช่แข็งจนกว่า 007 จะลบ
+   *
+   * ไม่เทียบชื่อที่เอาไว้แสดงผล เพราะตารางใหม่ตั้งใจให้ชื่อมาจาก
+   * certification_types ที่เดียว แทนที่จะเป็นข้อความอิสระของแต่ละแถว
+   */
+  const key = (c: Record<string, unknown>) =>
+    [c.shortCode, c.certNumber, c.issuedBy, c.validUntil, c.verified].join('|');
+
+  test('ใบรับรองของทุกฟาร์มตรงกับตารางเก่าทุกใบ', async () => {
+    const farms = await loadFarms({});
+
+    const legacy = await pool.query(
+      `SELECT farm_id, short_code, cert_number, issued_by, valid_until, verified
+         FROM farm_certifications
+        WHERE EXISTS (SELECT 1 FROM farms f WHERE f.id = farm_id)`
+    );
+
+    const expected = new Map<string, string[]>();
+    for (const r of legacy.rows) {
+      const list = expected.get(r.farm_id) ?? [];
+      list.push(
+        [r.short_code, r.cert_number, r.issued_by, r.valid_until, r.verified].join('|')
+      );
+      expected.set(r.farm_id, list);
+    }
+
+    for (const farm of farms) {
+      const want = expected.get(farm.id);
+      if (!want) continue;
+
+      const actual = new Set((farm.certificationDetails as Record<string, unknown>[]).map(key));
+      const missing = want.filter((w) => !actual.has(w));
+      expect({ farm: farm.id, missing }).toEqual({ farm: farm.id, missing: [] });
+    }
+  });
+
+  test('ฟาร์มที่มีทั้ง GAP และ GI ต้องได้ครบสองใบ ไม่ใช่ใบเดียว', async () => {
+    // GI อยู่คนละตารางกับ GAP หลังย้าย ถ้าขาอ่านลืม join ตารางระดับภูมิภาค
+    // ใบ GI จะหายจากหน้าเว็บโดยที่จำนวนใบอื่นยังถูกต้อง ซึ่งสังเกตยาก
+    const farms = await loadFarms({});
+    const withBoth = farms.filter((f) => {
+      const codes = (f.certificationDetails as Record<string, unknown>[]).map((c) => c.shortCode);
+      return codes.includes('GAP') && codes.includes('GI');
+    });
+
+    expect(withBoth.length).toBeGreaterThan(0);
+  });
+
+  test('รูปใบรับรองมาเฉพาะตอนที่ขอ ไม่ติดมากับหน้ารายชื่อ', async () => {
+    // รูปเป็น base64 รวมเกือบ 1 MB หน้ารายชื่อไม่ได้ใช้
+    const listed = await loadFarms({});
+    const hasPhotoField = listed.some((f) =>
+      (f.certificationDetails as Record<string, unknown>[]).some((c) => 'documentPhoto' in c)
+    );
+    expect(hasPhotoField).toBe(false);
+
+    const detailed = await loadFarms({ includeCertificatePhotos: true });
+    const anyWithPhoto = detailed.some((f) =>
+      (f.certificationDetails as Record<string, unknown>[]).some((c) => 'documentPhoto' in c)
+    );
+    expect(anyWithPhoto).toBe(true);
   });
 });

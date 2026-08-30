@@ -19,6 +19,23 @@ export interface LoadFarmsOptions {
   farmId?: string;
 }
 
+/**
+ * ประกอบวันหมดอายุกลับเป็นข้อความแบบเดียวกับที่หน้าเว็บแสดงอยู่เดิม
+ *
+ * ข้อมูลเดิมเก็บเป็นปีเปล่าอย่าง '2029' ตารางใหม่แยกเป็นวันที่จริงกับธงบอก
+ * ความละเอียด ถ้าคืนวันที่เต็มออกไปเสมอ ผู้ใช้จะเห็น 31 ธ.ค. ทั้งที่ของเดิม
+ * รู้แค่ปี คือเติมความแม่นยำที่ไม่เคยมีอยู่จริง
+ */
+function formatValidUntil(c: Record<string, unknown>): string {
+  const raw = c.legacy_valid_until_raw as string | null;
+  if (raw) return raw;
+
+  const date = c.expiry_date as string | null;
+  if (!date) return '';
+
+  return c.expiry_precision === 'year' ? date.slice(0, 4) : date;
+}
+
 export async function loadFarms(options: LoadFarmsOptions = {}) {
   const { includeCertificatePhotos = false, farmId } = options;
 
@@ -31,11 +48,42 @@ export async function loadFarms(options: LoadFarmsOptions = {}) {
     pool.query(`SELECT * FROM trees ${whereFk} ORDER BY code`, params),
     pool.query(`SELECT * FROM reviews ${whereFk} ORDER BY created_at DESC`, params),
     pool.query(`SELECT * FROM tree_varieties ${whereFk} ORDER BY sort_order`, params),
+    // ใบรับรองมาจากสองตาราง
+    //
+    // certifications เก็บใบของสวนเอง ส่วน regional_certifications เก็บใบของโซน
+    // ภูมิศาสตร์อย่าง GI ซึ่งสวนหลายแห่งใช้ใบเดียวกัน จึงต้องต่อผ่าน join table
+    // ถ้าลืมฝั่งหลัง ใบ GI จะหายจากหน้าเว็บโดยที่ใบอื่นยังครบ ซึ่งสังเกตยาก
+    //
+    // ไม่รวมใบระดับการขนส่งรายเที่ยว เพราะไม่ใช่คุณสมบัติถาวรของสวน
+    // จึงไม่ควรไปโผล่ปนกับใบรับรองของสวนตามที่ 005 ตั้งใจไว้
+    //
+    // แปลงวันหมดอายุเป็นข้อความตั้งแต่ใน SQL ไม่ปล่อยให้เป็น Date
+    // ไทยอยู่ UTC+7 การเรียก toISOString กับ Date ที่เป็นเที่ยงคืนตามเวลาเครื่อง
+    // จะได้วันที่ย้อนไปหนึ่งวัน
     pool.query(
-      `SELECT id, farm_id, name, name_th, short_code, cert_number, issued_by, valid_until,
-              verified, sort_order, file_name, file_type
-              ${includeCertificatePhotos ? ', document_photo' : ''}
-       FROM farm_certifications ${whereFk} ORDER BY sort_order`,
+      `SELECT c.farm_id, ct.name, ct.name_th, ct.code AS short_code,
+              c.cert_number, c.issuing_authority AS issued_by,
+              to_char(c.expiry_date, 'YYYY-MM-DD') AS expiry_date,
+              c.expiry_precision, c.legacy_valid_until_raw,
+              c.approval_status, ct.sort_order,
+              c.attachment_file_name AS file_name, c.attachment_file_type AS file_type
+              ${includeCertificatePhotos ? ', c.attachment_data AS document_photo' : ''}
+         FROM certifications c
+         JOIN certification_types ct ON ct.id = c.certification_type_id
+        WHERE c.tier <> 'shipment' ${farmId ? 'AND c.farm_id = $1' : ''}
+       UNION ALL
+       SELECT frc.farm_id, ct.name, ct.name_th, ct.code AS short_code,
+              rc.cert_number, rc.issuing_authority AS issued_by,
+              to_char(rc.expiry_date, 'YYYY-MM-DD') AS expiry_date,
+              rc.expiry_precision, rc.legacy_valid_until_raw,
+              rc.approval_status, ct.sort_order,
+              rc.attachment_file_name AS file_name, rc.attachment_file_type AS file_type
+              ${includeCertificatePhotos ? ', rc.attachment_data AS document_photo' : ''}
+         FROM farm_regional_certifications frc
+         JOIN regional_certifications rc ON rc.id = frc.regional_certification_id
+         JOIN certification_types ct ON ct.id = rc.certification_type_id
+        WHERE true ${farmId ? 'AND frc.farm_id = $1' : ''}
+        ORDER BY sort_order`,
       params
     ),
     pool.query(`SELECT * FROM farm_smart_technologies ${whereFk} ORDER BY sort_order`, params),
@@ -128,8 +176,8 @@ export async function loadFarms(options: LoadFarmsOptions = {}) {
     shortCode: c.short_code ?? '',
     certNumber: c.cert_number ?? '',
     issuedBy: c.issued_by ?? '',
-    validUntil: c.valid_until ?? '',
-    verified: c.verified,
+    validUntil: formatValidUntil(c),
+    verified: c.approval_status === 'approved',
     fileName: c.file_name ?? undefined,
     fileType: c.file_type ?? undefined,
     ...(c.document_photo !== undefined ? { documentPhoto: c.document_photo } : {}),
@@ -388,41 +436,14 @@ export async function upsertFarm(client: PoolClient, farm: UpsertFarmInput): Pro
     ]
   );
 
-  // ใบรับรอง -- เขียนสองตาราง
+  // ใบรับรอง -- เขียนเฉพาะตารางชุดใหม่
   //
-  // ตารางเก่ายังเขียนอยู่เพราะขาอ่านยังอ่านจากตารางเก่า ถ้าตัดทิ้งตอนนี้
-  // ใบที่เพิ่งอนุมัติจะหายไปจากหน้าเว็บทันที ตัดออกพร้อมกับตอนสลับขาอ่าน
+  // ตาราง farm_certifications เดิมไม่ถูกเขียนจากที่ไหนอีกแล้ว เหลือไว้เป็น
+  // ข้อมูลอ้างอิงจนกว่า 007 จะลบทิ้ง ขาอ่านย้ายมาอ่านตารางใหม่แล้ว
   //
   // ทำเฉพาะตอนที่ผู้เรียกส่ง certificationDetails มาจริง ๆ
   if (Array.isArray(farm.certificationDetails)) {
-    const details = farm.certificationDetails as Record<string, unknown>[];
-
-    // ตารางเก่า: ล้างของเดิมแล้วเขียนใหม่ เพราะไม่มี key ธรรมชาติให้ upsert
-    await client.query('DELETE FROM farm_certifications WHERE farm_id = $1', [farm.id]);
-    for (const [i, c] of details.entries()) {
-      await client.query(
-        `INSERT INTO farm_certifications
-           (farm_id, name, name_th, short_code, cert_number, issued_by, valid_until,
-            verified, sort_order, file_name, file_type, document_photo)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-        [
-          farm.id,
-          str(c.name) ?? str(c.nameTh) ?? '(ไม่ระบุ)',
-          str(c.nameTh),
-          str(c.shortCode),
-          str(c.certNumber),
-          str(c.issuedBy),
-          str(c.validUntil),
-          c.verified === true,
-          i,
-          str(c.fileName),
-          str(c.fileType),
-          str(c.documentPhoto),
-        ]
-      );
-    }
-
-    await writeCertifications(client, farm.id, details);
+    await writeCertifications(client, farm.id, farm.certificationDetails as Record<string, unknown>[]);
   }
 
   if (Array.isArray(farm.smartTechnologies)) {
