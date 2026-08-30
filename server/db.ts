@@ -23,15 +23,45 @@ pool.on('error', (err) => {
   console.error('เกิดข้อผิดพลาดกับ connection pool ของ Postgres:', err.message);
 });
 
+/**
+ * ตารางที่เซิร์ฟเวอร์ต้องมีจริงถึงจะทำงานได้
+ *
+ * เดิมลิสต์นี้มี farm_certifications ซึ่งเป็นตารางใบรับรองชุดเก่า
+ * โค้ดเลิกอ่านเลิกเขียนไปแล้ว และ 007 จะลบทิ้ง ถ้าไม่แก้ก่อน
+ * เซิร์ฟเวอร์จะสตาร์ทไม่ขึ้นทันทีที่รัน 007
+ *
+ * ใบรับรองชุดใหม่กระจายอยู่สี่ตารางซึ่ง loadFarms join ถึงทั้งหมด
+ * ขาดตัวใดตัวหนึ่งก็พังตอนเรียกใช้จริงอยู่ดี จึงตรวจให้ครบตั้งแต่ตอนสตาร์ท
+ * จะได้รู้ตั้งแต่แรก แทนที่จะไปพังตอนมีคนเปิดหน้าเว็บ
+ */
+const REQUIRED_TABLES = [
+  'farms',
+  'trees',
+  'reviews',
+  'users',
+  'tree_varieties',
+  'farm_smart_technologies',
+  'certifications',
+  'certification_types',
+  'regional_certifications',
+  'farm_regional_certifications',
+];
+
 export async function assertDbReady() {
-  const { rows } = await pool.query(
-    `SELECT count(*)::int AS n FROM information_schema.tables
-     WHERE table_schema = 'public' AND table_name IN
-       ('farms','trees','reviews','users','tree_varieties','farm_certifications','farm_smart_technologies')`
+  const { rows } = await pool.query<{ table_name: string }>(
+    `SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = ANY($1)`,
+    [REQUIRED_TABLES]
   );
-  if (rows[0].n < 7) {
+
+  // บอกชื่อตารางที่ขาดไปเลย ของเดิมบอกแค่จำนวนซึ่งไม่ช่วยให้รู้ว่าต้องแก้อะไร
+  const found = new Set(rows.map((r) => r.table_name));
+  const missing = REQUIRED_TABLES.filter((t) => !found.has(t));
+
+  if (missing.length > 0) {
     throw new Error(
-      `พบตารางแค่ ${rows[0].n} จาก 7 ตาราง -- ฐานข้อมูลยังไม่ได้ตั้งค่า\n` +
+      `ฐานข้อมูลยังไม่ได้ตั้งค่า ขาดตาราง ${missing.length} จาก ${REQUIRED_TABLES.length} ตาราง\n` +
+        `   ที่ขาด: ${missing.join(', ')}\n` +
         '   ลองรัน: docker compose up -d'
     );
   }

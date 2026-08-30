@@ -213,8 +213,9 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
         {/* แถบเมนูและเนื้อหาของแท็บ อยู่ในระยะขอบชุดเดียวกับส่วนหัวด้านบน */}
         <div className="px-4 sm:px-6 lg:px-8 pt-5 space-y-4">
-          {/* ที่ว่างของตราใบรับรอง คั่นระหว่างเรื่องราวของฟาร์มกับรายชื่อต้นไม้ */}
-          <FarmCertificationBadgeStrip />
+          {/* ตราใบรับรอง คั่นระหว่างเรื่องราวของฟาร์มกับรายชื่อต้นไม้
+              แสดงเฉพาะใบที่ผ่านการตรวจของแอดมินแล้ว */}
+          <FarmCertificationBadgeStrip certifications={currentFarm.certificationDetails} />
 
           {/* Navigation Tabs -- เรียงแนวนอนชิดซ้ายใต้ส่วนข้อมูลหลักตามต้นแบบ
               แท็บที่เลือกอยู่ใช้เส้นใต้บาง ๆ แทนปุ่มพื้นทองเต็มช่องแบบเดิม

@@ -10,19 +10,6 @@ import { toRequest } from './farmRequests';
  * โดยไม่ต้องมีฐานข้อมูล ส่วนการยืนยันระดับ route อยู่ใน test/api/id-card-masking.test.ts
  */
 
-/** แถวแบบที่ยังไม่ได้เข้ารหัส -- สภาพของฐานข้อมูลก่อนรันสคริปต์เข้ารหัส */
-const legacyRow = {
-  id: 'req_1',
-  user_id: 'u1',
-  farm_name: 'สวนทดสอบ',
-  province: 'จันทบุรี',
-  status: 'pending',
-  farmer_full_name: 'นายสมชาย วงศ์เกษตร',
-  farmer_id_card_number: '1229900341828',
-  farmer_id_card_photo: 'data:image/jpeg;base64,AAAABBBBCCCC',
-  farmer_id_card_file_type: 'image',
-};
-
 /** แถวแบบหลังเข้ารหัสแล้ว -- ไม่มีคอลัมน์ข้อความธรรมดาเหลือ */
 const encryptedRow = {
   id: 'req_2',
@@ -38,15 +25,6 @@ const encryptedRow = {
 };
 
 describe('toRequest -- ไม่ส่งเลขบัตรและรูปออกไปไม่ว่าผู้เรียกเป็นใคร', () => {
-  it('แถวที่ยังเป็นข้อความธรรมดา ก็ไม่หลุดออกไป', () => {
-    const out = toRequest(legacyRow) as Record<string, unknown>;
-
-    expect(out.farmerIdCardNumber).toBeUndefined();
-    expect(out.farmerIdCardPhoto).toBeUndefined();
-    expect(out.farmerIdCardMasked).toBe('X-XXXX-XXXXX-XX-8');
-    expect(out.hasIdCardPhoto).toBe(true);
-  });
-
   it('แถวที่เข้ารหัสแล้ว ปิดบังจากหลักตรวจสอบที่เก็บแยกไว้', () => {
     const out = toRequest(encryptedRow) as Record<string, unknown>;
 
@@ -57,17 +35,17 @@ describe('toRequest -- ไม่ส่งเลขบัตรและรูป
   });
 
   it('ทั้งก้อนที่ส่งออกไปไม่มีเลขบัตรหรือเนื้อรูปปนอยู่เลย', () => {
-    for (const row of [legacyRow, encryptedRow]) {
+    for (const row of [encryptedRow]) {
       const serialized = JSON.stringify(toRequest(row));
       expect(serialized).not.toContain('1229900341828');
       expect(serialized).not.toContain('122990034182');
-      expect(serialized).not.toContain('AAAABBBBCCCC');
+      expect(serialized).not.toContain('photo-ciphertext');
       expect(serialized).not.toContain('ciphertext');
     }
   });
 
   it('เปิดเผยได้แค่หลักที่ 13 หลักเดียว ไม่ใช่สี่หลักท้าย', () => {
-    const out = toRequest(legacyRow) as Record<string, unknown>;
+    const out = toRequest(encryptedRow) as Record<string, unknown>;
     const masked = out.farmerIdCardMasked as string;
     const digitsShown = masked.replace(/[^0-9]/g, '');
 
@@ -97,7 +75,7 @@ describe('toRequest -- ไม่ส่งเลขบัตรและรูป
       farm_name: 'สวนมีแต่รูป',
       province: 'ยะลา',
       status: 'pending',
-      farmer_id_card_photo: 'data:image/jpeg;base64,ZZZZ',
+      farmer_id_card_photo_ciphertext: Buffer.from('photo-only'),
     }) as Record<string, unknown>;
 
     expect(out.farmerIdCardMasked).toBeUndefined();
@@ -106,14 +84,14 @@ describe('toRequest -- ไม่ส่งเลขบัตรและรูป
   });
 
   it('ข้อมูลอื่นของคำขอยังส่งออกไปครบเหมือนเดิม', () => {
-    const out = toRequest(legacyRow) as Record<string, unknown>;
+    const out = toRequest(encryptedRow) as Record<string, unknown>;
 
-    expect(out.id).toBe('req_1');
-    expect(out.userId).toBe('u1');
-    expect(out.farmName).toBe('สวนทดสอบ');
-    expect(out.province).toBe('จันทบุรี');
-    expect(out.status).toBe('pending');
-    expect(out.farmerFullName).toBe('นายสมชาย วงศ์เกษตร');
-    expect(out.farmerIdCardFileType).toBe('image');
+    expect(out.id).toBe('req_2');
+    expect(out.userId).toBe('u2');
+    expect(out.farmName).toBe('สวนทดสอบสอง');
+    expect(out.province).toBe('ระยอง');
+    expect(out.status).toBe('approved');
+    expect(out.farmerFullName).toBe('นางสาวสมหญิง');
+    expect(out.farmerIdCardFileType).toBe('pdf');
   });
 });

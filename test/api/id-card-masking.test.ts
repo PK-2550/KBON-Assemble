@@ -74,17 +74,13 @@ describe('เลขบัตรและรูปถ่ายบัตรไม�
   test('คำขอถูกสร้างและเลขจริงถูกเก็บแบบเข้ารหัส ไม่ใช่ข้อความธรรมดา', async () => {
     expect(requestId).toBeTruthy();
     const row = await pool.query(
-      `SELECT farmer_id_card_number, farmer_id_card_ciphertext
-         FROM farm_requests WHERE id = $1`,
+      `SELECT farmer_id_card_ciphertext FROM farm_requests WHERE id = $1`,
       [requestId]
     );
 
-    // เก็บไว้จริงและถอดกลับได้
+    // 007 ลบคอลัมน์ข้อความธรรมดาไปแล้ว ที่เหลือจึงมีแต่ฉบับเข้ารหัสทางเดียว
     expect(row.rows[0]?.farmer_id_card_ciphertext).not.toBeNull();
     expect(decryptIdCardValue(row.rows[0].farmer_id_card_ciphertext, requestId)).toBe(ID_CARD);
-
-    // และต้องไม่มีข้อความธรรมดาเหลืออยู่
-    expect(row.rows[0]?.farmer_id_card_number).toBeNull();
   });
 
   test('คำตอบตอนสร้างคำขอ ไม่ส่งเลขเต็มหรือรูปกลับมา', async () => {

@@ -249,11 +249,39 @@ async function main() {
         ]
       );
 
+      // ใบรับรองระดับสวน
       await db.query(
-        `INSERT INTO farm_certifications (farm_id, name, short_code, cert_number, issued_by, valid_until, verified, sort_order)
-         VALUES ($1,'GAP (Good Agricultural Practice)','GAP',$2,'กรมวิชาการเกษตร','2029',true,0),
-                ($1,'GI สิ่งบ่งชี้ทางภูมิศาสตร์','GI',$3,'กรมทรัพย์สินทางปัญญา','2030',true,1)`,
-        [f.id, `GAP-TH-68-${f.rank}0021`, `GI-TH-${f.rank}0088`]
+        `INSERT INTO certifications
+           (certification_type_id, tier, farm_id, issuing_authority, cert_number,
+            expiry_date, expiry_precision, approval_status)
+         SELECT ct.id, ct.tier, $1, 'กรมวิชาการเกษตร', $2, make_date(2029, 12, 31), 'year', 'approved'
+           FROM certification_types ct WHERE ct.code = 'GAP'`,
+        [f.id, `GAP-TH-68-${f.rank}0021`]
+      );
+
+      // GI เป็นใบของโซนภูมิศาสตร์ ไม่ใช่ของสวนรายตัว จึงสร้างโซนตามจังหวัด
+      // แล้วผูกสวนเข้ากับโซน ตรงกับที่ 009 ทำกับข้อมูลเดิม
+      await db.query(
+        `INSERT INTO regional_certifications
+           (certification_type_id, region_name, province, issuing_authority, cert_number,
+            expiry_date, approval_status)
+         SELECT ct.id, $1, $1, 'กรมทรัพย์สินทางปัญญา', $2, make_date(2030, 12, 31), 'approved'
+           FROM certification_types ct WHERE ct.code = 'GI'
+          AND NOT EXISTS (
+                SELECT 1 FROM regional_certifications rc
+                 WHERE rc.certification_type_id = ct.id AND rc.province = $1
+              )`,
+        [f.province, `GI-TH-${f.rank}0088`]
+      );
+      await db.query(
+        `INSERT INTO farm_regional_certifications (farm_id, regional_certification_id)
+         SELECT $1, rc.id
+           FROM regional_certifications rc
+           JOIN certification_types ct ON ct.id = rc.certification_type_id
+          WHERE ct.code = 'GI' AND rc.province = $2
+          ORDER BY rc.id LIMIT 1
+         ON CONFLICT DO NOTHING`,
+        [f.id, f.province]
       );
 
       await db.query(

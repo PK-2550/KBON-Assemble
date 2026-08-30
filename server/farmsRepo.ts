@@ -19,6 +19,23 @@ export interface LoadFarmsOptions {
   farmId?: string;
 }
 
+/**
+ * ประกอบวันหมดอายุกลับเป็นข้อความแบบเดียวกับที่หน้าเว็บแสดงอยู่เดิม
+ *
+ * ข้อมูลเดิมเก็บเป็นปีเปล่าอย่าง '2029' ตารางใหม่แยกเป็นวันที่จริงกับธงบอก
+ * ความละเอียด ถ้าคืนวันที่เต็มออกไปเสมอ ผู้ใช้จะเห็น 31 ธ.ค. ทั้งที่ของเดิม
+ * รู้แค่ปี คือเติมความแม่นยำที่ไม่เคยมีอยู่จริง
+ */
+function formatValidUntil(c: Record<string, unknown>): string {
+  const raw = c.legacy_valid_until_raw as string | null;
+  if (raw) return raw;
+
+  const date = c.expiry_date as string | null;
+  if (!date) return '';
+
+  return c.expiry_precision === 'year' ? date.slice(0, 4) : date;
+}
+
 export async function loadFarms(options: LoadFarmsOptions = {}) {
   const { includeCertificatePhotos = false, farmId } = options;
 
@@ -31,11 +48,42 @@ export async function loadFarms(options: LoadFarmsOptions = {}) {
     pool.query(`SELECT * FROM trees ${whereFk} ORDER BY code`, params),
     pool.query(`SELECT * FROM reviews ${whereFk} ORDER BY created_at DESC`, params),
     pool.query(`SELECT * FROM tree_varieties ${whereFk} ORDER BY sort_order`, params),
+    // ใบรับรองมาจากสองตาราง
+    //
+    // certifications เก็บใบของสวนเอง ส่วน regional_certifications เก็บใบของโซน
+    // ภูมิศาสตร์อย่าง GI ซึ่งสวนหลายแห่งใช้ใบเดียวกัน จึงต้องต่อผ่าน join table
+    // ถ้าลืมฝั่งหลัง ใบ GI จะหายจากหน้าเว็บโดยที่ใบอื่นยังครบ ซึ่งสังเกตยาก
+    //
+    // ไม่รวมใบระดับการขนส่งรายเที่ยว เพราะไม่ใช่คุณสมบัติถาวรของสวน
+    // จึงไม่ควรไปโผล่ปนกับใบรับรองของสวนตามที่ 005 ตั้งใจไว้
+    //
+    // แปลงวันหมดอายุเป็นข้อความตั้งแต่ใน SQL ไม่ปล่อยให้เป็น Date
+    // ไทยอยู่ UTC+7 การเรียก toISOString กับ Date ที่เป็นเที่ยงคืนตามเวลาเครื่อง
+    // จะได้วันที่ย้อนไปหนึ่งวัน
     pool.query(
-      `SELECT id, farm_id, name, name_th, short_code, cert_number, issued_by, valid_until,
-              verified, sort_order, file_name, file_type
-              ${includeCertificatePhotos ? ', document_photo' : ''}
-       FROM farm_certifications ${whereFk} ORDER BY sort_order`,
+      `SELECT c.farm_id, ct.name, ct.name_th, ct.code AS short_code,
+              c.cert_number, c.issuing_authority AS issued_by,
+              to_char(c.expiry_date, 'YYYY-MM-DD') AS expiry_date,
+              c.expiry_precision, c.legacy_valid_until_raw,
+              c.approval_status, c.tier, ct.sort_order,
+              c.attachment_file_name AS file_name, c.attachment_file_type AS file_type
+              ${includeCertificatePhotos ? ', c.attachment_data AS document_photo' : ''}
+         FROM certifications c
+         JOIN certification_types ct ON ct.id = c.certification_type_id
+        WHERE c.tier <> 'shipment' ${farmId ? 'AND c.farm_id = $1' : ''}
+       UNION ALL
+       SELECT frc.farm_id, ct.name, ct.name_th, ct.code AS short_code,
+              rc.cert_number, rc.issuing_authority AS issued_by,
+              to_char(rc.expiry_date, 'YYYY-MM-DD') AS expiry_date,
+              rc.expiry_precision, rc.legacy_valid_until_raw,
+              rc.approval_status, ct.tier, ct.sort_order,
+              rc.attachment_file_name AS file_name, rc.attachment_file_type AS file_type
+              ${includeCertificatePhotos ? ', rc.attachment_data AS document_photo' : ''}
+         FROM farm_regional_certifications frc
+         JOIN regional_certifications rc ON rc.id = frc.regional_certification_id
+         JOIN certification_types ct ON ct.id = rc.certification_type_id
+        WHERE true ${farmId ? 'AND frc.farm_id = $1' : ''}
+        ORDER BY sort_order`,
       params
     ),
     pool.query(`SELECT * FROM farm_smart_technologies ${whereFk} ORDER BY sort_order`, params),
@@ -128,8 +176,11 @@ export async function loadFarms(options: LoadFarmsOptions = {}) {
     shortCode: c.short_code ?? '',
     certNumber: c.cert_number ?? '',
     issuedBy: c.issued_by ?? '',
-    validUntil: c.valid_until ?? '',
-    verified: c.verified,
+    validUntil: formatValidUntil(c),
+    tier: c.tier,
+    approvalStatus: c.approval_status,
+    // เก็บไว้ให้โค้ดเดิมที่ยังอ่าน verified อยู่ ค่าจริงที่ใช้ตัดสินคือ approvalStatus
+    verified: c.approval_status === 'approved',
     fileName: c.file_name ?? undefined,
     fileType: c.file_type ?? undefined,
     ...(c.document_photo !== undefined ? { documentPhoto: c.document_photo } : {}),
@@ -212,6 +263,126 @@ export interface UpsertFarmInput {
  * ไม่แตะตาราง trees และ reviews เพราะฟีเจอร์สมัครฟาร์มไม่ได้ส่งข้อมูลต้นไม้มาด้วย
  * ถ้าเขียนทับด้วยค่าว่างจะทำให้ต้นไม้ที่มีอยู่หายไปทั้งหมด
  */
+/**
+ * แปลงรหัสย่อแบบข้อความอิสระของตารางเก่า ให้เป็นรหัสประเภทของตารางใหม่
+ *
+ * ค่าที่จับคู่ไม่ได้ตกไปเป็น LEGACY_OTHER ไม่ใช่ถูกทิ้ง เพราะใบที่หายไปเงียบ ๆ
+ * แปลว่าฟาร์มเสียตราไปโดยไม่มีใครรู้ ใช้เกณฑ์เดียวกับที่ 005 ใช้ตอนย้ายข้อมูล
+ */
+function certificationTypeCode(shortCode: string | null): string {
+  const code = (shortCode ?? '').trim().toUpperCase();
+  if (code === 'GAP') return 'GAP';
+  if (code.startsWith('ORGANIC')) return 'ORGANIC_TH';
+  if (code === 'GMP') return 'GMP';
+  if (code === 'GACC') return 'GACC';
+  if (code === 'GI') return 'GI';
+  return 'LEGACY_OTHER';
+}
+
+/** ปีเปล่าอย่าง '2029' นับเป็นความละเอียดระดับปี แล้วปัดเป็น 31 ธ.ค. */
+function parseValidUntil(raw: string | null): {
+  expiryDate: string | null;
+  precision: 'day' | 'year';
+  legacyRaw: string | null;
+} {
+  const value = (raw ?? '').trim();
+  if (/^\d{4}$/.test(value)) {
+    return { expiryDate: `${value}-12-31`, precision: 'year', legacyRaw: null };
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return { expiryDate: value, precision: 'day', legacyRaw: null };
+  }
+  return { expiryDate: null, precision: 'day', legacyRaw: value || null };
+}
+
+/**
+ * เขียนใบรับรองลงตาราง certifications
+ *
+ * ไม่ลบแล้วเขียนใหม่แบบตารางเก่า เพราะแถวในตารางใหม่ถือสถานะการตรวจ ผู้ตรวจ
+ * และหมายเหตุของแอดมินไว้ด้วย การลบทิ้งทุกครั้งที่บันทึกฟาร์มจะล้างร่องรอย
+ * การตรวจไปหมด แล้วตราใบรับรองก็จะไม่ได้แปลว่าผ่านการตรวจแล้วอีกต่อไป
+ *
+ * ไม่ลบแถวที่ไม่อยู่ในรายการที่ส่งมาด้วย การถอนใบรับรองเป็นการกระทำของแอดมิน
+ * ที่ควรมีร่องรอย ไม่ใช่ผลข้างเคียงของการบันทึกฟาร์ม
+ */
+async function writeCertifications(
+  client: PoolClient,
+  farmId: string,
+  details: Record<string, unknown>[]
+): Promise<void> {
+  for (const c of details) {
+    const code = certificationTypeCode(str(c.shortCode));
+
+    // ใบระดับภูมิภาคอยู่คนละตาราง และ trigger ของ certifications จะโยน exception
+    // ถ้าเผลอเขียนลงมา ต้องให้แอดมินจับคู่สวนเข้ากับโซนเอง เพราะแถวเดิม
+    // ไม่มีข้อมูลบอกว่าเป็นใบของโซนไหน
+    const type = await client.query(
+      `SELECT id, tier FROM certification_types WHERE code = $1`,
+      [code]
+    );
+    if (type.rowCount === 0 || type.rows[0].tier === 'regional') continue;
+
+    const typeId = type.rows[0].id;
+    const { expiryDate, precision, legacyRaw } = parseValidUntil(str(c.validUntil));
+    const fileType = c.fileType === 'image' || c.fileType === 'pdf' ? c.fileType : null;
+
+    // ยกสถานะเป็นอนุมัติได้ แต่ไม่ลดสถานะของใบที่แอดมินอนุมัติไปแล้ว
+    const approve = c.verified === true;
+
+    const updated = await client.query(
+      `UPDATE certifications
+          SET cert_number            = $3,
+              issuing_authority      = $4,
+              expiry_date            = $5,
+              expiry_precision       = $6,
+              legacy_valid_until_raw = $7,
+              attachment_data        = COALESCE($8, attachment_data),
+              attachment_file_name   = COALESCE($9, attachment_file_name),
+              attachment_file_type   = COALESCE($10, attachment_file_type),
+              approval_status        = CASE WHEN $11 THEN 'approved' ELSE approval_status END
+        WHERE farm_id = $1 AND certification_type_id = $2
+        RETURNING id`,
+      [
+        farmId,
+        typeId,
+        str(c.certNumber),
+        str(c.issuedBy),
+        expiryDate,
+        precision,
+        legacyRaw,
+        str(c.documentPhoto),
+        str(c.fileName),
+        fileType,
+        approve,
+      ]
+    );
+
+    if (updated.rowCount === 0) {
+      await client.query(
+        `INSERT INTO certifications
+           (certification_type_id, tier, farm_id, issuing_authority, cert_number,
+            expiry_date, expiry_precision, legacy_valid_until_raw,
+            attachment_data, attachment_file_name, attachment_file_type, approval_status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          typeId,
+          type.rows[0].tier,
+          farmId,
+          str(c.issuedBy),
+          str(c.certNumber),
+          expiryDate,
+          precision,
+          legacyRaw,
+          str(c.documentPhoto),
+          str(c.fileName),
+          fileType,
+          approve ? 'approved' : 'pending',
+        ]
+      );
+    }
+  }
+}
+
 export async function upsertFarm(client: PoolClient, farm: UpsertFarmInput): Promise<string> {
   const contact = (farm.contact ?? {}) as Record<string, unknown>;
   const topVarieties = arr(farm.topVarieties);
@@ -268,32 +439,14 @@ export async function upsertFarm(client: PoolClient, farm: UpsertFarmInput): Pro
     ]
   );
 
-  // ใบรับรอง: ล้างของเดิมแล้วเขียนใหม่ เพราะไม่มี key ธรรมชาติให้ upsert
+  // ใบรับรอง -- เขียนเฉพาะตารางชุดใหม่
+  //
+  // ตาราง farm_certifications เดิมไม่ถูกเขียนจากที่ไหนอีกแล้ว เหลือไว้เป็น
+  // ข้อมูลอ้างอิงจนกว่า 007 จะลบทิ้ง ขาอ่านย้ายมาอ่านตารางใหม่แล้ว
+  //
   // ทำเฉพาะตอนที่ผู้เรียกส่ง certificationDetails มาจริง ๆ
   if (Array.isArray(farm.certificationDetails)) {
-    await client.query('DELETE FROM farm_certifications WHERE farm_id = $1', [farm.id]);
-    for (const [i, c] of (farm.certificationDetails as Record<string, unknown>[]).entries()) {
-      await client.query(
-        `INSERT INTO farm_certifications
-           (farm_id, name, name_th, short_code, cert_number, issued_by, valid_until,
-            verified, sort_order, file_name, file_type, document_photo)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-        [
-          farm.id,
-          str(c.name) ?? str(c.nameTh) ?? '(ไม่ระบุ)',
-          str(c.nameTh),
-          str(c.shortCode),
-          str(c.certNumber),
-          str(c.issuedBy),
-          str(c.validUntil),
-          c.verified === true,
-          i,
-          str(c.fileName),
-          str(c.fileType),
-          str(c.documentPhoto),
-        ]
-      );
-    }
+    await writeCertifications(client, farm.id, farm.certificationDetails as Record<string, unknown>[]);
   }
 
   if (Array.isArray(farm.smartTechnologies)) {
