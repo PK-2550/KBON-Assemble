@@ -65,7 +65,7 @@ export async function loadFarms(options: LoadFarmsOptions = {}) {
               c.cert_number, c.issuing_authority AS issued_by,
               to_char(c.expiry_date, 'YYYY-MM-DD') AS expiry_date,
               c.expiry_precision, c.legacy_valid_until_raw,
-              c.approval_status, ct.sort_order,
+              c.approval_status, c.tier, ct.sort_order,
               c.attachment_file_name AS file_name, c.attachment_file_type AS file_type
               ${includeCertificatePhotos ? ', c.attachment_data AS document_photo' : ''}
          FROM certifications c
@@ -76,7 +76,7 @@ export async function loadFarms(options: LoadFarmsOptions = {}) {
               rc.cert_number, rc.issuing_authority AS issued_by,
               to_char(rc.expiry_date, 'YYYY-MM-DD') AS expiry_date,
               rc.expiry_precision, rc.legacy_valid_until_raw,
-              rc.approval_status, ct.sort_order,
+              rc.approval_status, ct.tier, ct.sort_order,
               rc.attachment_file_name AS file_name, rc.attachment_file_type AS file_type
               ${includeCertificatePhotos ? ', rc.attachment_data AS document_photo' : ''}
          FROM farm_regional_certifications frc
@@ -177,6 +177,9 @@ export async function loadFarms(options: LoadFarmsOptions = {}) {
     certNumber: c.cert_number ?? '',
     issuedBy: c.issued_by ?? '',
     validUntil: formatValidUntil(c),
+    tier: c.tier,
+    approvalStatus: c.approval_status,
+    // เก็บไว้ให้โค้ดเดิมที่ยังอ่าน verified อยู่ ค่าจริงที่ใช้ตัดสินคือ approvalStatus
     verified: c.approval_status === 'approved',
     fileName: c.file_name ?? undefined,
     fileType: c.file_type ?? undefined,
