@@ -22,6 +22,7 @@
     "export:farm-requests": "tsx scripts/export-farm-requests.ts",
     "smoke:farm-requests": "tsx scripts/smoke-farm-requests.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
+    "purge:rejected": "tsx scripts/purge-rejected-pii.ts",
     "import:care-logs": "tsx scripts/import-care-logs.ts",
     "set-password": "tsx scripts/set-password.ts",
     "delete-user": "tsx scripts/delete-user.ts",
