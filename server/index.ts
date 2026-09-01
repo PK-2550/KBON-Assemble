@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import 'dotenv/config';
 
 import { assertDbReady } from './db.js';
+import { scheduleRejectedPiiPurge } from './jobs/purgeRejectedPii.js';
 import { readUser } from './middleware/auth.js';
 import { assertIdCardEncryptionKey } from './security/idCardCipher.js';
 import { authIpLimiter } from './middleware/rateLimit.js';
@@ -112,6 +113,12 @@ async function start() {
     console.error(`   ${err instanceof Error ? err.message : String(err)}\n`);
     process.exit(1);
   }
+
+  // งานล้างข้อมูลส่วนตัวของคำขอที่ถูกปฏิเสธ รันทันทีหนึ่งรอบแล้วทุก 24 ชั่วโมง
+  //
+  // ตั้งหลังเชื่อมฐานสำเร็จ ไม่งั้นรอบแรกจะล้มทุกครั้งที่ฐานยังไม่พร้อม
+  // ตัวงานกันรันซ้อนด้วย advisory lock ที่ฐาน ไม่ใช่ตัวแปรในหน่วยความจำ
+  scheduleRejectedPiiPurge();
 
   app.listen(PORT, () => {
     console.log(`API พร้อมใช้งานที่ http://localhost:${PORT}/api`);
