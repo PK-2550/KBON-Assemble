@@ -16,7 +16,9 @@ export const farmsRouter = Router();
  * เพราะข้อมูลมีแค่หลักสิบฟาร์ม ยังไม่คุ้มที่จะย้ายมาทำใน SQL
  */
 farmsRouter.get('/', asyncHandler(async (_req, res) => {
-  const farms = await loadFarms();
+  // หน้ารายชื่อได้เฉพาะใบรับรองที่ผ่านการตรวจแล้ว ตราบนหน้านี้ต้องแปลว่า
+  // ผ่านการตรวจจริง ส่วนใบที่ยังไม่ผ่านดูได้ที่หน้ารายละเอียดซึ่งบอกสถานะครบ
+  const farms = await loadFarms({ approvedCertsOnly: true });
   res.json({ farms });
 }));
 
