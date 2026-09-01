@@ -20,10 +20,20 @@ const FALLBACK_PHOTO =
  *   2. เอาปุ่ม "เข้าชมแปลงต้นไม้" ออก ทั้งการ์ดกดได้อยู่แล้ว ปุ่มซ้ำหน้าที่เดิม
  *   3. ป้าย GI แสดงเฉพาะฟาร์มที่มีใบรับรองจริง ของเดิมเขียนตายตัวจึงขึ้นทุกใบ
  */
+/** จำนวนตราสูงสุดในการ์ดหนึ่งใบ ที่เกินจากนี้ยุบเป็นตัวเลขนับ */
+const MAX_BADGES = 2;
+
 export const FarmCard: React.FC<FarmCardProps> = ({ farm, displayRank, onSelectFarm }) => {
   const rank = displayRank ?? farm.rank;
   const cover = farm.photos?.[0] ?? FALLBACK_PHOTO;
-  const hasGi = farm.certifications?.some((c) => c.includes('GI'));
+  // ตราใบรับรอง -- เอาเฉพาะใบที่ผ่านการตรวจของแอดมินแล้ว
+  // เกณฑ์เดียวกับ FarmRow และแถบตราในหน้ารายละเอียดฟาร์ม
+  // เดิมอ่านจาก farm.certifications ซึ่งเป็น array ข้อความชุดเก่าที่ไม่มีสถานะการตรวจ
+  const approvedCerts = (farm.certificationDetails ?? []).filter((c) =>
+    c.approvalStatus ? c.approvalStatus === 'approved' : c.verified
+  );
+  const shownCerts = approvedCerts.slice(0, MAX_BADGES);
+  const hiddenCertCount = approvedCerts.length - shownCerts.length;
 
   return (
     <article
@@ -57,9 +67,17 @@ export const FarmCard: React.FC<FarmCardProps> = ({ farm, displayRank, onSelectF
           <h2 className="flex-1 min-w-0 text-sm font-bold text-fg leading-snug line-clamp-2 group-hover:text-gold-soft transition-colors">
             {farm.name}
           </h2>
-          {hasGi && (
-            <span className="shrink-0 mt-0.5 px-1.5 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded">
-              GI
+          {shownCerts.map((c) => (
+            <span
+              key={c.shortCode}
+              className="shrink-0 mt-0.5 px-1.5 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded"
+            >
+              {c.shortCode}
+            </span>
+          ))}
+          {hiddenCertCount > 0 && (
+            <span className="shrink-0 mt-0.5 px-1.5 py-px text-[9px] font-bold text-fg-3 border border-line rounded">
+              +{hiddenCertCount}
             </span>
           )}
         </div>

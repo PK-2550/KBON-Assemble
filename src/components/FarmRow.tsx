@@ -17,11 +17,34 @@ interface FarmRowProps {
  * สีทองสงวนไว้ให้คะแนนรีวิวเท่านั้น ของเดิมใช้ทองกับอันดับ ดาว คะแนน ป้าย GI
  * และชื่อตอน hover พร้อมกัน พอทุกอย่างเป็นทองก็ไม่มีอะไรเด่นจริง
  */
+/**
+ * จำนวนตราสูงสุดที่แสดงในแถวเดียว
+ *
+ * สามใบพอดีกับที่ว่างข้างชื่อฟาร์มบนจอ sm โดยยังเหลือที่ให้ชื่อไทยความยาวปกติ
+ * ที่เกินจากนี้ยุบเป็นตัวเลขนับ
+ */
+const MAX_BADGES = 3;
+
 export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFarm }) => {
   const rank = displayRank ?? farm.rank;
   const isTop3 = rank <= 3;
   const varieties = farm.varietiesCount || farm.topVarieties?.length || 0;
-  const hasGi = farm.certifications?.some((c) => c.includes('GI'));
+  /**
+   * ตราใบรับรอง -- เอาเฉพาะใบที่ผ่านการตรวจของแอดมินแล้ว
+   *
+   * เดิมอ่านจาก farm.certifications ซึ่งเป็น array ข้อความชุดเก่าที่ไม่มีสถานะ
+   * การตรวจติดมาด้วย ป้ายจึงขึ้นแม้ใบนั้นจะยังไม่ผ่าน
+   *
+   * approvalStatus เป็นค่าที่ใช้ตัดสิน ส่วน verified รองรับข้อมูลชุดเก่า
+   * ที่ยังไม่มีฟิลด์ใหม่ เกณฑ์เดียวกับแถบตราในหน้ารายละเอียดฟาร์ม
+   */
+  const approvedCerts = (farm.certificationDetails ?? []).filter((c) =>
+    c.approvalStatus ? c.approvalStatus === 'approved' : c.verified
+  );
+
+  // แถวในหน้ารายชื่อแคบ ถ้าปล่อยให้ตราขึ้นทุกใบ ชื่อฟาร์มจะถูกบีบจนอ่านไม่ออก
+  const shownCerts = approvedCerts.slice(0, MAX_BADGES);
+  const hiddenCertCount = approvedCerts.length - shownCerts.length;
 
   return (
     <div
@@ -61,11 +84,19 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
           <h3 className="font-bold text-sm text-fg truncate group-hover:text-gold-soft transition-colors">
             {farm.name}
           </h3>
-          {/* บนมือถือป้าย GI ย้ายไปบรรทัดรอง เพราะวางไว้ตรงนี้กินที่ชื่อไปราว 30px
+          {/* บนมือถือตราย้ายไปบรรทัดรอง เพราะวางไว้ตรงนี้กินที่ชื่อไปราว 30px ต่อใบ
               ซึ่งมากพอที่จะทำให้ชื่อไทยส่วนใหญ่ถูกตัด */}
-          {hasGi && (
-            <span className="hidden sm:inline shrink-0 px-1.5 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded">
-              GI
+          {shownCerts.map((c) => (
+            <span
+              key={c.shortCode}
+              className="hidden sm:inline shrink-0 px-1.5 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded"
+            >
+              {c.shortCode}
+            </span>
+          ))}
+          {hiddenCertCount > 0 && (
+            <span className="hidden sm:inline shrink-0 px-1.5 py-px text-[9px] font-bold text-fg-3 border border-line rounded">
+              +{hiddenCertCount}
             </span>
           )}
         </div>
@@ -74,9 +105,17 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
             ของเดิมเอาธงชาติกับจำนวนสายพันธุ์ขึ้นก่อน แล้วดันจังหวัดไปท้ายสุดและจางสุด
             ธงชาติถูกตัดออกเพราะทุกฟาร์มอยู่ไทยหมด จึงไม่ได้บอกอะไร */}
         <div className="flex items-center gap-1.5 text-xs text-fg-2 mt-0.5 truncate lg:hidden">
-          {hasGi && (
-            <span className="sm:hidden shrink-0 px-1 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded">
-              GI
+          {shownCerts.map((c) => (
+            <span
+              key={c.shortCode}
+              className="sm:hidden shrink-0 px-1 py-px text-[9px] font-bold text-fg-2 border border-line-strong rounded"
+            >
+              {c.shortCode}
+            </span>
+          ))}
+          {hiddenCertCount > 0 && (
+            <span className="sm:hidden shrink-0 px-1 py-px text-[9px] font-bold text-fg-3 border border-line rounded">
+              +{hiddenCertCount}
             </span>
           )}
           <span className="text-fg-3">{farm.province}</span>

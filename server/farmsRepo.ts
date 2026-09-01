@@ -17,6 +17,19 @@ export interface LoadFarmsOptions {
   includeCertificatePhotos?: boolean;
   /** ดึงเฉพาะฟาร์มเดียว */
   farmId?: string;
+  /**
+   * เอาเฉพาะใบรับรองที่ผ่านการตรวจของแอดมินแล้ว
+   *
+   * หน้ารายชื่อฟาร์มใช้ตัวนี้ ตราบนหน้านั้นคือสิ่งที่ผู้ซื้อเห็นก่อนกดเข้าไปดูสวน
+   * ถ้าใบที่ยังรอตรวจติดมาด้วย สวนที่ยังไม่ผ่านจะดูเหมือนผ่านแล้วตั้งแต่หน้าแรก
+   *
+   * หน้ารายละเอียดไม่ใช้ เพราะแท็บใบรับรองต้องแสดงสถานะจริงของทุกใบ
+   * ให้เจ้าของสวนเห็นว่าใบไหนติดอยู่ขั้นไหน
+   *
+   * กรองที่ SQL ไม่ใช่ที่ JS เพราะเงื่อนไขนี้ตรงกับ certifications_farm_approved_idx
+   * ที่ 005 สร้างไว้ ซึ่งเป็น covering index ตอบได้โดยไม่ต้องเปิดแถวจริง
+   */
+  approvedCertsOnly?: boolean;
 }
 
 /**
@@ -37,7 +50,8 @@ function formatValidUntil(c: Record<string, unknown>): string {
 }
 
 export async function loadFarms(options: LoadFarmsOptions = {}) {
-  const { includeCertificatePhotos = false, farmId } = options;
+  const { includeCertificatePhotos = false, farmId, approvedCertsOnly = false } = options;
+
 
   const where = farmId ? 'WHERE id = $1' : '';
   const whereFk = farmId ? 'WHERE farm_id = $1' : '';
@@ -71,6 +85,7 @@ export async function loadFarms(options: LoadFarmsOptions = {}) {
          FROM certifications c
          JOIN certification_types ct ON ct.id = c.certification_type_id
         WHERE c.tier <> 'shipment' ${farmId ? 'AND c.farm_id = $1' : ''}
+              ${approvedCertsOnly ? "AND c.approval_status = 'approved'" : ''}
        UNION ALL
        SELECT frc.farm_id, ct.name, ct.name_th, ct.code AS short_code,
               rc.cert_number, rc.issuing_authority AS issued_by,
@@ -83,6 +98,7 @@ export async function loadFarms(options: LoadFarmsOptions = {}) {
          JOIN regional_certifications rc ON rc.id = frc.regional_certification_id
          JOIN certification_types ct ON ct.id = rc.certification_type_id
         WHERE true ${farmId ? 'AND frc.farm_id = $1' : ''}
+              ${approvedCertsOnly ? "AND rc.approval_status = 'approved'" : ''}
         ORDER BY sort_order`,
       params
     ),
