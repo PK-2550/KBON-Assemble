@@ -1,10 +1,12 @@
 import React from 'react';
-import { Award, Plus, Trash2, Paperclip, FileText, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Award, Plus, Trash2, Paperclip, FileText, ExternalLink, ShieldCheck, Info } from 'lucide-react';
 import { CertificationDetail } from '../types';
-import { STANDARD_OPTIONS } from '../constants/farmRegistrationOptions';
+import type { CertificationTypeOption } from '../services/certificationTypeService';
 
 interface FarmRegistrationStep5Props {
   certificationList: CertificationDetail[];
+  /** ประเภทใบรับรองที่เลือกได้ ดึงมาจากฐานข้อมูล ไม่ได้ฝังไว้ในโค้ด */
+  certificationTypes: CertificationTypeOption[];
   onAddCertificate: () => void;
   onUpdateCertField: (index: number, field: keyof CertificationDetail, value: any) => void;
   onSelectStandardOption: (index: number, code: string) => void;
@@ -33,6 +35,7 @@ interface FarmRegistrationStep5Props {
  */
 export const FarmRegistrationStep5: React.FC<FarmRegistrationStep5Props> = ({
   certificationList,
+  certificationTypes,
   onAddCertificate,
   onUpdateCertField,
   onSelectStandardOption,
@@ -67,6 +70,11 @@ export const FarmRegistrationStep5: React.FC<FarmRegistrationStep5Props> = ({
 
       <div className="space-y-3">
         {certificationList.map((cert, index) => {
+          // ใบระดับโซนภูมิศาสตร์อย่าง GI เป็นของโซน ไม่ใช่ของสวนรายตัว
+          // สวนหลายแห่งในโซนเดียวกันใช้ใบใบเดียวกัน ระบบจึงจับคู่ให้เองไม่ได้
+          const isRegional =
+            certificationTypes.find((t) => t.code === cert.shortCode)?.tier === 'regional';
+
           const isPdf =
             cert.fileType === 'pdf' ||
             cert.documentPhoto?.includes('application/pdf') ||
@@ -87,7 +95,7 @@ export const FarmRegistrationStep5: React.FC<FarmRegistrationStep5Props> = ({
                     onChange={(e) => onSelectStandardOption(index, e.target.value)}
                     className="px-2.5 py-1 bg-panel border border-line rounded-lg text-white font-bold text-xs focus:outline-hidden focus:border-gold"
                   >
-                    {STANDARD_OPTIONS.map((opt) => (
+                    {certificationTypes.map((opt) => (
                       <option key={opt.code} value={opt.code}>
                         {opt.code} - {opt.nameTh}
                       </option>
@@ -105,6 +113,17 @@ export const FarmRegistrationStep5: React.FC<FarmRegistrationStep5Props> = ({
                   </button>
                 )}
               </div>
+
+              {isRegional && (
+                <p className="flex items-start gap-1.5 px-2.5 py-2 rounded-xl bg-surface-2 border border-line text-[11px] text-fg-2 leading-relaxed">
+                  <Info className="w-3.5 h-3.5 shrink-0 mt-px text-gold" />
+                  <span>
+                    ใบรับรองระดับพื้นที่เป็นของโซนภูมิศาสตร์ ไม่ใช่ของสวนรายแห่ง
+                    กรอกไว้ได้เลย แล้วแอดมินจะเป็นผู้จับคู่สวนของคุณเข้ากับโซนที่ถูกต้องให้
+                    ตราจะขึ้นบนหน้าสวนหลังจับคู่เรียบร้อยแล้ว
+                  </span>
+                </p>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div>

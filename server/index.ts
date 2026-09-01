@@ -9,6 +9,7 @@ import { assertIdCardEncryptionKey } from './security/idCardCipher.js';
 import { authIpLimiter } from './middleware/rateLimit.js';
 import { authRouter } from './routes/auth.js';
 import { farmsRouter } from './routes/farms.js';
+import { certificationTypesRouter } from './routes/certificationTypes.js';
 import { treesRouter } from './routes/trees.js';
 import { farmRequestsRouter } from './routes/farmRequests.js';
 import { careLogsRouter } from './routes/careLogs.js';
@@ -56,6 +57,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 app.use('/api/auth', authIpLimiter, authRouter);
 app.use('/api/farms', farmsRouter);
+app.use('/api/certification-types', certificationTypesRouter);
 app.use('/api/trees', treesRouter);
 app.use('/api/farm-requests', farmRequestsRouter);
 // careLogs ลงทะเบียนที่ราก /api เพราะมีทั้งเส้นทางใต้ /trees และ /care-logs

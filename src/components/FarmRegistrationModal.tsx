@@ -81,6 +81,7 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
     topVarietiesInput,
     setTopVarietiesInput,
     certificationList,
+    certificationTypes,
     atmospherePhotos,
     setAtmospherePhotos,
     hasSmartFarm,
@@ -366,6 +367,7 @@ export const FarmRegistrationModal: React.FC<FarmRegistrationModalProps> = ({
               {step === 5 && (
                 <FarmRegistrationStep5
                   certificationList={certificationList}
+                  certificationTypes={certificationTypes}
                   onAddCertificate={handleAddCertificate}
                   onUpdateCertField={handleUpdateCertField}
                   onSelectStandardOption={handleSelectStandardOption}
