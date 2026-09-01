@@ -54,7 +54,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalTrees = farms.reduce((acc, f) => acc + (f.totalTrees || 0), 0);
   const totalHarvested = farms.reduce((acc, f) => acc + (f.harvestedFruits || 0), 0);
   const avgYieldPerTree = totalTrees > 0 ? (totalHarvested / totalTrees).toFixed(1) : '0';
-  const certifiedFarmsCount = farms.filter((f) => f.certifications && f.certifications.length > 0).length;
+  /**
+   * นับเฉพาะฟาร์มที่มีใบรับรองผ่านการตรวจของแอดมินแล้ว
+   *
+   * เดิมนับจาก farm.certifications ซึ่งเป็น array ข้อความชุดเก่าที่ไม่มีสถานะ
+   * การตรวจ ตัวเลขจึงนับรวมฟาร์มที่ใบยังไม่ผ่าน ซึ่งบนแดชบอร์ดคือรายงานเกินจริง
+   *
+   * นับเป็นรายฟาร์ม ไม่ใช่รายใบ ฟาร์มที่มีสามใบผ่านก็ยังนับเป็นหนึ่ง
+   */
+  const certifiedFarmsCount = farms.filter((f) =>
+    (f.certificationDetails ?? []).some((c) =>
+      c.approvalStatus ? c.approvalStatus === 'approved' : c.verified
+    )
+  ).length;
 
   // Province breakdown
   const provinceStats = React.useMemo(() => {

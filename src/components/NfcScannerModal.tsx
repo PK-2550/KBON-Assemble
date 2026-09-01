@@ -37,7 +37,6 @@ export interface DemoNfcPreset {
   harvestDate: string;
   sweetnessBrix: number;
   location: string;
-  certified: string;
 }
 
 /**
@@ -56,7 +55,6 @@ const FALLBACK_NFC_PRESETS: DemoNfcPreset[] = [
     harvestDate: '18 ส.ค. 2026',
     sweetnessBrix: 34.5,
     location: 'อ.กันทรลักษ์ จ.ศรีสะเกษ',
-    certified: 'GI & GAP มาตรฐานส่งออก',
   },
   {
     tagId: 'NFC Tag: #LB-LL01-F019',
@@ -68,7 +66,6 @@ const FALLBACK_NFC_PRESETS: DemoNfcPreset[] = [
     harvestDate: '17 ส.ค. 2026',
     sweetnessBrix: 36.2,
     location: 'อ.ลับแล จ.อุตรดิตถ์',
-    certified: 'GI ทุเรียนลับแลแท้',
   },
   {
     tagId: 'NFC Tag: #NT-KY01-F008',
@@ -80,7 +77,6 @@ const FALLBACK_NFC_PRESETS: DemoNfcPreset[] = [
     harvestDate: '16 ส.ค. 2026',
     sweetnessBrix: 35.8,
     location: 'อ.บางกรวย จ.นนทบุรี',
-    certified: 'GI นนทบุรี Heritage Organic',
   },
   {
     tagId: 'NFC Tag: #KC-CN01-F027',
@@ -92,7 +88,6 @@ const FALLBACK_NFC_PRESETS: DemoNfcPreset[] = [
     harvestDate: '15 ส.ค. 2026',
     sweetnessBrix: 33.9,
     location: 'เกาะช้าง จ.ตราด',
-    certified: 'Organic Thailand & GI ตราด',
   },
 ];
 
@@ -121,7 +116,6 @@ function buildDemoPresets(farms: DurianFarm[]): DemoNfcPreset[] {
       harvestDate: tree.expectedHarvest ?? '-',
       sweetnessBrix: tree.sweetnessBrix ?? 0,
       location: [farm.district, farm.province].filter(Boolean).join(' '),
-      certified: farm.certifications?.join(' · ') ?? '-',
     });
 
     if (presets.length >= 4) break;
