@@ -286,14 +286,40 @@ export interface UpsertFarmInput {
  * แปลว่าฟาร์มเสียตราไปโดยไม่มีใครรู้ ใช้เกณฑ์เดียวกับที่ 005 ใช้ตอนย้ายข้อมูล
  */
 function certificationTypeCode(shortCode: string | null): string {
-  const code = (shortCode ?? '').trim().toUpperCase();
-  if (code === 'GAP') return 'GAP';
+  const code = (shortCode ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+
+  // รหัสที่ตรงกับ code ในตาราง certification_types อยู่แล้ว ส่งผ่านไปตรง ๆ
+  // ประเภทที่เพิ่มเข้าฐานทีหลังจึงใช้ได้ทันทีโดยไม่ต้องกลับมาแก้ฟังก์ชันนี้
+  if (KNOWN_TYPE_CODES.has(code)) return code;
+
+  // ค่าที่ฟอร์มรุ่นเก่าเคยส่งมา ยังต้องแปลให้ถูกต่อไป
   if (code.startsWith('ORGANIC')) return 'ORGANIC_TH';
-  if (code === 'GMP') return 'GMP';
-  if (code === 'GACC') return 'GACC';
-  if (code === 'GI') return 'GI';
+  if (code === 'ISO' || code.startsWith('ISO22000')) return 'ISO22000';
+  if (code === 'QMARK' || code === 'Q_MARK') return 'Q_MARK';
+
   return 'LEGACY_OTHER';
 }
+
+/**
+ * รหัสประเภทที่ตารางค้นหารู้จัก
+ *
+ * ตรงกับ code ใน certification_types ที่ 005 กับ 014 สร้างไว้ เก็บเป็นชุดที่นี่
+ * เพื่อให้ตัวแปลงรหัสส่งค่าที่ตรงอยู่แล้วผ่านไปได้โดยไม่ต้องไล่เขียนเงื่อนไข
+ * ทีละประเภท
+ *
+ * ถ้าเพิ่มประเภทใหม่ในฐานแล้วลืมเติมที่นี่ ใบจะตกไปเป็น LEGACY_OTHER
+ * ซึ่งเห็นได้ทันทีจากตราที่ขึ้นว่า อื่น ๆ ไม่ใช่หายไปเงียบ ๆ
+ */
+const KNOWN_TYPE_CODES = new Set([
+  'GAP',
+  'ORGANIC_TH',
+  'GMP',
+  'GACC',
+  'PHYTO',
+  'GI',
+  'Q_MARK',
+  'ISO22000',
+]);
 
 /** ปีเปล่าอย่าง '2029' นับเป็นความละเอียดระดับปี แล้วปัดเป็น 31 ธ.ค. */
 function parseValidUntil(raw: string | null): {
@@ -336,7 +362,24 @@ async function writeCertifications(
       `SELECT id, tier FROM certification_types WHERE code = $1`,
       [code]
     );
-    if (type.rowCount === 0 || type.rows[0].tier === 'regional') continue;
+    if (type.rowCount === 0) continue;
+
+    // ใบระดับโซนอย่าง GI ไปตาราง regional_certifications ซึ่งแอดมินต้องจับคู่เอง
+    // เพราะแถวคำขอไม่มีข้อมูลบอกว่าสวนนี้ควรอยู่โซนไหน
+    //
+    // เดิมข้ามทิ้งเฉย ๆ ผู้ใช้กรอกครบ แอดมินกดอนุมัติ แล้วใบหายไปโดยไม่มีใครรู้
+    // ตอนนี้บันทึกเป็นคำขอค้างไว้ให้แอดมินมาจัดการ
+    if (type.rows[0].tier === 'regional') {
+      await client.query(
+        `INSERT INTO regional_certification_requests
+           (farm_id, certification_type_id, cert_number, issuing_authority)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (farm_id, certification_type_id)
+           WHERE status = 'pending' DO NOTHING`,
+        [farmId, type.rows[0].id, str(c.certNumber), str(c.issuedBy)]
+      );
+      continue;
+    }
 
     const typeId = type.rows[0].id;
     const { expiryDate, precision, legacyRaw } = parseValidUntil(str(c.validUntil));

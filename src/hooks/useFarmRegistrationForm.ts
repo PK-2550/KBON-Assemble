@@ -10,6 +10,10 @@ import { submitFarmRegistrationRequest } from '../services/farmRequestService';
 import { compressImageFile } from '../utils/imageCompressor';
 import { AVAILABLE_SMART_TECH, STANDARD_OPTIONS } from '../constants/farmRegistrationOptions';
 import { isValidThaiNationalId } from '../shared/thaiNationalId';
+import {
+  fetchCertificationTypes,
+  type CertificationTypeOption,
+} from '../services/certificationTypeService';
 
 interface UseFarmRegistrationFormArgs {
   isOpen: boolean;
@@ -160,6 +164,27 @@ export function useFarmRegistrationForm({
   );
 
   // Step 4: Multiple Certifications State (PDF & PNG/JPG Support)
+  /**
+   * ประเภทใบรับรองที่เลือกได้ ดึงจากฐานข้อมูลตอนเปิดฟอร์ม
+   *
+   * ไม่ฝังรายการไว้ในโค้ด เพราะรายการที่ฝังไว้เดิมไม่เคยตรงกับตารางในฐาน
+   * บางตัวเลือกจึงถูกบันทึกเป็น อื่น ๆ และบางประเภทที่มีในฐานกลับเลือกไม่ได้
+   */
+  const [certificationTypes, setCertificationTypes] = useState<CertificationTypeOption[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+
+    fetchCertificationTypes().then((types) => {
+      if (!cancelled) setCertificationTypes(types);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
   const [certificationList, setCertificationList] = useState<CertificationDetail[]>(() => {
     if (initialData?.certificationList && initialData.certificationList.length > 0) {
       return initialData.certificationList;
@@ -540,17 +565,20 @@ export function useFarmRegistrationForm({
   };
 
   const handleSelectStandardOption = (index: number, code: string) => {
-    const standard = STANDARD_OPTIONS.find((s) => s.code === code);
-    if (!standard) return;
+    const type = certificationTypes.find((t) => t.code === code);
+    if (!type) return;
 
     setCertificationList((prev) => {
       const next = [...prev];
       next[index] = {
         ...next[index],
-        shortCode: standard.code,
-        name: `${standard.code} Certification`,
-        nameTh: standard.nameTh,
-        issuedBy: standard.org,
+        shortCode: type.code,
+        name: type.name,
+        nameTh: type.nameTh,
+        tier: type.tier,
+        // หน่วยงานที่ออกใบไม่ได้อยู่ในตารางประเภท เพราะใบชนิดเดียวกัน
+        // ออกโดยหน่วยงานต่างกันได้ ให้ผู้ใช้กรอกเอง ไม่เดาแทน
+        issuedBy: next[index]?.issuedBy ?? '',
       };
       return next;
     });
@@ -849,6 +877,7 @@ export function useFarmRegistrationForm({
     toggleTech,
     handleAddCertificate,
     handleUpdateCertField,
+    certificationTypes,
     handleSelectStandardOption,
     handleCertDocUpload,
     handleRemoveCertificate,
