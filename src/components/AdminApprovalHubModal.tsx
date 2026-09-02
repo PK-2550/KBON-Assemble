@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   X,
   ShieldCheck,
@@ -29,6 +29,7 @@ import {
   Layers,
   ChevronRight,
   Sprout,
+  Info,
 } from 'lucide-react';
 import { FarmRegistrationRequest, DurianFarm } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -45,6 +46,20 @@ import {
   revealFarmRequestIdCard,
 } from '../services/farmRequestService';
 import { DocumentViewerModal, DocumentViewerData } from './DocumentViewerModal';
+import { RegionalCertLinkPanel } from './RegionalCertLinkPanel';
+import { fetchPendingRegionalCertRequests } from '../services/regionalCertificationService';
+import {
+  fetchCertificationTypes,
+  type CertificationTypeOption,
+} from '../services/certificationTypeService';
+
+/**
+ * แท็บในศูนย์อนุมัติ
+ *
+ * สามตัวแรกกรองคำขอสมัคร ส่วน regional เป็นกองงานคนละชนิดคือใบรับรองระดับโซน
+ * ที่รอจับคู่ จึงแทนที่เนื้อหาทั้งหมดแทนการกรองรายการเดิม
+ */
+type HubTab = 'pending' | 'approved' | 'rejected' | 'all' | 'regional';
 
 interface AdminApprovalHubModalProps {
   isOpen: boolean;
@@ -65,7 +80,21 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
     const init = getInitialFarmRequests();
     return init[0] ? init[0].id : null;
   });
-  const [activeFilter, setActiveFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [activeFilter, setActiveFilter] = useState<HubTab>('pending');
+
+  // จำนวนคำขอใบระดับโซนที่ยังรอจับคู่
+  //
+  // ดึงมาตั้งแต่เปิดศูนย์อนุมัติ ไม่ใช่ตอนกดเข้าแท็บ เพราะถ้าต้องกดเข้าไปดูเองก่อน
+  // ถึงจะรู้ว่ามีงานค้าง ก็ไม่ต่างจากตอนที่คำขอพวกนี้ไม่มีใครเห็นเลย
+  const [regionalPendingCount, setRegionalPendingCount] = useState(0);
+
+  /**
+   * ประเภทใบรับรองจากฐาน ใช้แปลรหัสย่อเป็นชื่อไทยและบอกว่าใบไหนเป็นระดับโซน
+   *
+   * ไม่พึ่งค่าที่ติดมากับคำขอเพียงอย่างเดียว เพราะคำขอที่ยื่นก่อนระบบรองรับหลายใบ
+   * เก็บไว้แค่รหัสย่อ ไม่มีทั้งชื่อและ tier
+   */
+  const [certTypes, setCertTypes] = useState<CertificationTypeOption[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
   const [revisionNotes, setRevisionNotes] = useState('');
@@ -163,6 +192,40 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
     return () => unsubscribe();
   }, [isOpen]);
 
+  /**
+   * นับคำขอใบระดับโซนที่ยังรอจับคู่
+   *
+   * กลืน error ทิ้งโดยตั้งใจ endpoint นี้เป็นของแอดมิน ผู้ใช้ที่ไม่มีสิทธิ์จะได้ 403
+   * ซึ่งไม่ควรลากศูนย์อนุมัติทั้งหน้าไปด้วย แค่ไม่ต้องแสดงตัวเลขก็พอ
+   */
+  const refreshRegionalPendingCount = useCallback(async () => {
+    try {
+      const pending = await fetchPendingRegionalCertRequests();
+      setRegionalPendingCount(pending.length);
+    } catch {
+      setRegionalPendingCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    // ตัวตรวจมองไม่ทะลุ async จึงนับว่าเป็นการ setState แบบทันทีใน effect
+    // จริง ๆ แล้วค่าถูกตั้งหลังรอผลจากเซิร์ฟเวอร์ ซึ่งคือกรณีที่กฎข้อนี้อนุญาตไว้เอง
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refreshRegionalPendingCount();
+  }, [isOpen, refreshRegionalPendingCount]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    // ตัวเรียกมีทางสำรองในตัวอยู่แล้ว จึงไม่ต้องดัก error ซ้ำที่นี่
+    void fetchCertificationTypes().then(setCertTypes);
+  }, [isOpen]);
+
+  const certTypeByCode = useMemo(
+    () => new Map(certTypes.map((t) => [t.code, t])),
+    [certTypes]
+  );
+
   // Mark all currently visible requests as read when modal is opened
   useEffect(() => {
     if (isOpen && requests.length > 0) {
@@ -188,6 +251,9 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
     return found || filteredRequests[0] || null;
   }, [filteredRequests, selectedId]);
 
+  /** ใบรับรองที่แนบมากับคำขอที่กำลังดูอยู่ */
+  const certList = selectedRequest?.certificationList ?? [];
+
   if (!isOpen) return null;
 
   // Counts
@@ -197,10 +263,12 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
   const allCount = requests.length;
   const unreadPendingCount = requests.filter((r) => r.status === 'pending' && !readIds.has(r.id)).length;
 
-  const handleFilterChange = (filter: 'pending' | 'approved' | 'rejected' | 'all') => {
+  const handleFilterChange = (filter: HubTab) => {
     setActiveFilter(filter);
     setIsRevisionBoxOpen(false);
     setIsRejectBoxOpen(false);
+    // แท็บใบระดับโซนไม่ได้กรองรายการคำขอสมัคร จึงไม่ต้องเลือกคำขอตัวไหน
+    if (filter === 'regional') return;
     const newFiltered = requests.filter((r) => {
       if (filter === 'all') return true;
       if (filter === 'rejected') return r.status === 'rejected' || r.status === 'needs_revision';
@@ -443,6 +511,28 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
               )}
             </button>
 
+            {/*
+              กองงานคนละชนิด คือใบรับรองระดับโซนที่รอจับคู่สวนเข้ากับโซน
+
+              วางไว้ติดกับแท็บรอการตรวจสอบ เพราะเป็นงานค้างเหมือนกัน และเพราะบนมือถือ
+              แถบแท็บเลื่อนแนวนอน ถ้าไปอยู่ท้ายสุดจะตกขอบจอไปทั้งตัวนับและจุดแจ้งเตือน
+              ซึ่งแปลว่าแอดมินที่ใช้มือถือจะไม่มีวันรู้เลยว่ามีคำขอค้างอยู่
+            */}
+            <button
+              onClick={() => handleFilterChange('regional')}
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold whitespace-nowrap ${
+                activeFilter === 'regional'
+                  ? 'bg-gradient-to-r from-gold to-[#c28723] text-gold-ink font-black shadow-xs'
+                  : 'bg-surface text-fg-2 hover:text-white border border-line'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5 shrink-0" />
+              <span>จับคู่ใบระดับโซน ({regionalPendingCount})</span>
+              {regionalPendingCount > 0 && activeFilter !== 'regional' && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              )}
+            </button>
+
             <button
               onClick={() => handleFilterChange('approved')}
               className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer text-xs font-bold ${
@@ -478,7 +568,10 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
           </div>
         </div>
 
-        {/* Main Body: 2-Column Split (List & Details) */}
+        {activeFilter === 'regional' ? (
+          <RegionalCertLinkPanel onResolved={refreshRegionalPendingCount} />
+        ) : (
+        /* Main Body: 2-Column Split (List & Details) */
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Left Column: Request List Cards */}
           <div className="w-full md:w-5/12 border-b md:border-b-0 md:border-r border-line overflow-y-auto p-3 space-y-2.5 bg-[#05140c]">
@@ -743,62 +836,123 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                   )}
                 </div>
 
-                {/* Section 3: Standard Certifications (GAP / GI / Organic) */}
+                {/*
+                  Section 3: ใบรับรองมาตรฐาน
+
+                  เดิมส่วนนี้วางอยู่บนสมมติฐานว่าคำขอหนึ่งมีใบเดียวคือ GAP หัวข้อสามช่อง
+                  อ่านจากคอลัมน์ชุดเก่าที่รองรับใบเดียว ส่วนรายการใบที่แนบมาแสดงแค่รหัส
+                  กับเลขที่ แอดมินจึงตัดสินใบ GMP หรือ GACC โดยไม่เห็นหน่วยงานผู้ออก
+                  และวันหมดอายุของใบนั้นเลย ทั้งที่สองอย่างนี้คือสิ่งที่ใช้ตรวจว่าใบยังใช้ได้จริง
+                */}
                 <div className="p-3.5 bg-well rounded-2xl border border-line space-y-2.5">
                   <div className="flex items-center justify-between text-xs font-bold text-gold">
                     <div className="flex items-center gap-1.5">
                       <Award className="w-4 h-4" />
-                      <span>3. การรับรองมาตรฐานทางการเกษตร (GAP / GI / Organic)</span>
+                      <span>3. การรับรองมาตรฐานทางการเกษตร</span>
                     </div>
+                    {certList.length > 0 && (
+                      <span className="text-[11px] font-bold text-fg-2">{certList.length} ใบ</span>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-panel p-3 rounded-xl border border-line">
-                    <div>
-                      <span className="text-fg-2">เลขที่ใบรับรอง GAP:</span>
-                      <p className="font-mono font-bold text-leaf mt-0.5">{selectedRequest.gapCertNumber || '-'}</p>
-                    </div>
-                    <div>
-                      <span className="text-fg-2">หน่วยงานผู้ออกใบรับรอง:</span>
-                      <p className="font-bold text-white mt-0.5">{selectedRequest.certIssuedBy || '-'}</p>
-                    </div>
-                    <div>
-                      <span className="text-fg-2">ใช้ได้ถึงปี:</span>
-                      <p className="font-bold text-white mt-0.5">{selectedRequest.certValidUntil || '-'}</p>
-                    </div>
-                  </div>
+                  {certList.length === 0 ? (
+                    /*
+                      คำขอรุ่นเก่าที่กรอกมาก่อนระบบรองรับหลายใบ
 
-                  {/* Certificate Documents List */}
-                  {selectedRequest.certificationList && selectedRequest.certificationList.length > 0 && (
-                    <div className="space-y-1.5">
-                      <span className="text-[11px] text-fg-2">เอกสารใบรับรองมาตรฐานที่แนบมา:</span>
-                      {selectedRequest.certificationList.map((cert, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 bg-panel rounded-xl border border-line">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-surface-2 text-leaf font-black text-[10px]">
-                              {cert.shortCode}
-                            </span>
-                            <span className="text-xs text-white">{cert.name}</span>
-                            <span className="text-xs font-mono text-fg-2">({cert.certNumber})</span>
+                      แสดงเฉพาะตอนไม่มีรายการใบ ให้ตรงกับตอนอนุมัติพอดี เพราะเซิร์ฟเวอร์
+                      ใช้คอลัมน์ชุดเดิมเป็นทางสำรองเฉพาะกรณีนี้เท่านั้น ถ้าโชว์ทั้งคู่เสมอ
+                      คำขอยุคใหม่จะเห็นช่องว่างเปล่าสามช่องโดยไม่รู้ว่าแปลว่าอะไร
+                    */
+                    <div
+                      data-testid="legacy-cert-fields"
+                      className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-panel p-3 rounded-xl border border-line"
+                    >
+                      <div>
+                        <span className="text-fg-2">เลขที่ใบรับรอง GAP:</span>
+                        <p className="font-mono font-bold text-leaf mt-0.5">{selectedRequest.gapCertNumber || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-fg-2">หน่วยงานผู้ออกใบรับรอง:</span>
+                        <p className="font-bold text-white mt-0.5">{selectedRequest.certIssuedBy || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-fg-2">ใช้ได้ถึงปี:</span>
+                        <p className="font-bold text-white mt-0.5">{selectedRequest.certValidUntil || '-'}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {certList.map((cert, idx) => {
+                        const type = certTypeByCode.get(cert.shortCode);
+                        const label = type?.nameTh || cert.nameTh || cert.name || cert.shortCode;
+                        // tier จากฐานเชื่อถือได้กว่าค่าที่ติดมากับคำขอ เพราะคำขอเก่า
+                        // ยื่นมาตั้งแต่ก่อนระบบเก็บ tier จึงไม่มีค่านี้เลย
+                        const isRegional = (type?.tier ?? cert.tier) === 'regional';
+
+                        return (
+                          <div
+                            key={idx}
+                            data-testid="request-cert-row"
+                            className="p-2.5 bg-panel rounded-xl border border-line space-y-2"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="px-2 py-0.5 rounded-md bg-surface-2 text-leaf font-black text-[10px] shrink-0">
+                                  {cert.shortCode}
+                                </span>
+                                <span className="text-xs text-white truncate">{label}</span>
+                              </div>
+                              {cert.documentPhoto && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setPreviewDoc({
+                                      title: `${label} - ${selectedRequest.farmName}`,
+                                      fileUrl: cert.documentPhoto!,
+                                      fileType: cert.fileType || 'image',
+                                      fileName: cert.fileName,
+                                    })
+                                  }
+                                  className="px-2.5 py-1 bg-surface-2 hover:bg-[#1f4c33] text-leaf border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  <span>เปิดดู</span>
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                              <div>
+                                <span className="text-fg-2 text-[11px]">เลขที่ใบรับรอง:</span>
+                                <p className="font-mono font-bold text-leaf mt-0.5">{cert.certNumber || '-'}</p>
+                              </div>
+                              <div>
+                                <span className="text-fg-2 text-[11px]">หน่วยงานผู้ออก:</span>
+                                <p className="font-bold text-white mt-0.5">{cert.issuedBy || '-'}</p>
+                              </div>
+                              <div>
+                                <span className="text-fg-2 text-[11px]">ใช้ได้ถึง:</span>
+                                <p className="font-bold text-white mt-0.5">{cert.validUntil || '-'}</p>
+                              </div>
+                            </div>
+
+                            {isRegional && (
+                              /*
+                                ใบระดับโซนไม่ได้ขึ้นตราทันทีที่อนุมัติ เพราะเป็นใบของพื้นที่
+                                ระบบไม่รู้เองว่าสวนนี้อยู่โซนไหน จึงไปรอที่คิวจับคู่โซนต่อ
+                                ถ้าไม่บอกตรงนี้ แอดมินจะเข้าใจว่ากดอนุมัติแล้วจบ
+                              */
+                              <p className="flex items-start gap-1.5 text-[11px] text-fg-2 bg-well px-2 py-1.5 rounded-lg border border-line">
+                                <Info className="w-3.5 h-3.5 text-gold shrink-0 mt-px" />
+                                <span>
+                                  ใบระดับโซน ตราจะขึ้นหลังอนุมัติแล้วไปจับคู่โซนที่แท็บ
+                                  จับคู่ใบระดับโซน อีกขั้นหนึ่ง
+                                </span>
+                              </p>
+                            )}
                           </div>
-                          {cert.documentPhoto && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setPreviewDoc({
-                                  title: `${cert.name} - ${selectedRequest.farmName}`,
-                                  fileUrl: cert.documentPhoto!,
-                                  fileType: cert.fileType || 'image',
-                                  fileName: cert.fileName,
-                                })
-                              }
-                              className="px-2.5 py-1 bg-surface-2 hover:bg-[#1f4c33] text-leaf border border-[#235b3a] rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                            >
-                              <Eye className="w-3 h-3" />
-                              <span>เปิดดู</span>
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1032,6 +1186,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* High-Resolution Document & File Lightbox Viewer */}
