@@ -11,6 +11,7 @@ import { authRouter } from './routes/auth.js';
 import { farmsRouter } from './routes/farms.js';
 import { certificationTypesRouter } from './routes/certificationTypes.js';
 import { regionalCertificationsRouter } from './routes/regionalCertifications.js';
+import { dataRetentionRouter } from './routes/dataRetention.js';
 import { treesRouter } from './routes/trees.js';
 import { farmRequestsRouter } from './routes/farmRequests.js';
 import { careLogsRouter } from './routes/careLogs.js';
@@ -60,6 +61,7 @@ app.use('/api/auth', authIpLimiter, authRouter);
 app.use('/api/farms', farmsRouter);
 app.use('/api/certification-types', certificationTypesRouter);
 app.use('/api/regional-certifications', regionalCertificationsRouter);
+app.use('/api/data-retention', dataRetentionRouter);
 app.use('/api/trees', treesRouter);
 app.use('/api/farm-requests', farmRequestsRouter);
 // careLogs ลงทะเบียนที่ราก /api เพราะมีทั้งเส้นทางใต้ /trees และ /care-logs
