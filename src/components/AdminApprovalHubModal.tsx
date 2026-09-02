@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   X,
   ShieldCheck,
@@ -45,6 +45,16 @@ import {
   revealFarmRequestIdCard,
 } from '../services/farmRequestService';
 import { DocumentViewerModal, DocumentViewerData } from './DocumentViewerModal';
+import { RegionalCertLinkPanel } from './RegionalCertLinkPanel';
+import { fetchPendingRegionalCertRequests } from '../services/regionalCertificationService';
+
+/**
+ * แท็บในศูนย์อนุมัติ
+ *
+ * สามตัวแรกกรองคำขอสมัคร ส่วน regional เป็นกองงานคนละชนิดคือใบรับรองระดับโซน
+ * ที่รอจับคู่ จึงแทนที่เนื้อหาทั้งหมดแทนการกรองรายการเดิม
+ */
+type HubTab = 'pending' | 'approved' | 'rejected' | 'all' | 'regional';
 
 interface AdminApprovalHubModalProps {
   isOpen: boolean;
@@ -65,7 +75,13 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
     const init = getInitialFarmRequests();
     return init[0] ? init[0].id : null;
   });
-  const [activeFilter, setActiveFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [activeFilter, setActiveFilter] = useState<HubTab>('pending');
+
+  // จำนวนคำขอใบระดับโซนที่ยังรอจับคู่
+  //
+  // ดึงมาตั้งแต่เปิดศูนย์อนุมัติ ไม่ใช่ตอนกดเข้าแท็บ เพราะถ้าต้องกดเข้าไปดูเองก่อน
+  // ถึงจะรู้ว่ามีงานค้าง ก็ไม่ต่างจากตอนที่คำขอพวกนี้ไม่มีใครเห็นเลย
+  const [regionalPendingCount, setRegionalPendingCount] = useState(0);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
   const [revisionNotes, setRevisionNotes] = useState('');
@@ -163,6 +179,29 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
     return () => unsubscribe();
   }, [isOpen]);
 
+  /**
+   * นับคำขอใบระดับโซนที่ยังรอจับคู่
+   *
+   * กลืน error ทิ้งโดยตั้งใจ endpoint นี้เป็นของแอดมิน ผู้ใช้ที่ไม่มีสิทธิ์จะได้ 403
+   * ซึ่งไม่ควรลากศูนย์อนุมัติทั้งหน้าไปด้วย แค่ไม่ต้องแสดงตัวเลขก็พอ
+   */
+  const refreshRegionalPendingCount = useCallback(async () => {
+    try {
+      const pending = await fetchPendingRegionalCertRequests();
+      setRegionalPendingCount(pending.length);
+    } catch {
+      setRegionalPendingCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    // ตัวตรวจมองไม่ทะลุ async จึงนับว่าเป็นการ setState แบบทันทีใน effect
+    // จริง ๆ แล้วค่าถูกตั้งหลังรอผลจากเซิร์ฟเวอร์ ซึ่งคือกรณีที่กฎข้อนี้อนุญาตไว้เอง
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refreshRegionalPendingCount();
+  }, [isOpen, refreshRegionalPendingCount]);
+
   // Mark all currently visible requests as read when modal is opened
   useEffect(() => {
     if (isOpen && requests.length > 0) {
@@ -197,10 +236,12 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
   const allCount = requests.length;
   const unreadPendingCount = requests.filter((r) => r.status === 'pending' && !readIds.has(r.id)).length;
 
-  const handleFilterChange = (filter: 'pending' | 'approved' | 'rejected' | 'all') => {
+  const handleFilterChange = (filter: HubTab) => {
     setActiveFilter(filter);
     setIsRevisionBoxOpen(false);
     setIsRejectBoxOpen(false);
+    // แท็บใบระดับโซนไม่ได้กรองรายการคำขอสมัคร จึงไม่ต้องเลือกคำขอตัวไหน
+    if (filter === 'regional') return;
     const newFiltered = requests.filter((r) => {
       if (filter === 'all') return true;
       if (filter === 'rejected') return r.status === 'rejected' || r.status === 'needs_revision';
@@ -443,6 +484,28 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
               )}
             </button>
 
+            {/*
+              กองงานคนละชนิด คือใบรับรองระดับโซนที่รอจับคู่สวนเข้ากับโซน
+
+              วางไว้ติดกับแท็บรอการตรวจสอบ เพราะเป็นงานค้างเหมือนกัน และเพราะบนมือถือ
+              แถบแท็บเลื่อนแนวนอน ถ้าไปอยู่ท้ายสุดจะตกขอบจอไปทั้งตัวนับและจุดแจ้งเตือน
+              ซึ่งแปลว่าแอดมินที่ใช้มือถือจะไม่มีวันรู้เลยว่ามีคำขอค้างอยู่
+            */}
+            <button
+              onClick={() => handleFilterChange('regional')}
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold whitespace-nowrap ${
+                activeFilter === 'regional'
+                  ? 'bg-gradient-to-r from-gold to-[#c28723] text-gold-ink font-black shadow-xs'
+                  : 'bg-surface text-fg-2 hover:text-white border border-line'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5 shrink-0" />
+              <span>จับคู่ใบระดับโซน ({regionalPendingCount})</span>
+              {regionalPendingCount > 0 && activeFilter !== 'regional' && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              )}
+            </button>
+
             <button
               onClick={() => handleFilterChange('approved')}
               className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer text-xs font-bold ${
@@ -478,7 +541,10 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
           </div>
         </div>
 
-        {/* Main Body: 2-Column Split (List & Details) */}
+        {activeFilter === 'regional' ? (
+          <RegionalCertLinkPanel onResolved={refreshRegionalPendingCount} />
+        ) : (
+        /* Main Body: 2-Column Split (List & Details) */
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Left Column: Request List Cards */}
           <div className="w-full md:w-5/12 border-b md:border-b-0 md:border-r border-line overflow-y-auto p-3 space-y-2.5 bg-[#05140c]">
@@ -1032,6 +1098,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* High-Resolution Document & File Lightbox Viewer */}
