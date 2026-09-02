@@ -1,6 +1,10 @@
-import React from 'react';
-import { ShieldCheck, CheckCircle2, FileText, Eye } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ShieldCheck, CheckCircle2, FileText, Eye, MapPin, Clock, XCircle } from 'lucide-react';
 import { DurianFarm } from '../types';
+import {
+  fetchRegionalCertRequestsForFarm,
+  type RegionalCertRequest,
+} from '../services/regionalCertificationService';
 
 /** เอกสารใบรับรองที่กำลังเปิดดู รูปร่างนี้ใช้ร่วมกับหน้าต่างแสดงเอกสารที่หน้าแม่ */
 export interface CertDocView {
@@ -24,13 +28,45 @@ interface FarmCertificationsTabProps {
    * ปุ่มจะกดแล้วเงียบ ไม่มี error ไม่มีอะไรขึ้น
    */
   onViewDocument: (doc: CertDocView) => void;
+  /**
+   * ผู้ที่กำลังดูเป็นเจ้าของสวนหรือผู้ดูแล
+   *
+   * ใช้ตัดสินว่าจะแสดงสถานะใบระดับโซนหรือไม่ หน้าโปรไฟล์สวนใครเปิดดูก็ได้
+   * เหตุผลที่ผู้ดูแลปฏิเสธจึงไม่ควรโผล่ให้คนทั่วไปเห็น
+   *
+   * เซิร์ฟเวอร์กันไว้อีกชั้นอยู่แล้ว ตัวนี้ทำให้ไม่ต้องยิงขอข้อมูลที่จะได้ 403
+   * กลับมาทุกครั้งที่มีคนเปิดดูหน้าสวน
+   */
+  isOwnerOrAdmin?: boolean;
 }
 
 /** แท็บใบรับรองมาตรฐาน อ่านข้อมูลจากฟาร์มอย่างเดียว ไม่มีสถานะของตัวเอง */
 export const FarmCertificationsTab: React.FC<FarmCertificationsTabProps> = ({
   farm: currentFarm,
   onViewDocument,
+  isOwnerOrAdmin = false,
 }) => {
+  const [regionalRequests, setRegionalRequests] = useState<RegionalCertRequest[]>([]);
+
+  useEffect(() => {
+    if (!isOwnerOrAdmin || !currentFarm.id) return;
+
+    let cancelled = false;
+    // กลืน error ทิ้งโดยตั้งใจ ส่วนนี้เป็นข้อมูลเสริม ถ้าดึงไม่ได้ก็ไม่ควร
+    // ลากแท็บใบรับรองทั้งแท็บพังไปด้วย
+    void fetchRegionalCertRequestsForFarm(currentFarm.id)
+      .then((rows) => {
+        if (!cancelled) setRegionalRequests(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setRegionalRequests([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwnerOrAdmin, currentFarm.id]);
+
   return (
     <div className="bg-surface rounded-3xl border border-line p-5 shadow-2xl space-y-4">
       <div className="flex items-center justify-between border-b border-line pb-3">
@@ -133,6 +169,76 @@ export const FarmCertificationsTab: React.FC<FarmCertificationsTabProps> = ({
           </div>
         )}
       </div>
+
+      {/*
+        สถานะใบระดับโซนของสวนนี้
+
+        ใบอย่าง GI ไม่ได้ขึ้นตราทันทีที่อนุมัติคำขอสมัคร แต่ไปรอให้ผู้ดูแล
+        จับคู่โซนก่อน ถ้าถูกปฏิเสธ เหตุผลถูกบันทึกไว้ตั้งแต่ต้นแต่ไม่เคยมีใคร
+        ได้อ่าน จากมุมเจ้าของสวนคือกรอกครบ รอไปเรื่อย ๆ แล้วตราไม่เคยขึ้น
+        โดยไม่รู้ว่าติดอยู่ที่ขั้นไหน
+
+        ขึ้นเฉพาะเจ้าของสวนกับผู้ดูแล และเฉพาะตอนที่มีคำขอจริง
+      */}
+      {regionalRequests.length > 0 && (
+        <div className="pt-4 border-t border-line space-y-2.5">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-gold" />
+            <h4 className="font-bold text-xs text-white">
+              ใบรับรองระดับโซนที่ยื่นไว้ (เห็นเฉพาะเจ้าของสวนและผู้ดูแล)
+            </h4>
+          </div>
+
+          {regionalRequests.map((r) => {
+            const tone =
+              r.status === 'linked'
+                ? 'border-[#235b3a] bg-[#122b1c]'
+                : r.status === 'rejected'
+                  ? 'border-rose-800/60 bg-rose-950/30'
+                  : 'border-line bg-well';
+
+            return (
+              <div key={r.id} className={`p-3 rounded-2xl border ${tone} space-y-1.5`}>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-md bg-surface-2 text-leaf font-black text-[10px]">
+                    {r.typeCode}
+                  </span>
+                  <span className="text-xs text-white truncate">{r.typeNameTh}</span>
+                  {r.certNumber ? (
+                    <span className="font-mono text-[11px] text-fg-2">{r.certNumber}</span>
+                  ) : null}
+                </div>
+
+                {r.status === 'pending' && (
+                  <p className="flex items-start gap-1.5 text-[11px] text-fg-2">
+                    <Clock className="w-3.5 h-3.5 shrink-0 mt-px" />
+                    <span>
+                      รอผู้ดูแลจับคู่สวนของคุณเข้ากับโซนที่ถูกต้อง ตราจะขึ้นทันทีที่จับคู่เสร็จ
+                    </span>
+                  </p>
+                )}
+
+                {r.status === 'linked' && (
+                  <p className="flex items-start gap-1.5 text-[11px] text-leaf font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-px" />
+                    <span>อยู่ในโซน {r.linkedRegionName || '-'} เรียบร้อยแล้ว</span>
+                  </p>
+                )}
+
+                {r.status === 'rejected' && (
+                  <p className="flex items-start gap-1.5 text-[11px] text-rose-300">
+                    <XCircle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                    <span>
+                      ไม่ผ่านการตรวจ
+                      {r.adminNotes ? ` · ${r.adminNotes}` : ' (ไม่ได้ระบุเหตุผลไว้)'}
+                    </span>
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

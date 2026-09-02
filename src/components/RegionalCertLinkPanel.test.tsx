@@ -77,7 +77,7 @@ const rejectRequest = vi.fn();
 
 vi.mock('../services/regionalCertificationService', () => ({
   fetchRegionalZones: () => fetchZones(),
-  fetchPendingRegionalCertRequests: () => fetchRequests(),
+  fetchRegionalCertRequests: () => fetchRequests(),
   linkRegionalCertRequest: (...args: unknown[]) => linkRequest(...args),
   rejectRegionalCertRequest: (...args: unknown[]) => rejectRequest(...args),
 }));

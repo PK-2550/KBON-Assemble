@@ -47,7 +47,7 @@ import {
 } from '../services/farmRequestService';
 import { DocumentViewerModal, DocumentViewerData } from './DocumentViewerModal';
 import { RegionalCertLinkPanel } from './RegionalCertLinkPanel';
-import { fetchPendingRegionalCertRequests } from '../services/regionalCertificationService';
+import { fetchRegionalCertRequests } from '../services/regionalCertificationService';
 import {
   fetchCertificationTypes,
   type CertificationTypeOption,
@@ -200,7 +200,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
    */
   const refreshRegionalPendingCount = useCallback(async () => {
     try {
-      const pending = await fetchPendingRegionalCertRequests();
+      const pending = await fetchRegionalCertRequests('pending');
       setRegionalPendingCount(pending.length);
     } catch {
       setRegionalPendingCount(0);
