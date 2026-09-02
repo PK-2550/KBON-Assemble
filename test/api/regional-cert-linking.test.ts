@@ -33,6 +33,15 @@ let adminCookie = '';
 let giZoneId = 0;
 let otherZoneId = 0;
 
+/**
+ * โซนของใบคนละประเภท ใช้ทดสอบว่าจับคู่ข้ามประเภทไม่ได้
+ *
+ * สร้างใน beforeAll และลบใน afterAll ไม่ใช่ในตัวเทสต์เอง เพราะถ้าเทสต์ล้ม
+ * บรรทัดลบที่อยู่ท้าย test จะไม่ถูกรัน แล้วแถวทดสอบจะค้างอยู่ในฐาน dev
+ */
+let wrongTypeId = 0;
+let wrongTypeZoneId = 0;
+
 function cookieOf(res: request.Response): string {
   const raw = res.headers['set-cookie'];
   const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
@@ -98,6 +107,21 @@ beforeAll(async () => {
   );
   giZoneId = Number(zones.rows[0].id);
   otherZoneId = Number(zones.rows[1].id);
+
+  const wrongType = await pool.query(
+    `INSERT INTO certification_types (code, tier, name, name_th, sort_order)
+     VALUES ($1, 'regional', 'ทดสอบโซน', 'ทดสอบโซน', 99)
+     RETURNING id`,
+    [`TEST_REGION_${SUFFIX}`]
+  );
+  wrongTypeId = Number(wrongType.rows[0].id);
+
+  const wrongZone = await pool.query(
+    `INSERT INTO regional_certifications (certification_type_id, region_name, province)
+     VALUES ($1, $2, 'จันทบุรี') RETURNING id`,
+    [wrongTypeId, `โซนทดสอบ ${SUFFIX}`]
+  );
+  wrongTypeZoneId = Number(wrongZone.rows[0].id);
 });
 
 afterAll(async () => {
@@ -110,6 +134,12 @@ afterAll(async () => {
     await pool.query('DELETE FROM farms WHERE id = ANY($1)', [ids]);
   }
   await pool.query('DELETE FROM farm_requests WHERE farm_name LIKE $1', [`${FARM_NAME}%`]);
+  if (wrongTypeZoneId) {
+    await pool.query('DELETE FROM regional_certifications WHERE id = $1', [wrongTypeZoneId]);
+  }
+  if (wrongTypeId) {
+    await pool.query('DELETE FROM certification_types WHERE id = $1', [wrongTypeId]);
+  }
   await pool.query('DELETE FROM users WHERE username_lower = ANY($1)', [
     [OWNER.toLowerCase(), OTHER.toLowerCase(), ADMIN.toLowerCase()],
   ]);
@@ -346,28 +376,12 @@ describe('จับคู่คำขอเข้ากับโซน', () => {
     // สวนจะได้ตราของมาตรฐานที่ไม่เคยยื่นมา
     const { requestId } = await submitGiAndApprove();
 
-    const wrongType = await pool.query(
-      `INSERT INTO certification_types (code, tier, name, name_th, sort_order)
-       VALUES ($1, 'regional', 'ทดสอบโซน', 'ทดสอบโซน', 99)
-       ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
-       RETURNING id`,
-      [`TEST_REGION_${SUFFIX}`]
-    );
-    const wrongZone = await pool.query(
-      `INSERT INTO regional_certifications (certification_type_id, region_name, province)
-       VALUES ($1, $2, 'จันทบุรี') RETURNING id`,
-      [wrongType.rows[0].id, `โซนทดสอบ ${SUFFIX}`]
-    );
-
     const res = await request(app)
       .post(`/api/regional-certifications/requests/${requestId}/link`)
       .set('Cookie', adminCookie)
-      .send({ regionalCertificationId: Number(wrongZone.rows[0].id) });
+      .send({ regionalCertificationId: wrongTypeZoneId });
 
     expect(res.status).toBe(400);
-
-    await pool.query('DELETE FROM regional_certifications WHERE id = $1', [wrongZone.rows[0].id]);
-    await pool.query('DELETE FROM certification_types WHERE id = $1', [wrongType.rows[0].id]);
   });
 });
 
