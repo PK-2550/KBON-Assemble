@@ -13,10 +13,21 @@ const BASE = '/api';
 
 export class ApiError extends Error {
   readonly status: number;
-  constructor(message: string, status: number) {
+
+  /**
+   * เนื้อหาที่เซิร์ฟเวอร์ตอบกลับมาทั้งก้อน
+   *
+   * บาง endpoint ตอบรายละเอียดมาพร้อม error ที่ผู้เรียกต้องเอาไปใช้ต่อ เช่น
+   * รายชื่อโซนที่อาจซ้ำ ซึ่งหน้าจอต้องแสดงให้แอดมินตัดสิน ถ้าเก็บแต่ข้อความ
+   * ผู้เรียกจะต้องไปแกะเอาจากประโยคภาษาไทยเอง ซึ่งพังทันทีที่ข้อความเปลี่ยน
+   */
+  readonly body: unknown;
+
+  constructor(message: string, status: number, body: unknown = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -49,7 +60,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     const serverMessage = (body as { error?: string })?.error;
     if (serverMessage) {
-      throw new ApiError(serverMessage, res.status);
+      throw new ApiError(serverMessage, res.status, body);
     }
 
     // ไม่มี JSON กลับมาพร้อม status 5xx แปลว่าไม่ได้คุยกับ API ของเราจริง ๆ
@@ -62,7 +73,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       );
     }
 
-    throw new ApiError(`เกิดข้อผิดพลาด (${res.status})`, res.status);
+    throw new ApiError(`เกิดข้อผิดพลาด (${res.status})`, res.status, body);
   }
 
   return body as T;

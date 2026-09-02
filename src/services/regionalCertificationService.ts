@@ -1,4 +1,4 @@
-import { api } from './apiClient';
+import { api, ApiError } from './apiClient';
 
 /**
  * ใบรับรองระดับโซน และคำขอที่รอแอดมินจับคู่
@@ -19,6 +19,8 @@ export interface RegionalZone {
   approvalStatus: string;
   typeCode: string;
   typeNameTh: string;
+  /** วันหมดอายุของใบตัวแทนโซน คืนเป็นปีเปล่าถ้าข้อมูลรู้แค่ระดับปี */
+  validUntil: string;
   /** จำนวนสวนที่ผูกกับโซนนี้อยู่แล้ว ใช้ดูว่าโซนไหนใช้งานจริง */
   linkedFarmCount: number;
 }
@@ -73,4 +75,80 @@ export async function rejectRegionalCertRequest(
     { adminNotes }
   );
   return request;
+}
+
+/** ค่าที่ฟอร์มส่งไปตอนสร้างหรือแก้ไขโซน */
+export interface RegionalZoneInput {
+  certificationTypeCode?: string;
+  regionName: string;
+  province: string;
+  certNumber?: string;
+  issuingAuthority?: string;
+  validUntil?: string;
+  /** ยืนยันว่าเป็นคนละโซนกับที่มีอยู่แล้วในจังหวัดนั้น */
+  confirmDuplicate?: boolean;
+}
+
+/** โซนที่อาจซ้ำ ซึ่งเซิร์ฟเวอร์ส่งกลับมาให้แอดมินดูก่อนตัดสิน */
+export interface SimilarZone {
+  id: number;
+  regionName: string;
+  province: string;
+  certNumber: string;
+  linkedFarmCount: number;
+}
+
+/**
+ * ผลของการเขียนโซน
+ *
+ * การถูกปฏิเสธเพราะซ้ำเป็นผลลัพธ์ปกติของงานนี้ ไม่ใช่ความผิดพลาดของระบบ
+ * จึงคืนเป็นค่าให้ผู้เรียกจัดการ ไม่ใช่โยน exception ซึ่งจะทำให้หน้าจอ
+ * ต้องแกะรหัสกับรายชื่อโซนออกมาจาก error เอง
+ */
+export type RegionalZoneWriteResult =
+  | { ok: true; zone: RegionalZone }
+  | { ok: false; code: string; error: string; zones?: SimilarZone[] };
+
+/** แปลง error ของ API ให้เป็นผลลัพธ์ที่หน้าจอเอาไปแสดงได้ตรง ๆ */
+function toWriteFailure(err: unknown): RegionalZoneWriteResult {
+  if (err instanceof ApiError) {
+    const body = (err.body ?? {}) as { code?: string; zones?: SimilarZone[] };
+    return {
+      ok: false,
+      code: body.code ?? 'UNKNOWN',
+      error: err.message,
+      zones: body.zones,
+    };
+  }
+  return {
+    ok: false,
+    code: 'UNKNOWN',
+    error: err instanceof Error ? err.message : 'บันทึกโซนไม่สำเร็จ',
+  };
+}
+
+export async function createRegionalZone(
+  input: RegionalZoneInput
+): Promise<RegionalZoneWriteResult> {
+  try {
+    const { zone } = await api.post<{ zone: RegionalZone }>('/regional-certifications', input);
+    return { ok: true, zone };
+  } catch (err) {
+    return toWriteFailure(err);
+  }
+}
+
+export async function updateRegionalZone(
+  id: number,
+  input: Partial<RegionalZoneInput>
+): Promise<RegionalZoneWriteResult> {
+  try {
+    const { zone } = await api.patch<{ zone: RegionalZone }>(
+      `/regional-certifications/${id}`,
+      input
+    );
+    return { ok: true, zone };
+  } catch (err) {
+    return toWriteFailure(err);
+  }
 }

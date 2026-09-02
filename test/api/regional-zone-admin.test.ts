@@ -36,6 +36,15 @@ let existingZoneId = 0;
 let existingZoneName = '';
 let existingCertNumber = '';
 
+/**
+ * ร่องรอยผู้ตรวจของโซนเดิมก่อนชุดนี้เริ่ม
+ *
+ * เทสต์เปลี่ยนชื่อจะเขียน reviewed_by ทับ ถ้าคืนแค่ชื่อ ฐาน dev จะเหลือชื่อ
+ * บัญชีทดสอบค้างอยู่ในคอลัมน์ผู้ตรวจของโซนจริง
+ */
+let existingReviewedBy: string | null = null;
+let existingReviewedAt: Date | null = null;
+
 /** เก็บ id ทุกโซนที่ชุดนี้สร้าง เพื่อลบทิ้งให้หมดใน afterAll */
 const createdZoneIds: number[] = [];
 
@@ -87,7 +96,7 @@ beforeAll(async () => {
   );
 
   const { rows } = await pool.query(
-    `SELECT rc.id, rc.region_name, rc.cert_number
+    `SELECT rc.id, rc.region_name, rc.cert_number, rc.reviewed_by, rc.reviewed_at
        FROM regional_certifications rc
        JOIN certification_types ct ON ct.id = rc.certification_type_id
       WHERE ct.code = 'GI' ORDER BY rc.id LIMIT 1`
@@ -95,6 +104,8 @@ beforeAll(async () => {
   existingZoneId = Number(rows[0].id);
   existingZoneName = rows[0].region_name;
   existingCertNumber = rows[0].cert_number;
+  existingReviewedBy = rows[0].reviewed_by;
+  existingReviewedAt = rows[0].reviewed_at;
 });
 
 afterAll(async () => {
@@ -115,11 +126,13 @@ afterAll(async () => {
     await pool.query('DELETE FROM regional_certifications WHERE id = ANY($1)', [createdZoneIds]);
   }
 
-  // คืนชื่อโซนเดิมกลับ เผื่อเทสต์เปลี่ยนชื่อทำงานแล้วยังไม่ได้คืน
-  await pool.query('UPDATE regional_certifications SET region_name = $2 WHERE id = $1', [
-    existingZoneId,
-    existingZoneName,
-  ]);
+  // คืนโซนเดิมกลับให้เหมือนก่อนเริ่ม ทั้งชื่อและร่องรอยผู้ตรวจ
+  await pool.query(
+    `UPDATE regional_certifications
+        SET region_name = $2, reviewed_by = $3, reviewed_at = $4
+      WHERE id = $1`,
+    [existingZoneId, existingZoneName, existingReviewedBy, existingReviewedAt]
+  );
 
   await pool.query('DELETE FROM users WHERE username_lower = ANY($1)', [
     [OTHER.toLowerCase(), ADMIN.toLowerCase(), OWNER.toLowerCase()],
