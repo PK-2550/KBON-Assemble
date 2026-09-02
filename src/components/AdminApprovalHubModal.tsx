@@ -30,6 +30,7 @@ import {
   ChevronRight,
   Sprout,
   Info,
+  Eraser,
 } from 'lucide-react';
 import { FarmRegistrationRequest, DurianFarm } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -47,6 +48,7 @@ import {
 } from '../services/farmRequestService';
 import { DocumentViewerModal, DocumentViewerData } from './DocumentViewerModal';
 import { RegionalCertLinkPanel } from './RegionalCertLinkPanel';
+import { DataRetentionLogPanel } from './DataRetentionLogPanel';
 import { fetchRegionalCertRequests } from '../services/regionalCertificationService';
 import {
   fetchCertificationTypes,
@@ -59,7 +61,7 @@ import {
  * สามตัวแรกกรองคำขอสมัคร ส่วน regional เป็นกองงานคนละชนิดคือใบรับรองระดับโซน
  * ที่รอจับคู่ จึงแทนที่เนื้อหาทั้งหมดแทนการกรองรายการเดิม
  */
-type HubTab = 'pending' | 'approved' | 'rejected' | 'all' | 'regional';
+type HubTab = 'pending' | 'approved' | 'rejected' | 'all' | 'regional' | 'retention';
 
 interface AdminApprovalHubModalProps {
   isOpen: boolean;
@@ -267,8 +269,8 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
     setActiveFilter(filter);
     setIsRevisionBoxOpen(false);
     setIsRejectBoxOpen(false);
-    // แท็บใบระดับโซนไม่ได้กรองรายการคำขอสมัคร จึงไม่ต้องเลือกคำขอตัวไหน
-    if (filter === 'regional') return;
+    // สองแท็บนี้ไม่ได้กรองรายการคำขอสมัคร จึงไม่ต้องเลือกคำขอตัวไหน
+    if (filter === 'regional' || filter === 'retention') return;
     const newFiltered = requests.filter((r) => {
       if (filter === 'all') return true;
       if (filter === 'rejected') return r.status === 'rejected' || r.status === 'needs_revision';
@@ -565,10 +567,29 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
             >
               ทั้งหมด ({allCount})
             </button>
+
+            {/*
+              รายงานการล้างข้อมูลส่วนตัว เป็นงานตรวจสอบที่เปิดดูนาน ๆ ครั้ง
+              ไม่ใช่กองงานประจำวัน จึงวางท้ายสุด ต่างจากแท็บจับคู่ใบระดับโซน
+              ที่มีงานค้างรอคนจัดการและต้องเห็นตั้งแต่แรก
+            */}
+            <button
+              onClick={() => handleFilterChange('retention')}
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold whitespace-nowrap ${
+                activeFilter === 'retention'
+                  ? 'bg-[#1e4c33] text-white font-black shadow-xs border border-leaf'
+                  : 'bg-surface text-fg-2 hover:text-white border border-line'
+              }`}
+            >
+              <Eraser className="w-3.5 h-3.5 shrink-0" />
+              <span>บันทึกการล้างข้อมูล</span>
+            </button>
           </div>
         </div>
 
-        {activeFilter === 'regional' ? (
+        {activeFilter === 'retention' ? (
+          <DataRetentionLogPanel />
+        ) : activeFilter === 'regional' ? (
           <RegionalCertLinkPanel onResolved={refreshRegionalPendingCount} />
         ) : (
         /* Main Body: 2-Column Split (List & Details) */
