@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Award, Loader2, MapPin, Link2, XCircle, CheckCircle2, Info, Plus, Pencil, Settings2 } from 'lucide-react';
 import {
   fetchRegionalZones,
-  fetchPendingRegionalCertRequests,
+  fetchRegionalCertRequests,
   linkRegionalCertRequest,
   rejectRegionalCertRequest,
   type RegionalZone,
@@ -21,6 +21,15 @@ import { RegionalZoneForm } from './RegionalZoneForm';
  * มาสั่ง SQL เอง ผลจากมุมเจ้าของสวนคือกรอกใบ GI ไปแล้วตราไม่เคยขึ้น
  * ซึ่งไม่ต่างอะไรกับตอนที่ใบถูกข้ามทิ้งเงียบ ๆ
  */
+
+type RequestStatus = RegionalCertRequest['status'];
+
+/** ป้ายและข้อความว่างของแต่ละสถานะ เก็บไว้ที่เดียวกันเพื่อให้ไม่หลุดกัน */
+const STATUS_TABS: { value: RequestStatus; label: string; empty: string }[] = [
+  { value: 'pending', label: 'รอจับคู่', empty: 'ไม่มีคำขอที่รอจับคู่โซน' },
+  { value: 'linked', label: 'จับคู่แล้ว', empty: 'ยังไม่มีคำขอที่จับคู่โซนแล้ว' },
+  { value: 'rejected', label: 'ปฏิเสธแล้ว', empty: 'ยังไม่มีคำขอที่ถูกปฏิเสธ' },
+];
 
 /** วันที่แบบไทย ใช้แสดงว่าคำขอค้างมานานแค่ไหน */
 function thaiDate(iso: string): string {
@@ -57,16 +66,25 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
   const [creatingForRequestId, setCreatingForRequestId] = useState<number | null>(null);
 
   // รายชื่อโซนทั้งหมดสำหรับตอนตั้งใจมาแก้ชื่อ ไม่ได้มาจากคำขอ
+  /**
+   * สถานะของคำขอที่กำลังดูอยู่
+   *
+   * เซิร์ฟเวอร์รองรับการกรองมาตั้งแต่ต้น แต่หน้าจอเรียกแค่ที่ยังค้าง
+   * พอจัดการไปแล้วคำขอก็หายจากหน้าจอตลอดกาล ไม่มีทางย้อนดูว่าเคยตัดสินไป
+   * ว่าอย่างไร ซึ่งเป็นคำถามที่ต้องตอบได้ตอนเจ้าของสวนโทรมาถาม
+   */
+  const [statusFilter, setStatusFilter] = useState<RequestStatus>('pending');
+
   const [isZoneListOpen, setIsZoneListOpen] = useState(false);
   const [editingZoneId, setEditingZoneId] = useState<number | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (status: RequestStatus) => {
     setIsLoading(true);
     setLoadError('');
     try {
       const [z, r] = await Promise.all([
         fetchRegionalZones(),
-        fetchPendingRegionalCertRequests(),
+        fetchRegionalCertRequests(status),
       ]);
       setZones(z);
       setRequests(r);
@@ -81,8 +99,8 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
     // ตัวตรวจมองไม่ทะลุ async จึงนับว่าเป็นการ setState แบบทันทีใน effect
     // การดึงข้อมูลตอน mount คือกรณีที่กฎข้อนี้อนุญาตไว้เอง
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
-  }, [load]);
+    void load(statusFilter);
+  }, [load, statusFilter]);
 
   /**
    * โซนที่เลือกได้ แยกตามประเภทใบ
@@ -215,7 +233,28 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
         ชื่อโซนที่ 009 เติมให้เป็นชื่อจังหวัดล้วน ซึ่งไม่ใช่ชื่อจริงของทะเบียน GI
         ก่อนหน้านี้แก้ได้ทาง SQL ทางเดียว
       */}
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => {
+                setStatusFilter(tab.value);
+                setCreatingForRequestId(null);
+                setRejectingId(null);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold cursor-pointer transition-colors ${
+                statusFilter === tab.value
+                  ? 'bg-surface-2 text-leaf border border-[#235b3a]'
+                  : 'bg-surface text-fg-2 hover:text-white border border-line'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <button
           type="button"
           onClick={() => {
@@ -295,10 +334,18 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
       {requests.length === 0 && !loadError ? (
         <div className="py-12 text-center text-xs text-fg-2 space-y-2 px-4">
           <Award className="w-10 h-10 mx-auto text-line" />
-          <p className="font-semibold text-white">ไม่มีคำขอที่รอจับคู่โซน</p>
-          <p className="text-[11px]">
-            เมื่อมีสวนยื่นใบรับรองระดับโซนเข้ามา รายการจะปรากฏที่นี่
+          {/*
+            ข้อความต้องตรงกับสถานะที่กำลังดูอยู่ ถ้าขึ้นว่าไม่มีคำขอที่รอจับคู่
+            ทั้งที่กำลังดูรายการที่ปฏิเสธไปแล้ว แอดมินจะเข้าใจผิดว่าไม่เคยปฏิเสธใครเลย
+          */}
+          <p className="font-semibold text-white">
+            {STATUS_TABS.find((t) => t.value === statusFilter)?.empty}
           </p>
+          {statusFilter === 'pending' && (
+            <p className="text-[11px]">
+              เมื่อมีสวนยื่นใบรับรองระดับโซนเข้ามา รายการจะปรากฏที่นี่
+            </p>
+          )}
         </div>
       ) : (
         requests.map((req) => {
@@ -347,7 +394,31 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
                 </p>
               )}
 
-              {isRejecting ? (
+              {req.status !== 'pending' ? (
+                /*
+                  คำขอที่จัดการไปแล้ว แสดงผลการตัดสินแทนปุ่มจัดการ
+
+                  ไม่ปล่อยปุ่มไว้ให้กดซ้ำ เซิร์ฟเวอร์ตอบ 409 อยู่แล้วก็จริง
+                  แต่ปุ่มที่กดแล้วขึ้น error เสมอไม่ควรมีตั้งแต่แรก
+                */
+                <div className="p-2.5 bg-well border border-line rounded-xl space-y-1">
+                  {req.status === 'linked' ? (
+                    <p className="flex items-start gap-1.5 text-[11px] text-leaf font-bold">
+                      <Link2 className="w-3.5 h-3.5 shrink-0 mt-px" />
+                      <span>จับคู่เข้ากับโซน {req.linkedRegionName || '-'} แล้ว</span>
+                    </p>
+                  ) : (
+                    <p className="flex items-start gap-1.5 text-[11px] text-rose-300 font-bold">
+                      <XCircle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                      <span>ปฏิเสธ · {req.adminNotes || 'ไม่ได้บันทึกเหตุผลไว้'}</span>
+                    </p>
+                  )}
+                  <p className="text-[11px] text-fg-2 pl-5">
+                    โดย {req.resolvedBy || '-'}
+                    {req.resolvedAt ? ` · ${thaiDate(req.resolvedAt)}` : ''}
+                  </p>
+                </div>
+              ) : isRejecting ? (
                 <div className="space-y-2">
                   <label
                     className="block text-[11px] font-bold text-rose-300"

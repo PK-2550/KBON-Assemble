@@ -113,7 +113,7 @@ vi.mock('../services/certificationTypeService', () => ({
 
 vi.mock('../services/regionalCertificationService', () => ({
   fetchRegionalZones: () => Promise.resolve([]),
-  fetchPendingRegionalCertRequests: () => Promise.resolve([]),
+  fetchRegionalCertRequests: () => Promise.resolve([]),
   linkRegionalCertRequest: vi.fn(),
   rejectRegionalCertRequest: vi.fn(),
 }));

@@ -67,7 +67,7 @@ const updateZone = vi.fn();
 
 vi.mock('../services/regionalCertificationService', () => ({
   fetchRegionalZones: () => fetchZones(),
-  fetchPendingRegionalCertRequests: () => fetchRequests(),
+  fetchRegionalCertRequests: () => fetchRequests(),
   linkRegionalCertRequest: (...a: unknown[]) => linkRequest(...a),
   rejectRegionalCertRequest: (...a: unknown[]) => rejectRequest(...a),
   createRegionalZone: (...a: unknown[]) => createZone(...a),

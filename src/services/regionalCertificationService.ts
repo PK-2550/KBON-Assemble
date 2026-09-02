@@ -48,9 +48,19 @@ export async function fetchRegionalZones(): Promise<RegionalZone[]> {
   return zones;
 }
 
-export async function fetchPendingRegionalCertRequests(): Promise<RegionalCertRequest[]> {
+/**
+ * คำขอใบระดับโซนตามสถานะ
+ *
+ * ค่าตั้งต้นคือที่ยังค้าง เพราะนั่นคือกองงานที่แอดมินต้องเคลียร์
+ * ส่วนที่จัดการไปแล้วขอดูได้ ไว้ใช้ตอนต้องย้อนดูว่าใบใบหนึ่งเคยถูกตัดสิน
+ * ไปว่าอย่างไร ใครตัดสิน และเพราะอะไร ซึ่งเป็นคำถามที่ต้องตอบได้ตอน
+ * เจ้าของสวนโทรมาถามว่าทำไมตรายังไม่ขึ้น
+ */
+export async function fetchRegionalCertRequests(
+  status: RegionalCertRequest['status'] = 'pending'
+): Promise<RegionalCertRequest[]> {
   const { requests } = await api.get<{ requests: RegionalCertRequest[] }>(
-    '/regional-certifications/requests'
+    `/regional-certifications/requests?status=${status}`
   );
   return requests;
 }
