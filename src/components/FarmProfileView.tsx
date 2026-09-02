@@ -275,7 +275,11 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
 
           {/* Tab: Certifications with Inspection Button */}
           {activeTab === 'certs' && (
-            <FarmCertificationsTab farm={currentFarm} onViewDocument={setSelectedCertDoc} />
+            <FarmCertificationsTab
+              farm={currentFarm}
+              onViewDocument={setSelectedCertDoc}
+              isOwnerOrAdmin={isOwnerOrAdmin}
+            />
           )}
 
           {/* Tab: About Farm Story */}

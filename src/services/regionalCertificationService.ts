@@ -65,6 +65,23 @@ export async function fetchRegionalCertRequests(
   return requests;
 }
 
+/**
+ * สถานะใบระดับโซนของสวนหนึ่ง สำหรับเจ้าของสวนเอง
+ *
+ * ต่างจาก fetchRegionalCertRequests ตรงที่คืนทุกสถานะของสวนเดียว ไม่ใช่
+ * สถานะเดียวของทุกสวน และเปิดให้เจ้าของสวนเรียกได้ ไม่ใช่เฉพาะแอดมิน
+ *
+ * ชื่อผู้ตัดสินถูกตัดออกฝั่งเซิร์ฟเวอร์เมื่อผู้เรียกไม่ใช่แอดมิน
+ */
+export async function fetchRegionalCertRequestsForFarm(
+  farmId: string
+): Promise<RegionalCertRequest[]> {
+  const { requests } = await api.get<{ requests: RegionalCertRequest[] }>(
+    `/regional-certifications/requests/by-farm/${encodeURIComponent(farmId)}`
+  );
+  return requests;
+}
+
 export async function linkRegionalCertRequest(
   requestId: number,
   regionalCertificationId: number

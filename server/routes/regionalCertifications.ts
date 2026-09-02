@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
 import { asyncHandler } from '../asyncHandler.js';
-import { requireAdmin } from '../middleware/auth.js';
+import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { parseValidUntil, formatValidUntil } from '../farmsRepo.js';
 import { cleanZoneName, normalizeZoneNameKey } from '../../src/shared/regionalZoneName.js';
 
@@ -576,5 +576,65 @@ regionalCertificationsRouter.patch(
       if (mapped) return res.status(409).json(mapped);
       throw err;
     }
+  })
+);
+
+/**
+ * สถานะใบระดับโซนของสวนหนึ่ง สำหรับเจ้าของสวนเอง
+ *
+ * ใบอย่าง GI ไม่ได้ขึ้นตราทันทีที่อนุมัติคำขอสมัคร แต่ไปรอให้แอดมินจับคู่โซนก่อน
+ * ถ้าถูกปฏิเสธ เหตุผลถูกบันทึกไว้แล้วตั้งแต่ต้น แต่ไม่มีทางไหนที่เจ้าของสวน
+ * จะได้อ่านเลย จากมุมเจ้าของสวนคือกรอกครบ รอไปเรื่อย ๆ แล้วตราไม่เคยขึ้น
+ * โดยไม่รู้ว่าติดอยู่ที่ขั้นไหน
+ *
+ * เปิดให้เฉพาะเจ้าของสวนกับแอดมิน หน้าโปรไฟล์สวนใครเปิดดูก็ได้ ถ้าเส้นทางนี้
+ * เปิดตาม เหตุผลที่แอดมินปฏิเสธกับเลขที่ใบจะกลายเป็นข้อมูลสาธารณะไปด้วย
+ */
+regionalCertificationsRouter.get(
+  '/requests/by-farm/:farmId',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const farm = await pool.query('SELECT id, manager_id FROM farms WHERE id = $1', [
+      req.params.farmId,
+    ]);
+    // แยกให้ออกระหว่างไม่มีสวนนี้ กับมีแต่ไม่ใช่ของคุณ
+    if (farm.rowCount === 0) {
+      return res.status(404).json({ error: 'ไม่พบสวนที่ระบุ' });
+    }
+
+    const isAdmin = req.user!.role === 'admin';
+    const isOwner = farm.rows[0].manager_id === req.user!.uid;
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ error: 'ดูได้เฉพาะสวนของตัวเองเท่านั้น' });
+    }
+
+    const { rows } = await pool.query(
+      `SELECT r.id, r.farm_id, r.cert_number, r.issuing_authority, r.status,
+              r.admin_notes, r.resolved_by, r.resolved_at, r.created_at,
+              r.regional_certification_id,
+              f.name AS farm_name, f.province,
+              ct.code AS type_code, ct.name_th AS type_name_th,
+              rc.region_name AS linked_region_name
+         FROM regional_certification_requests r
+         JOIN farms f ON f.id = r.farm_id
+         JOIN certification_types ct ON ct.id = r.certification_type_id
+         LEFT JOIN regional_certifications rc ON rc.id = r.regional_certification_id
+        WHERE r.farm_id = $1
+        ORDER BY r.created_at DESC`,
+      [req.params.farmId]
+    );
+
+    /*
+      ตัดชื่อผู้ตัดสินออกเมื่อผู้เรียกไม่ใช่แอดมิน
+
+      เจ้าของสวนควรรู้ว่าใบถูกตัดสินแล้วและเพราะอะไร แต่ไม่จำเป็นต้องรู้ว่า
+      พนักงานคนไหนเป็นคนกด ชื่อบัญชีภายในไม่ควรไหลออกไปนอกทีม
+    */
+    res.json({
+      requests: rows.map((r) => {
+        const shaped = toRegionalRequest(r);
+        return isAdmin ? shaped : { ...shaped, resolvedBy: '' };
+      }),
+    });
   })
 );
