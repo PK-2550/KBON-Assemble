@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Award, Loader2, MapPin, Link2, XCircle, CheckCircle2, Info } from 'lucide-react';
+import { Award, Loader2, MapPin, Link2, XCircle, CheckCircle2, Info, Plus, Pencil, Settings2 } from 'lucide-react';
 import {
   fetchRegionalZones,
   fetchPendingRegionalCertRequests,
@@ -8,6 +8,7 @@ import {
   type RegionalZone,
   type RegionalCertRequest,
 } from '../services/regionalCertificationService';
+import { RegionalZoneForm } from './RegionalZoneForm';
 
 /**
  * จับคู่คำขอใบรับรองระดับโซนเข้ากับโซนจริง
@@ -46,6 +47,18 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
   const [busyId, setBusyId] = useState<number | null>(null);
   const [errorById, setErrorById] = useState<Record<number, string>>({});
   const [successToast, setSuccessToast] = useState('');
+
+  /**
+   * คำขอที่กำลังเปิดฟอร์มสร้างโซนใหม่อยู่
+   *
+   * ฟอร์มอยู่ในการ์ดคำขอ ไม่ใช่หน้าแยก เพราะนี่คือนาทีที่แอดมินเพิ่งรู้ตัว
+   * ว่าไม่มีโซนไหนตรง และข้อมูลที่ต้องกรอกทั้งหมดอยู่ในคำขอตรงหน้าอยู่แล้ว
+   */
+  const [creatingForRequestId, setCreatingForRequestId] = useState<number | null>(null);
+
+  // รายชื่อโซนทั้งหมดสำหรับตอนตั้งใจมาแก้ชื่อ ไม่ได้มาจากคำขอ
+  const [isZoneListOpen, setIsZoneListOpen] = useState(false);
+  const [editingZoneId, setEditingZoneId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -101,6 +114,26 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
   const removeRequest = (id: number) => {
     setRequests((prev) => prev.filter((r) => r.id !== id));
     onResolved?.();
+  };
+
+  /**
+   * โซนที่เพิ่งสร้างเสร็จ
+   *
+   * เติมเข้ารายการเองแทนการโหลดใหม่ทั้งกอง แล้วเลือกไว้ให้กับคำขอที่เป็นต้นเรื่อง
+   * เลย เพราะแอดมินเพิ่งสร้างโซนนี้เพื่อคำขอนี้โดยเฉพาะ ไม่มีเหตุผลให้ต้องไป
+   * ไล่หาในรายการเพื่อเลือกซ้ำอีกครั้ง
+   */
+  const handleZoneCreated = (zone: RegionalZone, requestId: number) => {
+    setZones((prev) => [...prev, zone]);
+    setZoneChoice((prev) => ({ ...prev, [requestId]: String(zone.id) }));
+    setCreatingForRequestId(null);
+    setSuccessToast(`สร้างโซน ${zone.regionName} แล้ว เลือกไว้ให้เรียบร้อย`);
+  };
+
+  const handleZoneUpdated = (zone: RegionalZone) => {
+    setZones((prev) => prev.map((z) => (z.id === zone.id ? zone : z)));
+    setEditingZoneId(null);
+    setSuccessToast(`บันทึกโซน ${zone.regionName} แล้ว`);
   };
 
   const handleLink = async (req: RegionalCertRequest) => {
@@ -175,6 +208,89 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
           ตราจะขึ้นบนหน้าสวนทันทีที่จับคู่เสร็จ
         </p>
       </div>
+
+      {/*
+        รายชื่อโซนทั้งหมด สำหรับตอนที่ตั้งใจมาแก้ชื่อ ไม่ได้มาจากคำขอ
+
+        ชื่อโซนที่ 009 เติมให้เป็นชื่อจังหวัดล้วน ซึ่งไม่ใช่ชื่อจริงของทะเบียน GI
+        ก่อนหน้านี้แก้ได้ทาง SQL ทางเดียว
+      */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            setIsZoneListOpen((open) => !open);
+            setEditingZoneId(null);
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-surface-2 border border-line text-fg-2 hover:text-white rounded-xl text-[11px] font-bold cursor-pointer transition-colors"
+        >
+          <Settings2 className="w-3.5 h-3.5" />
+          <span>จัดการโซน ({zones.length})</span>
+        </button>
+      </div>
+
+      {isZoneListOpen && (
+        <div className="p-3 bg-well border border-line rounded-2xl space-y-2">
+          {zones.length === 0 ? (
+            <p className="text-[11px] text-fg-2 text-center py-3">ยังไม่มีโซนในระบบ</p>
+          ) : (
+            zones.map((zone) =>
+              editingZoneId === zone.id ? (
+                <RegionalZoneForm
+                  key={zone.id}
+                  mode="edit"
+                  zoneId={zone.id}
+                  typeCode={zone.typeCode}
+                  typeNameTh={zone.typeNameTh}
+                  initial={{
+                    regionName: zone.regionName,
+                    province: zone.province,
+                    certNumber: zone.certNumber,
+                    issuingAuthority: zone.issuingAuthority,
+                    validUntil: zone.validUntil,
+                  }}
+                  existingZones={zones}
+                  onSaved={handleZoneUpdated}
+                  onCancel={() => setEditingZoneId(null)}
+                />
+              ) : (
+                <div
+                  key={zone.id}
+                  data-testid="zone-row"
+                  className="flex items-center justify-between gap-2 p-2.5 bg-panel border border-line rounded-xl"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{zone.regionName}</p>
+                    <p className="text-[11px] text-fg-2">
+                      <span className="px-1.5 py-0.5 rounded bg-surface-2 text-leaf font-black text-[10px]">
+                        {zone.typeCode}
+                      </span>
+                      {' · '}จังหวัด{zone.province}
+                      {zone.certNumber ? (
+                        <>
+                          {' · '}
+                          <span className="font-mono">{zone.certNumber}</span>
+                        </>
+                      ) : null}
+                      {' · ผูกอยู่ '}
+                      <span>{zone.linkedFarmCount}</span>
+                      {' สวน'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingZoneId(zone.id)}
+                    className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-surface-2 hover:bg-[#1f4c33] text-leaf border border-[#235b3a] rounded-lg text-[11px] font-bold cursor-pointer transition-colors"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    <span>แก้ไข</span>
+                  </button>
+                </div>
+              )
+            )
+          )}
+        </div>
+      )}
 
       {requests.length === 0 && !loadError ? (
         <div className="py-12 text-center text-xs text-fg-2 space-y-2 px-4">
@@ -268,7 +384,29 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
                     </button>
                   </div>
                 </div>
+              ) : creatingForRequestId === req.id ? (
+                /*
+                  ฟอร์มเปิดพร้อมข้อมูลจากคำขอนี้ทั้งหมด ทั้งจังหวัดของสวน
+                  เลขที่ใบ และหน่วยงานผู้ออก ถ้าให้จำแล้วไปพิมพ์ใหม่ที่อื่น
+                  นั่นคือทางที่ทำให้พิมพ์ผิดจนเกิดโซนซ้ำ
+                */
+                <RegionalZoneForm
+                  mode="create"
+                  typeCode={req.typeCode}
+                  typeNameTh={req.typeNameTh}
+                  initial={{
+                    regionName: '',
+                    province: req.province,
+                    certNumber: req.certNumber,
+                    issuingAuthority: req.issuingAuthority,
+                    validUntil: '',
+                  }}
+                  existingZones={zones}
+                  onSaved={(zone) => handleZoneCreated(zone, req.id)}
+                  onCancel={() => setCreatingForRequestId(null)}
+                />
               ) : (
+                <div className="space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <select
                     aria-label={`เลือกโซนสำหรับ ${req.farmName}`}
@@ -317,6 +455,20 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
                       <span>จับคู่โซน</span>
                     </button>
                   </div>
+                </div>
+
+                {/* ทางออกเมื่อไม่มีโซนไหนตรง ซึ่งก่อนหน้านี้ทำได้แค่ปฏิเสธ */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreatingForRequestId(req.id);
+                    clearError(req.id);
+                  }}
+                  className="flex items-center gap-1 text-[11px] font-bold text-leaf hover:text-white cursor-pointer transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>ไม่มีโซนที่ตรง? สร้างโซนใหม่จากข้อมูลคำขอนี้</span>
+                </button>
                 </div>
               )}
             </div>

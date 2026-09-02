@@ -23,6 +23,7 @@ const ZONES: RegionalZone[] = [
     approvalStatus: 'approved',
     typeCode: 'GI',
     typeNameTh: 'GI สิ่งบ่งชี้ทางภูมิศาสตร์',
+    validUntil: '2573',
     linkedFarmCount: 3,
   },
   {
@@ -34,6 +35,7 @@ const ZONES: RegionalZone[] = [
     approvalStatus: 'approved',
     typeCode: 'GI',
     typeNameTh: 'GI สิ่งบ่งชี้ทางภูมิศาสตร์',
+    validUntil: '2573',
     linkedFarmCount: 1,
   },
   {
@@ -45,6 +47,7 @@ const ZONES: RegionalZone[] = [
     approvalStatus: 'approved',
     typeCode: 'OTHER_REGION',
     typeNameTh: 'มาตรฐานระดับโซนอื่น',
+    validUntil: '2573',
     linkedFarmCount: 0,
   },
 ];

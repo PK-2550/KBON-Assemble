@@ -39,7 +39,7 @@ export interface LoadFarmsOptions {
  * ความละเอียด ถ้าคืนวันที่เต็มออกไปเสมอ ผู้ใช้จะเห็น 31 ธ.ค. ทั้งที่ของเดิม
  * รู้แค่ปี คือเติมความแม่นยำที่ไม่เคยมีอยู่จริง
  */
-function formatValidUntil(c: Record<string, unknown>): string {
+export function formatValidUntil(c: Record<string, unknown>): string {
   const raw = c.legacy_valid_until_raw as string | null;
   if (raw) return raw;
 
@@ -321,8 +321,13 @@ const KNOWN_TYPE_CODES = new Set([
   'ISO22000',
 ]);
 
-/** ปีเปล่าอย่าง '2029' นับเป็นความละเอียดระดับปี แล้วปัดเป็น 31 ธ.ค. */
-function parseValidUntil(raw: string | null): {
+/**
+ * ปีเปล่าอย่าง '2029' นับเป็นความละเอียดระดับปี แล้วปัดเป็น 31 ธ.ค.
+ *
+ * ส่งออกไปให้เส้นทางจัดการโซนใช้ด้วย ใบของโซนกับใบของสวนเก็บวันหมดอายุ
+ * ด้วยรูปแบบเดียวกัน ถ้าแยกกันเขียนสองที่ วันหนึ่งจะแสดงคนละอย่าง
+ */
+export function parseValidUntil(raw: string | null): {
   expiryDate: string | null;
   precision: 'day' | 'year';
   legacyRaw: string | null;
