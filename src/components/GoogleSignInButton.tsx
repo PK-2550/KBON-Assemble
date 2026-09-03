@@ -3,6 +3,7 @@ import {
   SOCIAL_BUTTON_WIDTH,
   socialButtonBase,
   socialButtonDisabled,
+  socialButtonDisabledLabel,
 } from './socialAuthStyles';
 
 /**
@@ -134,7 +135,9 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
         className={`${socialButtonBase} ${socialButtonDisabled}`}
       >
         <GoogleIcon />
-        <span>ลงชื่อเข้าใช้ด้วย Google (ยังไม่เปิดใช้งาน)</span>
+        <span className={socialButtonDisabledLabel}>
+          ลงชื่อเข้าใช้ด้วย Google (ยังไม่เปิดใช้งาน)
+        </span>
       </button>
     );
   }

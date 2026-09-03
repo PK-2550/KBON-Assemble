@@ -3,6 +3,7 @@ import {
   SOCIAL_BUTTON_WIDTH,
   socialButtonBase,
   socialButtonDisabled,
+  socialButtonDisabledLabel,
   socialButtonEnabled,
 } from './socialAuthStyles';
 
@@ -157,7 +158,9 @@ export const FacebookSignInButton: React.FC<FacebookSignInButtonProps> = ({
         className={`${socialButtonBase} ${socialButtonDisabled}`}
       >
         <FacebookIcon />
-        <span>ลงชื่อเข้าใช้ด้วย Facebook (ยังไม่เปิดใช้งาน)</span>
+        <span className={socialButtonDisabledLabel}>
+          ลงชื่อเข้าใช้ด้วย Facebook (ยังไม่เปิดใช้งาน)
+        </span>
       </button>
     );
   }
