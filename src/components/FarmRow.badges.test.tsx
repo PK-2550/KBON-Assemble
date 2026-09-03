@@ -1,7 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { FarmRow } from './FarmRow';
-import type { DurianFarm, CertificationDetail } from '../types';
+import type { DurianFarm, CertificationDetail, SmartTechItem } from '../types';
 
 /**
  * ตราใบรับรองในหน้ารายชื่อฟาร์ม
@@ -120,5 +120,40 @@ describe('ตราใบรับรองในแถวรายชื่อ�
 
     expect(screen.getAllByText('+1').length).toBeGreaterThan(0);
     expect(screen.queryByText('GACC')).not.toBeInTheDocument();
+  });
+});
+
+const tech = (over: Partial<SmartTechItem> = {}): SmartTechItem => ({
+  id: 'st-d1',
+  name: 'ระบบน้ำหยดอัตโนมัติ',
+  subtext: 'ควบคุมผ่านแอป',
+  iconEmoji: '💧',
+  active: true,
+  ...over,
+});
+
+describe('ตรา Smart Farm ในแถวรายชื่อฟาร์ม', () => {
+  test('สวนที่มีอุปกรณ์ Smart Farm ที่ยัง active ต้องขึ้นตรา', () => {
+    renderRow(makeFarm({ smartTechnologies: [tech()] }));
+
+    expect(screen.getAllByText('Smart Farm').length).toBeGreaterThan(0);
+  });
+
+  test('สวนที่ไม่มีอุปกรณ์เลย ไม่ขึ้นตรา', () => {
+    renderRow(makeFarm({ smartTechnologies: [] }));
+
+    expect(screen.queryByText('Smart Farm')).not.toBeInTheDocument();
+  });
+
+  test('อุปกรณ์ที่ถูกปิด (active=false) ไม่นับ ไม่ขึ้นตรา', () => {
+    renderRow(makeFarm({ smartTechnologies: [tech({ active: false })] }));
+
+    expect(screen.queryByText('Smart Farm')).not.toBeInTheDocument();
+  });
+
+  test('hasSmartFarm=false แม้ยังมีอุปกรณ์ค้าง ก็ไม่ขึ้นตรา', () => {
+    renderRow(makeFarm({ hasSmartFarm: false, smartTechnologies: [tech()] }));
+
+    expect(screen.queryByText('Smart Farm')).not.toBeInTheDocument();
   });
 });
