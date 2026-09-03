@@ -105,3 +105,25 @@ describe('ตัวนับฟาร์มมาตรฐานบนแดช�
     expect(screen.getByText(/100% ได้รับการรับรอง/)).toBeInTheDocument();
   });
 });
+
+describe('ตรา Smart Farm บนลีดเดอร์บอร์ดแดชบอร์ด', () => {
+  const smartTech = { id: 'st-d1', name: 'ระบบน้ำหยดอัตโนมัติ', subtext: '', iconEmoji: '💧', active: true };
+
+  test('ฟาร์มที่มี Smart Farm ต้องมีตราในลีดเดอร์บอร์ด', () => {
+    renderDashboard([makeFarm('a', { smartTechnologies: [smartTech] })]);
+
+    expect(screen.getByLabelText('Smart Farm')).toBeInTheDocument();
+  });
+
+  test('ฟาร์มที่ไม่มี Smart Farm ต้องไม่มีตรา', () => {
+    renderDashboard([makeFarm('a', { smartTechnologies: [] })]);
+
+    expect(screen.queryByLabelText('Smart Farm')).not.toBeInTheDocument();
+  });
+
+  test('hasSmartFarm=false แม้มีอุปกรณ์ค้าง ก็ไม่ขึ้นตรา', () => {
+    renderDashboard([makeFarm('a', { hasSmartFarm: false, smartTechnologies: [smartTech] })]);
+
+    expect(screen.queryByLabelText('Smart Farm')).not.toBeInTheDocument();
+  });
+});

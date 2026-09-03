@@ -258,7 +258,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="space-y-2.5">
-            {topFarms.map((farm, idx) => (
+            {topFarms.map((farm, idx) => {
+              // ตรา Smart Farm -- เกณฑ์เดียวกับ FarmRow/FarmCard บนพื้นเข้ม
+              // ใช้ไอคอนล้วนให้แถวลีดเดอร์บอร์ดกะทัดรัด
+              const activeSmartTech = (farm.smartTechnologies ?? []).filter(
+                (t) => t.active !== false
+              );
+              const showSmartFarm = farm.hasSmartFarm !== false && activeSmartTech.length > 0;
+              return (
               <div
                 key={farm.id}
                 onClick={() => onSelectFarm(farm)}
@@ -279,9 +286,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     #{idx + 1}
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-xs sm:text-sm font-bold text-white truncate">
-                      {farm.name}
-                    </h4>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <h4 className="text-xs sm:text-sm font-bold text-white truncate">
+                        {farm.name}
+                      </h4>
+                      {showSmartFarm && (
+                        <Sparkles
+                          className="w-3 h-3 shrink-0 text-sky-400"
+                          aria-label="Smart Farm"
+                        />
+                      )}
+                    </div>
                     <p className="text-[11px] text-fg-3 truncate flex items-center gap-1">
                       <MapPin className="w-3 h-3 text-gold" />
                       <span>{farm.province}</span>
@@ -302,7 +317,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <ArrowRight className="w-4 h-4 text-fg-3" />
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

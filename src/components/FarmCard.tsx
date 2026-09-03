@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, MapPin } from 'lucide-react';
+import { Star, MapPin, Sparkles } from 'lucide-react';
 import { DurianFarm } from '../types';
 
 interface FarmCardProps {
@@ -34,6 +34,11 @@ export const FarmCard: React.FC<FarmCardProps> = ({ farm, displayRank, onSelectF
   );
   const shownCerts = approvedCerts.slice(0, MAX_BADGES);
   const hiddenCertCount = approvedCerts.length - shownCerts.length;
+
+  // ตรา Smart Farm -- ไม่ใช่ใบรับรอง แยกสีจากตรา cert เกณฑ์เดียวกับ FarmRow
+  // และการ์ดในหน้าโปรไฟล์ (มีอุปกรณ์ active อย่างน้อยหนึ่ง และไม่ได้ปิดไว้)
+  const activeSmartTech = (farm.smartTechnologies ?? []).filter((t) => t.active !== false);
+  const showSmartFarm = farm.hasSmartFarm !== false && activeSmartTech.length > 0;
 
   return (
     <article
@@ -85,6 +90,15 @@ export const FarmCard: React.FC<FarmCardProps> = ({ farm, displayRank, onSelectF
         <div className="flex items-center gap-1 text-xs text-fg-2">
           <MapPin className="w-3 h-3 text-fg-4 shrink-0" />
           <span className="truncate">{farm.province}</span>
+          {showSmartFarm && (
+            <span
+              className="ml-auto inline-flex items-center gap-0.5 shrink-0 px-1.5 py-px text-[9px] font-bold text-sky-300 border border-sky-500/40 bg-sky-500/10 rounded"
+              title="สวนนี้ใช้เทคโนโลยี Smart Farm"
+            >
+              <Sparkles className="w-2.5 h-2.5" />
+              Smart Farm
+            </span>
+          )}
         </div>
 
         {/* สถิติเรียงเป็นบรรทัดเดียว แทนการใส่กล่องแยกใบละตัวเลข */}
