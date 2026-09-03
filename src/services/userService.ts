@@ -70,6 +70,21 @@ export async function loginWithGoogle(credential: string): Promise<AppUserProfil
   return profile;
 }
 
+/**
+ * เข้าสู่ระบบด้วย Facebook
+ *
+ * accessToken คือ token ที่ SDK ฝั่งเบราว์เซอร์คืนมา ไม่ใช่ ID token แบบ Google
+ * (ฝั่งเว็บของ Facebook ไม่มีให้) server จึงต้องถาม Graph API ว่า token นี้ใช้ได้
+ * และออกให้แอปของเราจริงหรือเปล่า ก่อนจะออก cookie ให้ ถ้าอีเมลตรงกับบัญชีเดิม
+ * server จะผูกให้เหมือนกับทาง Google ทุกประการ
+ */
+export async function loginWithFacebook(accessToken: string): Promise<AppUserProfile> {
+  const { profile } = await api.post<{ profile: AppUserProfile }>('/auth/facebook', {
+    accessToken,
+  });
+  return profile;
+}
+
 export async function logout(): Promise<void> {
   await api.post('/auth/logout');
   clearPreferredRole();

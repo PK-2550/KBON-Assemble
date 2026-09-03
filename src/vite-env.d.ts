@@ -3,6 +3,8 @@
 interface ImportMetaEnv {
   /** OAuth 2.0 Client ID (Web) สำหรับปุ่มเข้าสู่ระบบด้วย Google ฝั่งเบราว์เซอร์ */
   readonly VITE_GOOGLE_CLIENT_ID?: string;
+  /** App ID ของแอป Facebook สำหรับปุ่มเข้าสู่ระบบด้วย Facebook ฝั่งเบราว์เซอร์ */
+  readonly VITE_FACEBOOK_APP_ID?: string;
 }
 
 interface ImportMeta {
