@@ -104,7 +104,7 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
         {/* จังหวัดมาก่อนเพราะเป็นสิ่งที่คนกวาดตาหาเป็นอันดับแรก
             ของเดิมเอาธงชาติกับจำนวนสายพันธุ์ขึ้นก่อน แล้วดันจังหวัดไปท้ายสุดและจางสุด
             ธงชาติถูกตัดออกเพราะทุกฟาร์มอยู่ไทยหมด จึงไม่ได้บอกอะไร */}
-        <div className="flex items-center gap-1.5 text-xs text-fg-2 mt-0.5 truncate lg:hidden">
+        <div className="flex items-center gap-1.5 text-xs text-fg-2 mt-0.5 lg:hidden">
           {shownCerts.map((c) => (
             <span
               key={c.shortCode}
@@ -118,12 +118,15 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
               +{hiddenCertCount}
             </span>
           )}
-          <span className="text-fg-3">{farm.province}</span>
+          {/* จังหวัดเป็นตัวเดียวที่ยอมให้ยุบเมื่อพื้นที่ไม่พอ ตรากับยอดผลผลิต
+              ล็อก shrink-0 ไว้ ไม่งั้น ellipsis จะกินท้ายบรรทัดคือตัวเลขผลผลิต
+              ทั้งที่ตัวการล้นคือตรา (2 ตรา + เลข 5 หลัก เกินคอลัมน์ ~4px) */}
+          <span className="min-w-0 truncate text-fg-3">{farm.province}</span>
 
           {/* บนมือถือเอายอดผลผลิตมาต่อท้ายจังหวัดแทนจำนวนสายพันธุ์
               เพื่อคืนพื้นที่คอลัมน์ขวาให้ชื่อฟาร์ม ดูเหตุผลที่คอลัมน์ขวา */}
-          <span className="sm:hidden text-line-strong">·</span>
-          <span className="sm:hidden tabular-nums">
+          <span className="sm:hidden shrink-0 text-line-strong">·</span>
+          <span className="sm:hidden shrink-0 tabular-nums">
             {farm.harvestedFruits.toLocaleString()} ผลผลิต
           </span>
 
