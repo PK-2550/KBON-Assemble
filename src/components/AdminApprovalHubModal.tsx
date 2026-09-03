@@ -909,6 +909,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                         // tier จากฐานเชื่อถือได้กว่าค่าที่ติดมากับคำขอ เพราะคำขอเก่า
                         // ยื่นมาตั้งแต่ก่อนระบบเก็บ tier จึงไม่มีค่านี้เลย
                         const isRegional = (type?.tier ?? cert.tier) === 'regional';
+                        const isShipment = (type?.tier ?? cert.tier) === 'shipment';
 
                         return (
                           <div
@@ -947,6 +948,19 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                                 <span className="text-fg-2 text-[11px]">เลขที่ใบรับรอง:</span>
                                 <p className="font-mono font-bold text-leaf mt-0.5">{cert.certNumber || '-'}</p>
                               </div>
+                              {isShipment && (
+                                /*
+                                  เลขที่เที่ยวขนส่งคือสิ่งเดียวที่ทำให้ใบรายเที่ยวอ้างอิงได้
+                                  ถ้าแอดมินไม่เห็น ก็ตัดสินใบนี้โดยไม่เห็นข้อมูลชิ้นเดียว
+                                  ที่แยกมันออกจากใบอื่น
+                                */
+                                <div>
+                                  <span className="text-fg-2 text-[11px]">เลขที่เที่ยวขนส่ง:</span>
+                                  <p className="font-mono font-bold text-white mt-0.5">
+                                    {cert.shipmentRef || '-'}
+                                  </p>
+                                </div>
+                              )}
                               <div>
                                 <span className="text-fg-2 text-[11px]">หน่วยงานผู้ออก:</span>
                                 <p className="font-bold text-white mt-0.5">{cert.issuedBy || '-'}</p>
@@ -956,6 +970,21 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                                 <p className="font-bold text-white mt-0.5">{cert.validUntil || '-'}</p>
                               </div>
                             </div>
+
+                            {isShipment && (
+                              /*
+                                ใบรายเที่ยวไม่ขึ้นเป็นตราสาธารณะ ขาอ่านกรอง
+                                tier shipment ออกไว้ ถ้าไม่บอกตรงนี้ แอดมินจะอนุมัติ
+                                แล้วสงสัยว่าทำไมตราไม่ขึ้น
+                              */
+                              <p className="flex items-start gap-1.5 text-[11px] text-fg-2 bg-well px-2 py-1.5 rounded-lg border border-line">
+                                <Info className="w-3.5 h-3.5 text-gold shrink-0 mt-px" />
+                                <span>
+                                  ใบระดับการขนส่งรายเที่ยว เก็บเป็นประวัติการส่งออกของสวน
+                                  และไม่ขึ้นเป็นตราบนหน้าสวน
+                                </span>
+                              </p>
+                            )}
 
                             {isRegional && (
                               /*

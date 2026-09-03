@@ -72,8 +72,11 @@ export const FarmRegistrationStep5: React.FC<FarmRegistrationStep5Props> = ({
         {certificationList.map((cert, index) => {
           // ใบระดับโซนภูมิศาสตร์อย่าง GI เป็นของโซน ไม่ใช่ของสวนรายตัว
           // สวนหลายแห่งในโซนเดียวกันใช้ใบใบเดียวกัน ระบบจึงจับคู่ให้เองไม่ได้
-          const isRegional =
-            certificationTypes.find((t) => t.code === cert.shortCode)?.tier === 'regional';
+          const tier = certificationTypes.find((t) => t.code === cert.shortCode)?.tier;
+          const isRegional = tier === 'regional';
+          // ใบระดับการขนส่งรายเที่ยวอย่าง PHYTO ออกให้ต่อการส่งออกหนึ่งครั้ง
+          // ไม่ใช่ของสวนถาวร จึงต้องถามเลขที่เที่ยวขนส่งที่ใบนั้นผูกอยู่ด้วย
+          const isShipment = tier === 'shipment';
 
           const isPdf =
             cert.fileType === 'pdf' ||
@@ -125,6 +128,17 @@ export const FarmRegistrationStep5: React.FC<FarmRegistrationStep5Props> = ({
                 </p>
               )}
 
+              {isShipment && (
+                <p className="flex items-start gap-1.5 px-2.5 py-2 rounded-xl bg-surface-2 border border-line text-[11px] text-fg-2 leading-relaxed">
+                  <Info className="w-3.5 h-3.5 shrink-0 mt-px text-gold" />
+                  <span>
+                    ใบรับรองระดับการขนส่งออกให้ต่อการส่งออกหนึ่งครั้ง ไม่ใช่ของสวนถาวร
+                    จึงเก็บไว้เป็นประวัติการส่งออกและ<strong className="text-white">ไม่ขึ้นเป็นตรา</strong>
+                    บนหน้าสวน เจ้าของสวนกับผู้ดูแลเท่านั้นที่เห็นได้
+                  </span>
+                </p>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div>
                   <label className="block text-[11px] text-fg-2 mb-1 font-semibold">
@@ -167,6 +181,25 @@ export const FarmRegistrationStep5: React.FC<FarmRegistrationStep5Props> = ({
                   />
                 </div>
               </div>
+
+              {isShipment && (
+                <div>
+                  <label
+                    htmlFor={`shipment-ref-${index}`}
+                    className="block text-[11px] text-fg-2 mb-1 font-semibold"
+                  >
+                    เลขที่เที่ยวขนส่ง / consignment <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    id={`shipment-ref-${index}`}
+                    type="text"
+                    placeholder="เช่น CN-SHT-2569-0451"
+                    value={cert.shipmentRef ?? ''}
+                    onChange={(e) => onUpdateCertField(index, 'shipmentRef', e.target.value)}
+                    className="w-full px-3 py-2 bg-panel border border-line rounded-xl text-white text-xs font-mono focus:outline-hidden focus:border-leaf"
+                  />
+                </div>
+              )}
 
               {/* File Attachment for Certificate (PDF / Image) */}
               <div className="pt-1">
