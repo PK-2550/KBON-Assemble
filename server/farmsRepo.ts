@@ -388,6 +388,15 @@ async function writeCertifications(
 
     const typeId = type.rows[0].id;
     const { expiryDate, precision, legacyRaw } = parseValidUntil(str(c.validUntil));
+
+    /*
+      เลขที่เที่ยวขนส่ง ใช้ได้เฉพาะใบระดับ shipment อย่าง PHYTO
+
+      ทิ้งค่าที่ติดมากับใบประเภทอื่นเงียบ ๆ ไม่ส่งต่อไปที่ฐาน เพราะ trigger
+      จะปฏิเสธทั้งแถว ซึ่งทำให้คำขอทั้งใบล้มและผู้ใช้เสียใบอื่นไปด้วย
+      ทั้งที่ความผิดพลาดอยู่แค่ช่องเดียวที่ไม่เข้าพวก
+    */
+    const shipmentRef = type.rows[0].tier === 'shipment' ? str(c.shipmentRef) : null;
     const fileType = c.fileType === 'image' || c.fileType === 'pdf' ? c.fileType : null;
 
     // ยกสถานะเป็นอนุมัติได้ แต่ไม่ลดสถานะของใบที่แอดมินอนุมัติไปแล้ว
@@ -396,6 +405,7 @@ async function writeCertifications(
     const updated = await client.query(
       `UPDATE certifications
           SET cert_number            = $3,
+              shipment_ref           = $12,
               issuing_authority      = $4,
               expiry_date            = $5,
               expiry_precision       = $6,
@@ -418,6 +428,7 @@ async function writeCertifications(
         str(c.fileName),
         fileType,
         approve,
+        shipmentRef,
       ]
     );
 
@@ -426,8 +437,9 @@ async function writeCertifications(
         `INSERT INTO certifications
            (certification_type_id, tier, farm_id, issuing_authority, cert_number,
             expiry_date, expiry_precision, legacy_valid_until_raw,
-            attachment_data, attachment_file_name, attachment_file_type, approval_status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+            attachment_data, attachment_file_name, attachment_file_type, approval_status,
+            shipment_ref)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           typeId,
           type.rows[0].tier,
@@ -441,6 +453,7 @@ async function writeCertifications(
           str(c.fileName),
           fileType,
           approve ? 'approved' : 'pending',
+          shipmentRef,
         ]
       );
     }
