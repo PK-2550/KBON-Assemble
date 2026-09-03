@@ -57,6 +57,19 @@ export async function loginWithUsername(
   return profile;
 }
 
+/**
+ * เข้าสู่ระบบด้วย Google (Google Identity Services)
+ *
+ * credential คือ ID token (JWT) ที่ปุ่ม Google คืนมา ส่งให้ server เป็นคน
+ * verify แล้วออก cookie ของระบบเราเอง ถ้าอีเมลตรงกับบัญชีเดิม server จะผูกให้
+ */
+export async function loginWithGoogle(credential: string): Promise<AppUserProfile> {
+  const { profile } = await api.post<{ profile: AppUserProfile }>('/auth/google', {
+    credential,
+  });
+  return profile;
+}
+
 export async function logout(): Promise<void> {
   await api.post('/auth/logout');
   clearPreferredRole();
