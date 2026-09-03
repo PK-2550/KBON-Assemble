@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, MapPin, Sprout, Package } from 'lucide-react';
+import { Star, MapPin, Sprout, Package, Sparkles } from 'lucide-react';
 import { DurianFarm } from '../types';
 import { FarmLogo } from './FarmLogo';
 
@@ -45,6 +45,16 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
   // แถวในหน้ารายชื่อแคบ ถ้าปล่อยให้ตราขึ้นทุกใบ ชื่อฟาร์มจะถูกบีบจนอ่านไม่ออก
   const shownCerts = approvedCerts.slice(0, MAX_BADGES);
   const hiddenCertCount = approvedCerts.length - shownCerts.length;
+
+  /**
+   * ตรา Smart Farm -- ไม่ใช่ใบรับรอง จึงแยกสีจากตรา cert
+   *
+   * เป็นคุณสมบัติของสวน ไม่ได้ผ่านการตรวจของแอดมินแบบใบรับรอง เกณฑ์เดียวกับ
+   * การ์ด Smart Farm ในหน้าโปรไฟล์ (FarmProfileHeaderCard) คือมีอุปกรณ์ที่ยัง
+   * active อย่างน้อยหนึ่งตัว และไม่ได้ถูกปิดไว้
+   */
+  const activeSmartTech = (farm.smartTechnologies ?? []).filter((t) => t.active !== false);
+  const showSmartFarm = farm.hasSmartFarm !== false && activeSmartTech.length > 0;
 
   return (
     <div
@@ -99,6 +109,15 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
               +{hiddenCertCount}
             </span>
           )}
+          {showSmartFarm && (
+            <span
+              className="hidden sm:inline-flex items-center gap-0.5 shrink-0 px-1.5 py-px text-[9px] font-bold text-sky-300 border border-sky-500/40 bg-sky-500/10 rounded"
+              title="สวนนี้ใช้เทคโนโลยี Smart Farm"
+            >
+              <Sparkles className="w-2.5 h-2.5" />
+              Smart Farm
+            </span>
+          )}
         </div>
 
         {/* จังหวัดมาก่อนเพราะเป็นสิ่งที่คนกวาดตาหาเป็นอันดับแรก
@@ -117,6 +136,11 @@ export const FarmRow: React.FC<FarmRowProps> = ({ farm, displayRank, onSelectFar
             <span className="sm:hidden shrink-0 px-1 py-px text-[9px] font-bold text-fg-3 border border-line rounded">
               +{hiddenCertCount}
             </span>
+          )}
+          {/* บนมือถือแถวแคบ ใช้ไอคอนล้วนแทนชิปมีป้าย และล็อก shrink-0
+              เหมือนตรา ให้จังหวัดเป็นตัวเดียวที่ยุบ ตามบทเรียนเรื่อง truncate */}
+          {showSmartFarm && (
+            <Sparkles className="sm:hidden shrink-0 w-3 h-3 text-sky-400" aria-label="Smart Farm" />
           )}
           {/* จังหวัดเป็นตัวเดียวที่ยอมให้ยุบเมื่อพื้นที่ไม่พอ ตรากับยอดผลผลิต
               ล็อก shrink-0 ไว้ ไม่งั้น ellipsis จะกินท้ายบรรทัดคือตัวเลขผลผลิต
