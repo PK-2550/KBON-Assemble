@@ -34,3 +34,12 @@ export const socialButtonEnabled =
 /** สถานะยังไม่ได้ตั้งค่า OAuth -- ปุ่มปิดที่ยังอยู่ในแถวเดียวกัน ไม่ทำให้แถวเบี้ยว */
 export const socialButtonDisabled =
   'bg-surface border-line opacity-40 cursor-not-allowed';
+
+/**
+ * ป้ายบอกว่ายังไม่เปิดใช้งาน
+ *
+ * ต่อท้ายชื่อบริการจึงยาวกว่าข้อความปกติมาก ถ้าใช้ขนาดเดียวกับตอนเปิดใช้งาน
+ * (14px ซึ่งตั้งไว้ให้เท่าปุ่มที่ Google เรนเดอร์) ข้อความจะตกบรรทัดและล้น
+ * ออกนอกปุ่มสูง 40px ทันที จึงย่อขนาดลงและสั่งไม่ให้ตัดบรรทัด
+ */
+export const socialButtonDisabledLabel = 'text-[11px] whitespace-nowrap';
