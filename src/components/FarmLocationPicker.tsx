@@ -126,6 +126,10 @@ export const FarmLocationPicker: React.FC<FarmLocationPickerProps> = ({
         onChange(defaultCoord, mapInputUrl);
       }
     }
+    // จงใจ trigger เฉพาะตอน province เปลี่ยน ค่า coordinates/mapInputUrl/onChange
+    // อ่านค่าปัจจุบัน ณ จังหวะนั้น ไม่ต้องการให้ effect นี้ทำงานซ้ำเมื่อผู้ใช้พิมพ์
+    // พิกัดหรือ URL เอง (จะไปเขียนทับพิกัดที่เพิ่งกรอก)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [province]);
 
   // Handle URL or Coordinate text paste/change

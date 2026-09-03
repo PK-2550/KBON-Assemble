@@ -39,6 +39,18 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
 
+      // React Compiler perf-lint ที่ติดมากับ eslint-plugin-react-hooks เวอร์ชันใหม่
+      //
+      // อยู่นอกเจตนาของไฟล์นี้ (ดูหัวไฟล์: เปิดแค่ rules-of-hooks กับ exhaustive-deps)
+      // ทั้งสองเป็นคำเตือนเรื่องประสิทธิภาพ ไม่ใช่ความถูกต้อง
+      //   set-state-in-effect        setState ใน effect ตอน init (เช่น setLoading(true)
+      //                              ก่อนยิง fetch) ไม่ได้ทำให้ผลลัพธ์ผิด
+      //   preserve-manual-memoization  useMemo/useCallback ที่ compiler แปลงต่อไม่ได้
+      //                              ยังทำงานถูกเหมือนเดิม แค่ compiler ไม่ช่วย optimize
+      // เปิดไว้จะได้ error หลายสิบจุดที่ไม่เกี่ยวความถูกต้อง แล้วกลบสัญญาณที่ต้องการจริง
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+
       // ปิดกฎที่ซ้ำกับ tsc หรือไม่เกี่ยวกับความถูกต้อง
       // ของพวกนี้ tsc ตรวจให้อยู่แล้วด้วยข้อความที่ตรงกว่า
       'no-unused-vars': 'off',

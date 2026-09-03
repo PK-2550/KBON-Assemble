@@ -211,9 +211,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    // ตัวตรวจมองไม่ทะลุ async จึงนับว่าเป็นการ setState แบบทันทีใน effect
-    // จริง ๆ แล้วค่าถูกตั้งหลังรอผลจากเซิร์ฟเวอร์ ซึ่งคือกรณีที่กฎข้อนี้อนุญาตไว้เอง
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // ค่าถูกตั้งหลังรอผลจากเซิร์ฟเวอร์ ไม่ใช่ setState ทันทีใน effect
     void refreshRegionalPendingCount();
   }, [isOpen, refreshRegionalPendingCount]);
 
