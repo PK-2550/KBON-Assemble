@@ -12,6 +12,7 @@ import { FarmProfileHeaderCard } from './FarmProfileHeaderCard';
 import { FarmCertificationBadgeStrip } from './FarmCertificationBadgeStrip';
 import { FarmRegistrationModal } from './FarmRegistrationModal';
 import { saveFarm } from '../services/farmService';
+import { AVAILABLE_SMART_TECH } from '../constants/farmRegistrationOptions';
 import { useAuth } from '../context/AuthContext';
 import { openPdfDocument } from '../utils/pdfUtils';
 
@@ -28,15 +29,6 @@ const SAMPLE_GARDEN_PHOTOS = [
   'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=800&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1527842891421-42eec6e703ea?w=800&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=800&auto=format&fit=crop&q=80',
-];
-
-const DEFAULT_SMART_TECH_OPTIONS = [
-  { id: 'st-d1', name: 'ระบบน้ำหยดอัตโนมัติ (Smart Irrigation)', subtext: 'ควบคุมผ่านแอปฯ', iconEmoji: '💧' },
-  { id: 'st-d2', name: 'เซ็นเซอร์วัดความชื้นดินและสภาพอากาศ', subtext: 'อัปเดตทุก 15 นาที', iconEmoji: '🌡️' },
-  { id: 'st-d3', name: 'โดรนพ่นปุ๋ย / สำรวจสุขภาพแปลง', subtext: 'ลดการใช้สารเคมี 40%', iconEmoji: '🚁' },
-  { id: 'st-d4', name: 'Dashboard ติดตามสวนแบบ Real-time', subtext: 'มอนิเตอร์บนมือถือตลอด 24 ชม.', iconEmoji: '📊' },
-  { id: 'st-d5', name: 'พลังงานแสงอาทิตย์ (Solar Farm)', subtext: 'ขับเคลื่อนระบบน้ำด้วยแสงแดด', iconEmoji: '☀️' },
-  { id: 'st-d6', name: 'ระบบแท็กดิจิทัล QR-NFC ตรวจสอบย้อนกลับ', subtext: 'ระบุต้นกำเนิดผลทุเรียนรายต้น', iconEmoji: '🏷️' },
 ];
 
 export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
@@ -78,7 +70,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
   const [tempSmartTechList, setTempSmartTechList] = useState<SmartTechItem[]>(
     currentFarm.smartTechnologies && currentFarm.smartTechnologies.length > 0
       ? currentFarm.smartTechnologies
-      : DEFAULT_SMART_TECH_OPTIONS.map((t) => ({ ...t, active: true }))
+      : AVAILABLE_SMART_TECH.map((t) => ({ ...t, active: true }))
   );
 
   // Check if current user is owner or admin
@@ -194,7 +186,7 @@ export const FarmProfileView: React.FC<FarmProfileViewProps> = ({
           farm={currentFarm}
           photos={displayPhotos}
           registeredTreeCount={allTrees.length}
-          defaultSmartTech={DEFAULT_SMART_TECH_OPTIONS}
+          defaultSmartTech={AVAILABLE_SMART_TECH}
           isOwnerOrAdmin={isOwnerOrAdmin}
           successToast={updateSuccessToast}
           storyExpanded={storyExpanded}
