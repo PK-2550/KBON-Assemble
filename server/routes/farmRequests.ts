@@ -185,8 +185,12 @@ farmRequestsRouter.post('/', requireAuth, asyncHandler(async (req, res) => {
     payload.certificationList = b.certificationList;
   if (Array.isArray(b.atmospherePhotos) && b.atmospherePhotos.length > 0)
     payload.atmospherePhotos = b.atmospherePhotos;
-  if (Array.isArray(b.smartTechnologies) && b.smartTechnologies.length > 0)
-    payload.smartTechnologies = b.smartTechnologies;
+  // ต่างจาก certificationList/atmospherePhotos ตรงที่ [] มีความหมายจริง คือ
+  // ผู้ใช้ปิด SmartFarm ไม่ใช่ "ไม่ได้ส่งมารอบนี้" ถ้าใช้เกณฑ์ length > 0
+  // การปิด SmartFarm จะถูกมองว่าไม่ได้ส่ง แล้ว payload || EXCLUDED.payload ฝั่ง SQL
+  // จะคง smartTechnologies ชุดเก่าไว้ ทำให้ has_smart_farm=false ขัดกับ payload
+  // ที่ยังมีอุปกรณ์เดิมค้าง เก็บ [] ลงไปตรง ๆ เพื่อให้บันทึกการปิดไว้ตามจริง
+  if (Array.isArray(b.smartTechnologies)) payload.smartTechnologies = b.smartTechnologies;
   if (b.coordinates) payload.coordinates = b.coordinates;
 
   /** ส่ง null เมื่อ client ไม่ได้ส่งคีย์นั้นมา เพื่อให้ COALESCE คงค่าเดิมไว้ */
@@ -428,7 +432,10 @@ farmRequestsRouter.post('/:id/approve', requireAdmin, asyncHandler(async (req, r
       photos: request.atmospherePhotos.length > 0 ? request.atmospherePhotos : existing?.photos,
       certifications: existing?.certifications ?? ['GAP'],
       certificationDetails,
-      smartTechnologies: request.hasSmartFarm ? request.smartTechnologies : existing?.smartTechnologies,
+      // ปิด SmartFarm ต้องล้างอุปกรณ์เดิมจริง ส่ง [] เพื่อให้ upsertFarm ลบแถวเดิมทิ้ง
+      // (DELETE+INSERT) ถ้า fallback ไป existing แถวเก่าใน farm_smart_technologies จะไม่ถูกลบ
+      // แม้ has_smart_farm จะเป็น false แล้วก็ตาม
+      smartTechnologies: request.hasSmartFarm ? request.smartTechnologies : [],
       contact: { ...(existing?.contact ?? {}), ...request.contact, locationAddress: request.locationAddress },
       managerId: request.userId,
       logoBgColor: existing?.logoBgColor,
