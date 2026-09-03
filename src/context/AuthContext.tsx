@@ -5,6 +5,7 @@ import {
   loginWithUsername as apiLogin,
   registerWithUsername as apiRegister,
   loginWithGoogle as apiGoogleLogin,
+  loginWithFacebook as apiFacebookLogin,
   logout as apiLogout,
   getPreferredRole,
   setPreferredRole,
@@ -32,6 +33,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   signInWithUsername: (username: string, pass: string) => Promise<AppUserProfile>;
   signInWithGoogle: (credential: string) => Promise<AppUserProfile>;
+  signInWithFacebook: (accessToken: string) => Promise<AppUserProfile>;
   registerWithUsername: (username: string, pass: string) => Promise<AppUserProfile>;
   signOutUser: () => Promise<void>;
   setRoleMode: (role: UserRole) => void;
@@ -111,6 +113,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return profile;
   };
 
+  const signInWithFacebook = async (accessToken: string) => {
+    const profile = await apiFacebookLogin(accessToken);
+    setCurrentUser(profile);
+    setRoleModeState(profile.role === 'admin' ? getPreferredRole('user') : 'user');
+    return profile;
+  };
+
   const registerWithUsername = async (username: string, pass: string) => {
     // ไม่ตั้ง currentUser เพื่อให้ผู้ใช้ยังอยู่ที่หน้าเข้าสู่ระบบ (พฤติกรรมเดิมของแอป)
     return apiRegister(username, pass);
@@ -151,6 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshUser,
         signInWithUsername,
         signInWithGoogle,
+        signInWithFacebook,
         registerWithUsername,
         signOutUser,
         setRoleMode,

@@ -1,6 +1,7 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import { asyncHandler } from '../asyncHandler.js';
+import { verifyFacebookToken, facebookLoginEnabled } from '../oauth/facebook.js';
 import bcrypt from 'bcryptjs';
 import { pool } from '../db.js';
 import {
@@ -67,6 +68,60 @@ function toProfile(u: UserRow) {
     createdAt: u.created_at?.toISOString?.() ?? null,
     lastLoginAt: u.last_login_at?.toISOString?.() ?? null,
   };
+}
+
+/**
+ * ผูกบัญชีเดิมที่อีเมลตรงกัน หรือสร้างบัญชีใหม่ให้ผู้ใช้ที่เข้ามาจาก OAuth
+ *
+ * ใช้ร่วมกันทั้ง Google และ Facebook เพราะทั้งสองทางตัดสินใจแบบเดียวกันทุกข้อ
+ * ต่างกันแค่วิธียืนยัน token ก่อนหน้านี้ ถ้าแยกกันเขียนแล้ววันหนึ่งแก้กฎการผูก
+ * บัญชีที่ทางใดทางหนึ่ง อีกทางจะเงียบ ๆ ใช้กฎเก่าต่อไปโดยไม่มีอะไรเตือน
+ *
+ * ผู้เรียกต้องยืนยันมาแล้วว่าอีเมลนี้เชื่อถือได้จริง ฟังก์ชันนี้ไม่ตรวจซ้ำให้
+ */
+async function linkOrCreateOAuthUser(params: {
+  email: string;
+  name: string;
+  picture: string | null;
+  provider: 'google' | 'facebook';
+}): Promise<UserRow> {
+  const { email, name, picture, provider } = params;
+
+  const existing = await pool.query<UserRow>('SELECT * FROM users WHERE email = $1', [email]);
+
+  if (existing.rows.length > 0) {
+    // ผูกกับบัญชีเดิมที่อีเมลตรงกัน เติมชื่อ/รูปเฉพาะช่องที่ยังว่างเท่านั้น
+    // ไม่แตะ username, password_hash และ provider เดิม
+    // เจ้าของยังเข้าด้วยวิธีเดิมได้เหมือนเดิมทุกอย่าง
+    const { rows } = await pool.query<UserRow>(
+      `UPDATE users
+          SET last_login_at = now(),
+              display_name  = COALESCE(display_name, $2),
+              photo_url     = COALESCE(photo_url, $3),
+              updated_at    = now()
+        WHERE id = $1
+        RETURNING *`,
+      [existing.rows[0].id, name, picture]
+    );
+    return rows[0];
+  }
+
+  const username = await uniqueUsername(name);
+  const uid = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const { rows } = await pool.query<UserRow>(
+    `INSERT INTO users
+       (id, username, username_lower, email, display_name, photo_url, role, provider, password_hash, last_login_at)
+     VALUES ($1, $2, $3, $4, $5, $6, 'user', $7, NULL, now())
+     RETURNING *`,
+    [uid, username, username.toLowerCase(), email, name, picture, provider]
+  );
+  return rows[0];
+}
+
+/** ออก cookie session ให้บัญชีที่ยืนยันตัวตนผ่านแล้ว */
+function startSession(res: Response, user: UserRow): void {
+  const payload: TokenPayload = { uid: user.id, username: user.username, role: user.role };
+  setAuthCookie(res, signToken(payload));
 }
 
 function validateCredentials(username: unknown, password: unknown): string | null {
@@ -188,42 +243,61 @@ authRouter.post('/google', loginLimiter, asyncHandler(async (req, res) => {
     return res.status(401).json({ error: 'บัญชี Google นี้ยังไม่ได้ยืนยันอีเมล' });
   }
 
-  const email = payload.email.toLowerCase();
-  const name = payload.name || payload.email.split('@')[0];
-  const picture = payload.picture ?? null;
+  const user = await linkOrCreateOAuthUser({
+    email: payload.email.toLowerCase(),
+    name: payload.name || payload.email.split('@')[0],
+    picture: payload.picture ?? null,
+    provider: 'google',
+  });
 
-  const existing = await pool.query<UserRow>('SELECT * FROM users WHERE email = $1', [email]);
+  startSession(res, user);
+  res.json({ profile: toProfile(user) });
+}));
 
-  let user: UserRow;
-  if (existing.rows.length > 0) {
-    // ผูกกับบัญชีเดิมที่อีเมลตรงกัน เติมชื่อ/รูปเฉพาะช่องที่ยังว่างเท่านั้น
-    // ไม่แตะ username และ password_hash เดิม เจ้าของยังเข้าด้วยรหัสผ่านได้เหมือนเดิม
-    const { rows } = await pool.query<UserRow>(
-      `UPDATE users
-          SET last_login_at = now(),
-              display_name  = COALESCE(display_name, $2),
-              photo_url     = COALESCE(photo_url, $3),
-              updated_at    = now()
-        WHERE id = $1
-        RETURNING *`,
-      [existing.rows[0].id, name, picture]
-    );
-    user = rows[0];
-  } else {
-    const username = await uniqueUsername(name);
-    const uid = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const { rows } = await pool.query<UserRow>(
-      `INSERT INTO users
-         (id, username, username_lower, email, display_name, photo_url, role, provider, password_hash, last_login_at)
-       VALUES ($1, $2, $3, $4, $5, $6, 'user', 'google', NULL, now())
-       RETURNING *`,
-      [uid, username, username.toLowerCase(), email, name, picture]
-    );
-    user = rows[0];
+/**
+ * เข้าสู่ระบบด้วย Facebook
+ *
+ * ใช้คอนเซปต์เดียวกับ Google ทุกข้อ -- อีเมลตรงกับบัญชีเดิมก็ผูกให้ ไม่ตรงก็
+ * สร้างบัญชีใหม่ที่ไม่มีรหัสผ่าน ต่างกันแค่ขั้นตอนยืนยัน token ซึ่งของ Facebook
+ * ต้องถาม Graph API (ดู server/oauth/facebook.ts ว่าทำไมถึงข้าม debug_token ไม่ได้)
+ *
+ * บัญชี Facebook ที่ไม่มีอีเมลจะถูกปฏิเสธพร้อมบอกวิธีแก้ เพราะการผูกบัญชีของ
+ * ระบบนี้ตัดสินจากอีเมลอย่างเดียว ถ้าสร้างบัญชีให้โดยไม่มีอีเมล ครั้งต่อไป
+ * ที่เข้ามาจะหาบัญชีเดิมไม่เจอ กลายเป็นสร้างบัญชีใหม่ทุกครั้งที่ล็อกอิน
+ */
+authRouter.post('/facebook', loginLimiter, asyncHandler(async (req, res) => {
+  if (!facebookLoginEnabled) {
+    return res.status(503).json({ error: 'ยังไม่ได้เปิดใช้งานการเข้าสู่ระบบด้วย Facebook' });
   }
 
-  const tokenPayload: TokenPayload = { uid: user.id, username: user.username, role: user.role };
-  setAuthCookie(res, signToken(tokenPayload));
+  const { accessToken } = req.body ?? {};
+  if (typeof accessToken !== 'string' || !accessToken) {
+    return res.status(400).json({ error: 'ไม่พบข้อมูลยืนยันตัวตนจาก Facebook' });
+  }
+
+  const result = await verifyFacebookToken(accessToken);
+  if (result.status === 'no_email') {
+    return res.status(400).json({
+      error:
+        'บัญชี Facebook นี้ไม่ได้ให้สิทธิ์เข้าถึงอีเมล กรุณาอนุญาตการเข้าถึงอีเมล หรือเข้าสู่ระบบด้วยวิธีอื่น',
+    });
+  }
+  if (result.status === 'unavailable') {
+    return res.status(503).json({ error: 'ติดต่อ Facebook ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
+  }
+  if (result.status !== 'ok') {
+    return res.status(401).json({ error: 'ยืนยันตัวตนกับ Facebook ไม่สำเร็จ' });
+  }
+
+  const { profile } = result;
+  const user = await linkOrCreateOAuthUser({
+    email: profile.email.toLowerCase(),
+    name: profile.name || profile.email.split('@')[0],
+    picture: profile.picture,
+    provider: 'facebook',
+  });
+
+  startSession(res, user);
   res.json({ profile: toProfile(user) });
 }));
 

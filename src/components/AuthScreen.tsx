@@ -13,14 +13,15 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { validatePasswordSecurity, formatAuthErrorMessage } from '../services/userService';
-import { GoogleSignInButton } from './GoogleSignInButton';
+import { SocialAuthButtons } from './SocialAuthButtons';
 
 interface AuthScreenProps {
   onGuestAccess?: () => void;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
-  const { signInWithUsername, signInWithGoogle, registerWithUsername } = useAuth();
+  const { signInWithUsername, signInWithGoogle, signInWithFacebook, registerWithUsername } =
+    useAuth();
 
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [username, setUsername] = useState('');
@@ -50,13 +51,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
   };
 
 
-  const handleGoogleCredential = async (credential: string) => {
+  /**
+   * เข้าสู่ระบบด้วยบริการภายนอก
+   *
+   * ทั้งสองทางทำเหมือนกันหมดหลังได้ token มาแล้ว ต่างกันแค่ว่าเรียกฟังก์ชันไหน
+   * สำเร็จแล้ว AuthProvider ตั้ง currentUser ให้ แอปจะพาออกจากหน้านี้เอง
+   */
+  const runSocialSignIn = async (signIn: () => Promise<unknown>) => {
     setErrorMsg('');
     setSuccessMsg('');
     setIsSubmitting(true);
     try {
-      await signInWithGoogle(credential);
-      // สำเร็จแล้ว AuthProvider ตั้ง currentUser ให้ แอปจะพาออกจากหน้านี้เอง
+      await signIn();
     } catch (err) {
       setErrorMsg(formatAuthErrorMessage(err));
     } finally {
@@ -149,16 +155,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onGuestAccess }) => {
 
       {/* Main Glass / Luxury Dark Card */}
       <div className="w-full max-w-xs sm:max-w-sm relative z-10 bg-panel/95 border border-line-soft backdrop-blur-md rounded-2xl p-3.5 shadow-2xl text-white">
-        {/* Google Sign-In -- ใช้ Google Identity Services (flow แบบ ID token)
-            แสดงปุ่มจริงเมื่อมี VITE_GOOGLE_CLIENT_ID ถ้ายังไม่ตั้งค่าจะคงปุ่มปิดไว้ */}
-        <GoogleSignInButton
-          onCredential={handleGoogleCredential}
+        {/* เข้าสู่ระบบด้วยบริการภายนอก -- Google (ID token) และ Facebook (access token)
+            ปุ่มไหนยังไม่ได้ตั้งค่า OAuth จะขึ้นเป็นปุ่มปิดในทรงเดียวกัน */}
+        <SocialAuthButtons
+          onGoogleCredential={(credential) => runSocialSignIn(() => signInWithGoogle(credential))}
+          onFacebookAccessToken={(token) => runSocialSignIn(() => signInWithFacebook(token))}
           onError={(msg) => setErrorMsg(msg)}
           disabled={isSubmitting}
         />
 
         {/* Divider */}
-        <div className="relative my-1.5">
+        <div className="relative my-2.5">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-line-soft" />
           </div>
