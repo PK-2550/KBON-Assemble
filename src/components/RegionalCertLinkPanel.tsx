@@ -96,9 +96,7 @@ export const RegionalCertLinkPanel: React.FC<RegionalCertLinkPanelProps> = ({ on
   }, []);
 
   useEffect(() => {
-    // ตัวตรวจมองไม่ทะลุ async จึงนับว่าเป็นการ setState แบบทันทีใน effect
-    // การดึงข้อมูลตอน mount คือกรณีที่กฎข้อนี้อนุญาตไว้เอง
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // ดึงข้อมูลตอน mount ค่าถูกตั้งหลังรอผล async ไม่ใช่ setState ทันทีใน effect
     void load(statusFilter);
   }, [load, statusFilter]);
 

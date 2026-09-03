@@ -211,9 +211,7 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    // ตัวตรวจมองไม่ทะลุ async จึงนับว่าเป็นการ setState แบบทันทีใน effect
-    // จริง ๆ แล้วค่าถูกตั้งหลังรอผลจากเซิร์ฟเวอร์ ซึ่งคือกรณีที่กฎข้อนี้อนุญาตไว้เอง
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // ค่าถูกตั้งหลังรอผลจากเซิร์ฟเวอร์ ไม่ใช่ setState ทันทีใน effect
     void refreshRegionalPendingCount();
   }, [isOpen, refreshRegionalPendingCount]);
 
@@ -1043,6 +1041,38 @@ export const AdminApprovalHubModal: React.FC<AdminApprovalHubModalProps> = ({
                           referrerPolicy="no-referrer"
                         />
                       ))}
+                    </div>
+                  )}
+
+                  {/* Smart Farm ที่เกษตรกรระบุมา หัวข้อ Section นี้บอกว่ามี Tech อยู่แล้ว
+                      แต่ก่อนหน้านี้ไม่เคยแสดงให้เห็น แอดมินจึงอนุมัติคำขอที่อ้างว่ามี
+                      ระบบ IoT โดยไม่เห็นว่าคืออะไรบ้าง */}
+                  {selectedRequest.hasSmartFarm && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Smart Farm ({selectedRequest.smartTechnologies?.length ?? 0} ระบบ)</span>
+                      </div>
+                      {selectedRequest.smartTechnologies && selectedRequest.smartTechnologies.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {selectedRequest.smartTechnologies.map((t, i) => (
+                            <div
+                              key={t.id ?? i}
+                              className="flex items-start gap-2 bg-panel p-2.5 rounded-xl border border-line"
+                            >
+                              <span className="text-base leading-none mt-0.5">{t.iconEmoji || '⚙️'}</span>
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-fg">{t.name}</p>
+                                {t.subtext && (
+                                  <p className="text-[11px] text-fg-2 leading-snug">{t.subtext}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-fg-2">ระบุว่ามี Smart Farm แต่ไม่ได้เลือกอุปกรณ์</p>
+                      )}
                     </div>
                   )}
                 </div>
