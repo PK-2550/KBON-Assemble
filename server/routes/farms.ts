@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler.js';
 import { pool } from '../db.js';
-import { loadFarms, upsertFarmStandalone } from '../farmsRepo.js';
+import { loadFarms, upsertFarmStandalone, formatValidUntil } from '../farmsRepo.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
 
 export const farmsRouter = Router();
@@ -177,4 +177,70 @@ farmsRouter.delete('/:id', requireAdmin, asyncHandler(async (req, res) => {
     return res.status(404).json({ error: 'ไม่พบฟาร์มที่ระบุ' });
   }
   res.json({ ok: true, id: req.params.id });
+}));
+
+/**
+ * เอกสารการส่งออกของสวน คือใบรับรองระดับการขนส่งรายเที่ยวอย่าง PHYTO
+ *
+ * ใบพวกนี้ถูกกันออกจากขาอ่านสาธารณะโดยตั้งใจ (loadFarms กรอง tier <> shipment)
+ * เพราะไม่ใช่คุณสมบัติถาวรของสวน สวนที่ส่งออกไปหนึ่งตู้เมื่อปีที่แล้วไม่ควรได้
+ * ตราติดตัวไปตลอด และ PHYTO เป็นเอกสารระหว่างผู้ส่งออกกับประเทศปลายทาง
+ * ไม่ใช่เครื่องหมายคุณภาพที่ผู้บริโภคใช้ตัดสินใจ
+ *
+ * แต่ถ้าเก็บแล้วไม่มีใครเห็นที่ไหนเลย ก็เท่ากับใบหายไปเงียบ ๆ เส้นทางนี้จึงเปิด
+ * ให้เจ้าของสวนกับผู้ดูแลดูได้ ในฐานะประวัติการส่งออก ไม่ใช่ตรารับรอง
+ *
+ * ไม่เปิดสาธารณะ เลขที่เที่ยวขนส่งกับเลขที่ใบเป็นข้อมูลทางการค้าของสวนนั้น
+ * ต่างจากตรา GAP ที่ตั้งใจให้ทุกคนเห็น
+ */
+farmsRouter.get('/:id/export-documents', requireAuth, asyncHandler(async (req, res) => {
+  const farmId = req.params.id;
+
+  const owner = await pool.query('SELECT manager_id FROM farms WHERE id = $1', [farmId]);
+  // แยกให้ออกระหว่างไม่มีสวนนี้ กับมีแต่ไม่ใช่ของคุณ
+  if (owner.rowCount === 0) {
+    return res.status(404).json({ error: 'ไม่พบฟาร์มที่ระบุ' });
+  }
+
+  const isAdmin = req.user!.role === 'admin';
+  const isOwner = owner.rows[0].manager_id === req.user!.uid;
+  if (!isAdmin && !isOwner) {
+    return res.status(403).json({ error: 'ดูได้เฉพาะฟาร์มที่คุณเป็นผู้ดูแล' });
+  }
+
+  const { rows } = await pool.query(
+    `SELECT c.id, ct.code AS short_code, ct.name_th, ct.name,
+            c.cert_number, c.issuing_authority, c.shipment_ref,
+            to_char(c.expiry_date, 'YYYY-MM-DD') AS expiry_date,
+            c.expiry_precision, c.legacy_valid_until_raw,
+            c.approval_status, c.admin_notes,
+            c.attachment_file_name, c.attachment_file_type,
+            c.created_at
+       FROM certifications c
+       JOIN certification_types ct ON ct.id = c.certification_type_id
+      WHERE c.farm_id = $1 AND c.tier = 'shipment'
+      ORDER BY c.created_at DESC`,
+    [farmId]
+  );
+
+  res.json({
+    documents: rows.map((r) => ({
+      id: Number(r.id),
+      shortCode: r.short_code,
+      nameTh: r.name_th ?? r.name,
+      certNumber: r.cert_number ?? '',
+      issuedBy: r.issuing_authority ?? '',
+      shipmentRef: r.shipment_ref ?? '',
+      validUntil: formatValidUntil({
+        legacy_valid_until_raw: r.legacy_valid_until_raw,
+        expiry_date: r.expiry_date,
+        expiry_precision: r.expiry_precision,
+      }),
+      approvalStatus: r.approval_status,
+      adminNotes: r.admin_notes ?? '',
+      fileName: r.attachment_file_name ?? '',
+      fileType: r.attachment_file_type ?? '',
+      createdAt: new Date(r.created_at).toISOString(),
+    })),
+  });
 }));

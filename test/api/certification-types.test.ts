@@ -38,13 +38,17 @@ describe('GET /api/certification-types', () => {
     expect(codes).toContain('ISO22000');
   });
 
-  test('ไม่คืนใบระดับการขนส่งรายเที่ยว เพราะยังไม่มีระบบเที่ยวขนส่ง', async () => {
-    // PHYTO เป็น tier shipment ซึ่ง trigger บังคับว่าต้องมี shipment_ref
-    // ถ้าปล่อยให้เลือกได้ ผู้ใช้จะกรอกครบแล้วแอดมินอนุมัติไม่ผ่าน
+  test('คืนใบระดับการขนส่งรายเที่ยวมาด้วย พร้อมบอกว่าเป็น tier shipment', async () => {
+    // เดิม PHYTO ถูกกรองออก เพราะ trigger บังคับว่าต้องมี shipment_ref
+    // และระบบไม่มีตารางเที่ยวขนส่ง ผู้ใช้จะกรอกครบแล้วบันทึกไม่ผ่าน
+    //
+    // 016 ผ่อนกฎนั้นแล้ว จึงเลือกได้ หน้าเว็บต้องรู้ tier เพื่อถามเลขที่ใบขนส่ง
+    // ใบพวกนี้ไม่ขึ้นเป็นตราสาธารณะ ขาอ่านกรอง tier <> shipment ออกอยู่แล้ว
     const res = await request(app).get('/api/certification-types');
-    const codes = res.body.types.map((t: { code: string }) => t.code);
+    const phyto = res.body.types.find((t: { code: string }) => t.code === 'PHYTO');
 
-    expect(codes).not.toContain('PHYTO');
+    expect(phyto).toBeDefined();
+    expect(phyto.tier).toBe('shipment');
   });
 
   test('ไม่คืนประเภทสำหรับข้อมูลที่ย้ายมาจากระบบเดิม', async () => {

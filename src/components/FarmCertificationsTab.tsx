@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, CheckCircle2, FileText, Eye, MapPin, Clock, XCircle } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, FileText, Eye, MapPin, Clock, XCircle, Ship } from 'lucide-react';
 import { DurianFarm } from '../types';
 import {
   fetchRegionalCertRequestsForFarm,
   type RegionalCertRequest,
 } from '../services/regionalCertificationService';
+import {
+  fetchExportDocuments,
+  type ExportDocument,
+} from '../services/exportDocumentService';
 
 /** เอกสารใบรับรองที่กำลังเปิดดู รูปร่างนี้ใช้ร่วมกับหน้าต่างแสดงเอกสารที่หน้าแม่ */
 export interface CertDocView {
@@ -47,6 +51,7 @@ export const FarmCertificationsTab: React.FC<FarmCertificationsTabProps> = ({
   isOwnerOrAdmin = false,
 }) => {
   const [regionalRequests, setRegionalRequests] = useState<RegionalCertRequest[]>([]);
+  const [exportDocuments, setExportDocuments] = useState<ExportDocument[]>([]);
 
   useEffect(() => {
     if (!isOwnerOrAdmin || !currentFarm.id) return;
@@ -60,6 +65,15 @@ export const FarmCertificationsTab: React.FC<FarmCertificationsTabProps> = ({
       })
       .catch(() => {
         if (!cancelled) setRegionalRequests([]);
+      });
+
+    // กลืน error ทิ้งด้วยเหตุผลเดียวกัน เอกสารส่งออกเป็นข้อมูลเสริม
+    void fetchExportDocuments(currentFarm.id)
+      .then((rows) => {
+        if (!cancelled) setExportDocuments(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setExportDocuments([]);
       });
 
     return () => {
@@ -231,6 +245,87 @@ export const FarmCertificationsTab: React.FC<FarmCertificationsTabProps> = ({
                     <span>
                       ไม่ผ่านการตรวจ
                       {r.adminNotes ? ` · ${r.adminNotes}` : ' (ไม่ได้ระบุเหตุผลไว้)'}
+                    </span>
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/*
+        เอกสารการส่งออกของสวน
+
+        ใบระดับการขนส่งรายเที่ยวอย่าง PHYTO ถูกกันออกจากตราสาธารณะโดยตั้งใจ
+        เพราะไม่ใช่คุณสมบัติถาวรของสวน แต่ถ้าเก็บแล้วไม่มีใครเห็นที่ไหนเลย
+        ก็เท่ากับใบหายเงียบ ๆ ซึ่งเป็นอาการเดียวกับใบระดับโซนตอนก่อนแก้
+
+        ขึ้นเฉพาะเจ้าของสวนกับผู้ดูแล เลขที่เที่ยวขนส่งกับเลขที่ใบเป็นข้อมูล
+        ทางการค้าของสวนนั้น ต่างจากตรา GAP ที่ตั้งใจให้ทุกคนเห็น
+      */}
+      {exportDocuments.length > 0 && (
+        <div className="pt-4 border-t border-line space-y-2.5">
+          <div className="flex items-center gap-2">
+            <Ship className="w-4 h-4 text-gold" />
+            <h4 className="font-bold text-xs text-white">
+              เอกสารการส่งออก (เห็นเฉพาะเจ้าของสวนและผู้ดูแล)
+            </h4>
+          </div>
+
+          <p className="text-[11px] text-fg-2 leading-relaxed">
+            ใบรับรองระดับการขนส่งออกให้ต่อการส่งออกหนึ่งครั้ง เก็บไว้เป็นประวัติ
+            และ<span className="text-white font-semibold">ไม่ขึ้นเป็นตรา</span>บนหน้าสวน
+          </p>
+
+          {exportDocuments.map((d) => {
+            const tone =
+              d.approvalStatus === 'approved'
+                ? 'border-[#235b3a] bg-[#122b1c]'
+                : d.approvalStatus === 'rejected'
+                  ? 'border-rose-800/60 bg-rose-950/30'
+                  : 'border-line bg-well';
+
+            return (
+              <div key={d.id} className={`p-3 rounded-2xl border ${tone} space-y-1.5`}>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-md bg-surface-2 text-leaf font-black text-[10px]">
+                    {d.shortCode}
+                  </span>
+                  <span className="text-xs text-white truncate">{d.nameTh}</span>
+                  {d.certNumber ? (
+                    <span className="font-mono text-[11px] text-fg-2">{d.certNumber}</span>
+                  ) : null}
+                </div>
+
+                {d.shipmentRef ? (
+                  <p data-testid="export-shipment-ref" className="text-[11px] text-fg-2">
+                    เที่ยวขนส่ง{' '}
+                    <span className="font-mono text-white">{d.shipmentRef}</span>
+                    {d.validUntil ? ` · ใช้ได้ถึง ${d.validUntil}` : ''}
+                  </p>
+                ) : null}
+
+                {d.approvalStatus === 'pending' && (
+                  <p className="flex items-start gap-1.5 text-[11px] text-fg-2">
+                    <Clock className="w-3.5 h-3.5 shrink-0 mt-px" />
+                    <span>รอตรวจสอบจากผู้ดูแล</span>
+                  </p>
+                )}
+
+                {d.approvalStatus === 'approved' && (
+                  <p className="flex items-start gap-1.5 text-[11px] text-leaf font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-px" />
+                    <span>ตรวจสอบแล้ว</span>
+                  </p>
+                )}
+
+                {(d.approvalStatus === 'rejected' || d.approvalStatus === 'needs_revision') && (
+                  <p className="flex items-start gap-1.5 text-[11px] text-rose-300">
+                    <XCircle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                    <span>
+                      ไม่ผ่านการตรวจ
+                      {d.adminNotes ? ` · ${d.adminNotes}` : ' (ไม่ได้ระบุเหตุผลไว้)'}
                     </span>
                   </p>
                 )}
