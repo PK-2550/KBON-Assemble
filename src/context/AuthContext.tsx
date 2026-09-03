@@ -4,6 +4,7 @@ import {
   fetchCurrentUser,
   loginWithUsername as apiLogin,
   registerWithUsername as apiRegister,
+  loginWithGoogle as apiGoogleLogin,
   logout as apiLogout,
   getPreferredRole,
   setPreferredRole,
@@ -30,6 +31,7 @@ interface AuthContextType {
    */
   refreshUser: () => Promise<void>;
   signInWithUsername: (username: string, pass: string) => Promise<AppUserProfile>;
+  signInWithGoogle: (credential: string) => Promise<AppUserProfile>;
   registerWithUsername: (username: string, pass: string) => Promise<AppUserProfile>;
   signOutUser: () => Promise<void>;
   setRoleMode: (role: UserRole) => void;
@@ -102,6 +104,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return profile;
   };
 
+  const signInWithGoogle = async (credential: string) => {
+    const profile = await apiGoogleLogin(credential);
+    setCurrentUser(profile);
+    setRoleModeState(profile.role === 'admin' ? getPreferredRole('user') : 'user');
+    return profile;
+  };
+
   const registerWithUsername = async (username: string, pass: string) => {
     // ไม่ตั้ง currentUser เพื่อให้ผู้ใช้ยังอยู่ที่หน้าเข้าสู่ระบบ (พฤติกรรมเดิมของแอป)
     return apiRegister(username, pass);
@@ -141,6 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         retryConnection,
         refreshUser,
         signInWithUsername,
+        signInWithGoogle,
         registerWithUsername,
         signOutUser,
         setRoleMode,
