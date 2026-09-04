@@ -1,5 +1,9 @@
 import 'dotenv/config';
 import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest';
+// supertest ถูก import แบบ dynamic ข้างล่าง ตัวแปรที่ได้จึงเป็นค่า ไม่ใช่ namespace
+// ชนิดของ response จึงต้องดึงมาแยกต่างหาก ไฟล์อื่นเขียน request.Response ได้
+// เพราะ import แบบ static ซึ่งได้ทั้งค่าและ namespace มาพร้อมกัน
+import type { Response as SupertestResponse } from 'supertest';
 
 /**
  * เข้าสู่ระบบด้วย Google (flow แบบ ID token)
@@ -34,7 +38,7 @@ const LINK_EMAIL = `linkme_${SUFFIX}@example.com`;
 const LINK_USERNAME = `linkuser_${SUFFIX}`;
 const NEW_EMAIL = `brandnew_${SUFFIX}@example.com`;
 
-function cookieHeader(res: request.Response): string {
+function cookieHeader(res: SupertestResponse): string {
   const raw = res.headers['set-cookie'];
   const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
   return list.join(';');
