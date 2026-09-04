@@ -190,7 +190,7 @@ npm run make:admin -- ชื่อผู้ใช้
 | `npm run dev:web` | รันเฉพาะ Vite (พอร์ต 3000) |
 | `npm run dev:api` | รันเฉพาะ Express พร้อม watch |
 | `npm run build` | build เว็บลง `dist/` |
-| `npm run check` | `tsc --noEmit` + eslint — **รันก่อน push เสมอ ไม่มี CI คอยจับให้** |
+| `npm run check` | `tsc --noEmit` + eslint — CI รันให้ตอนเปิด PR แต่รันเองก่อน push จะรู้ผลเร็วกว่า |
 
 ### ทดสอบ
 
@@ -205,6 +205,28 @@ npm run make:admin -- ชื่อผู้ใช้
 ชุดทดสอบฝั่ง server แตะฐานข้อมูล**จริง**ตาม `DATABASE_URL` และรันทีละไฟล์
 (`fileParallelism: false`) เพราะข้อมูลทดสอบของแต่ละไฟล์จะชนกันเองถ้ารันขนาน
 อย่าชี้ `DATABASE_URL` ไปที่ฐานข้อมูลที่มีข้อมูลจริงตอนรันเทสต์
+
+ก่อนรัน `npm test` ให้ครบทุกข้อ ต้องมีสองอย่างนี้พร้อมก่อน
+
+- **`npm run seed:demo`** — ชุดทดสอบใบรับรองระดับภูมิภาคอ่านโซน GI ที่มีอยู่ก่อน
+  ซึ่ง migration ไม่ได้สร้างให้ ฐานข้อมูลที่มีแต่ schema เปล่าจะทำให้สามไฟล์นั้น
+  ล้มตั้งแต่ `beforeAll`
+- **เซิร์ฟเวอร์ API รันอยู่** (`npm run dev:api`) — `test/api/smoke.test.ts`
+  ยิงผ่าน HTTP ไปยังเซิร์ฟเวอร์จริง ไม่ใช่เรียก app ตรงแบบ supertest
+  และต้องเป็นเซิร์ฟเวอร์ที่ใช้ `DATABASE_URL` กับ `ID_CARD_ENCRYPTION_KEY`
+  ชุดเดียวกับที่รันเทสต์ ไม่งั้นจะเขียนคนละฐานแล้วถอดรหัสไม่ออก
+
+### CI
+
+`.github/workflows/ci.yml` รันตอนเปิดหรืออัปเดต PR ที่จะเข้า `main` แยกเป็นสอง job
+
+| job | ทำอะไร |
+|---|---|
+| `check` | `npm ci` แล้ว `npm run check` |
+| `test` | ตั้ง Postgres 17 รัน migration ทั้งหมด `seed:demo` เปิด API แล้ว `npm test` |
+
+> Vercel ที่ต่อไว้กับ repo อยู่แล้วรันแค่ `vite build` ซึ่ง esbuild ทิ้ง type ไปเฉย ๆ
+> **ไม่ typecheck และไม่ lint** เห็น Vercel ขึ้นเขียวจึงไม่ได้แปลว่าโค้ดผ่าน `npm run check`
 
 ### จัดการข้อมูลและบัญชี
 

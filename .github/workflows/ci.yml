@@ -1,0 +1,121 @@
+name: CI
+
+# รันตอนเปิดหรืออัปเดต PR ที่จะเข้า main
+#
+# Vercel ที่ต่อไว้อยู่แล้วรันแค่ `vite build` ซึ่ง esbuild ทิ้ง type ไปเฉย ๆ
+# ไม่ typecheck และไม่ lint ให้ type error กับ lint error จึงหลุดขึ้น main ได้
+# workflow นี้ปิดช่องนั้น
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# push ทับ PR เดิม ให้ยกเลิกรอบที่ยังค้างอยู่ ไม่ต้องรอผลของ commit ที่ถูกแทนแล้ว
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck + lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run check
+
+  test:
+    name: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # ใช้ image เดียวกับ docker-compose.yml เพื่อให้เจอปัญหาแบบเดียวกับตอน dev
+    # พอร์ต 5432 ตรง ๆ ได้ เพราะใน runner ไม่มี Postgres ตัวอื่นให้ชนเหมือนในเครื่อง
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: duritrack
+          POSTGRES_PASSWORD: duritrack_dev_password
+          POSTGRES_DB: duritrack
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U duritrack -d duritrack"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://duritrack:duritrack_dev_password@localhost:5432/duritrack
+      API_PORT: '3001'
+      # ฐานข้อมูลนี้เกิดและตายไปพร้อม job ยกเว้น rate limit ให้ loopback ได้
+      # ถ้าไม่ยกเว้น ชุดทดสอบสมัครสมาชิกรวมกัน 18 ครั้ง จะเฉียดเพดาน 20 ครั้ง/ชม.
+      # จนกลายเป็นเทสต์ที่ล้มไม่แน่นอน
+      #
+      # ตัวจำกัดการเปิดดูบัตรประชาชนจงใจไม่ยกเว้น loopback อยู่แล้ว
+      # เทสต์ id-card-reveal-ratelimit จึงยังตรวจของจริงได้ตามปกติ
+      RATE_LIMIT_ALLOW_LOOPBACK: 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # สร้างใหม่ทุกรอบ ไม่ต้องเก็บเป็น secret เพราะฐานข้อมูลถูกทิ้งเมื่อ job จบ
+      # และไม่ hardcode ไว้ในไฟล์นี้ เพื่อไม่ให้มีอะไรที่หน้าตาเหมือนกุญแจจริงอยู่ใน repo
+      - name: สร้างกุญแจสำหรับรอบทดสอบนี้
+        run: |
+          echo "JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))")" >> "$GITHUB_ENV"
+          echo "ID_CARD_ENCRYPTION_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")" >> "$GITHUB_ENV"
+
+      # เรียงตามชื่อไฟล์เหมือนที่ docker-entrypoint-initdb.d ทำตอน dev
+      - name: รัน migration
+        run: |
+          for f in migrations/*.sql; do
+            echo "── $f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+
+      # ชุดทดสอบใบรับรองระดับภูมิภาคอ่านโซน GI ที่มีอยู่ก่อน ซึ่ง migration ไม่ได้สร้างให้
+      # ฐานข้อมูลที่มีแต่ schema เปล่าจะทำให้สามไฟล์นั้นล้มตั้งแต่ beforeAll
+      - name: สร้างข้อมูลตัวอย่าง
+        run: npm run seed:demo
+
+      # ชุด smoke ยิงผ่าน HTTP ไปยังเซิร์ฟเวอร์จริง ไม่ใช่เรียก app ตรงแบบ supertest
+      # ใช้ tsx ตรง ๆ ไม่ใช่ dev:api เพราะ watch mode ไม่มีประโยชน์ใน CI
+      - name: เปิดเซิร์ฟเวอร์ API
+        run: |
+          npx tsx server/index.ts > api.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:$API_PORT/api/health" > /dev/null; then
+              echo "API พร้อมใช้งานหลังรอ ${i} วินาที"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "เซิร์ฟเวอร์ API ไม่ขึ้นภายใน 60 วินาที"
+          cat api.log
+          exit 1
+
+      - run: npm test
+
+      # log ของเซิร์ฟเวอร์คือที่เดียวที่บอกได้ว่าทำไม smoke test ถึงล้ม
+      - name: log ของเซิร์ฟเวอร์ (เมื่อมีขั้นตอนที่ล้ม)
+        if: failure()
+        run: cat api.log || true
