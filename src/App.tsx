@@ -88,6 +88,14 @@ function MainAppContent() {
     loadFarms();
   }, [loadFarms]);
 
+  // แดชบอร์ดเปิดให้เฉพาะแอดมิน -- ถ้าสิทธิ์เปลี่ยนหรือสลับไปดูมุมมองผู้ใช้ทั่วไป
+  // ระหว่างอยู่ในแท็บนี้ ให้เด้งกลับไปหน้ารายชื่อฟาร์มทันที กันไม่ให้ค้างอยู่ในแท็บที่ไม่ควรเห็น
+  useEffect(() => {
+    if (activeTab === 'dashboard' && !(isAdmin && roleMode === 'admin')) {
+      setActiveTab('farms');
+    }
+  }, [activeTab, isAdmin, roleMode]);
+
   // Extract unique provinces list
   const provinces = useMemo(() => {
     const unique = Array.from(new Set(farms.map((f) => f.province)));
@@ -388,7 +396,7 @@ function MainAppContent() {
               </div>
             )}
 
-            {activeTab === 'dashboard' && (
+            {activeTab === 'dashboard' && isAdmin && roleMode === 'admin' && (
               <div className={`${PAGE_WIDTH_LEGACY} space-y-4 sm:space-y-6`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
                   <div>

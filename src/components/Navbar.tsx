@@ -146,16 +146,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             รายชื่อฟาร์ม
           </button>
-          <button
-            onClick={() => onTabChange('dashboard')}
-            className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'dashboard'
-                ? 'bg-gold text-gold-ink font-extrabold shadow-sm'
-                : 'hover:bg-surface text-fg-2 hover:text-fg'
-            }`}
-          >
-            แดชบอร์ด
-          </button>
+          {isAdmin && currentRole === 'admin' && (
+            <button
+              onClick={() => onTabChange('dashboard')}
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer ${
+                activeTab === 'dashboard'
+                  ? 'bg-gold text-gold-ink font-extrabold shadow-sm'
+                  : 'hover:bg-surface text-fg-2 hover:text-fg'
+              }`}
+            >
+              แดชบอร์ด
+            </button>
+          )}
         </div>
       </div>
 
@@ -461,16 +463,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>สแกน NFC ผลทุเรียน</span>
               </button>
 
-              <button
-                onClick={() => {
-                  onTabChange('dashboard');
-                  setIsProfileMenuOpen(false);
-                }}
-                className="w-full px-4 py-2 text-left text-xs font-semibold text-fg-2 hover:bg-surface hover:text-white flex items-center gap-2.5 transition-colors cursor-pointer"
-              >
-                <Sprout className="w-4 h-4 text-leaf" />
-                <span>แดชบอร์ดภาพรวมการผลิต</span>
-              </button>
+              {isAdmin && currentRole === 'admin' && (
+                <button
+                  onClick={() => {
+                    onTabChange('dashboard');
+                    setIsProfileMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-xs font-semibold text-fg-2 hover:bg-surface hover:text-white flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <Sprout className="w-4 h-4 text-leaf" />
+                  <span>แดชบอร์ดภาพรวมการผลิต</span>
+                </button>
+              )}
             </div>
 
             {/* Logout Button */}
